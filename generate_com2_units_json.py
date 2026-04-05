@@ -97,9 +97,50 @@ def get_category(u):
     return 'Other'
 
 
+HERO_NAMES = {
+    'Dwarf':        'Dwarf (Brax)',
+    'Barbarian':    'Barbarian (Gunther)',
+    'Sage':         'Sage (Zaldron)',
+    'Dervish':      'Dervish (B\'Shan)',
+    'Beastmaster':  'Beastmaster (Rakir)',
+    'Bard':         'Bard (Valana)',
+    'Orc Archer':   'Orc Archer (Bahgtru)',
+    'Healer':       'Healer (Serena)',
+    'Huntress':     'Huntress (Shuri)',
+    'Thief':        'Thief (Theria)',
+    'Druid':        'Druid (Greyfairer)',
+    'War Monk':     'War Monk (Taki)',
+    'Warrior Mage': 'Warrior Mage (Reywind)',
+    'Magician':     'Magician (Malleus)',
+    'Assassin':     'Assassin (Tumu)',
+    'Wind Mage':    'Wind Mage (Jaer)',
+    'Ranger':       'Ranger (Marcus)',
+    'Draconian':    'Draconian (Fang)',
+    'Witch':        'Witch (Morgana)',
+    'Golden One':   'Golden One (Aureus)',
+    'Ninja':        'Ninja (Shin Bo)',
+    'Rogue':        'Rogue (Spyder)',
+    'Amazon':       'Amazon (Shalla)',
+    'Warlock':      'Warlock (Yramrag)',
+    'Unknown':      'Unknown (Mystic X)',
+    'Illusionist':  'Illusionist (Aerie)',
+    'Swordsman':    'Swordsman (Deth Stryke)',
+    'Priestess':    'Priestess (Elana)',
+    'Paladin':      'Paladin (Roland)',
+    'Black Knight': 'Black Knight (Mortu)',
+    'Elven Archer': 'Elven Archer (Alorra)',
+    'Knight':       'Knight (Sir Harold)',
+    'Necromancer':  'Necromancer (Ravashack)',
+    'Chaos Warrior':'Chaos Warrior (Warrax)',
+    'Chosen':       'Chosen (Torin)',
+}
+
+
 def get_display_name(u):
     """Mirror index.html getUnitDisplayName logic."""
     name = u.get('Name', 'Unknown')
+    if u.get('HeroType'):
+        return HERO_NAMES.get(name, name)
     race = int(u.get('Race', 0))
     if u.get('DisplayRace') == 'Yes' and RACE_NAMES.get(race) and RACE_NAMES.get(race) != 'Special':
         return RACE_NAMES[race] + ' ' + name
@@ -223,6 +264,22 @@ def main():
     records = [ini_unit_to_record(u) for u in raw_units
                if u.get('CreateOutpost', '').lower() != 'yes'
                and u.get('Name') not in SPECIAL_UNIT_NAMES]
+
+    # Hardcoded ability fixes for data missing from the INI
+    for r in records:
+        if r.get('ini_name') == 'Night Stalker' and r['category'] == 'Death Creatures':
+            r.setdefault('abilities', []).append('GazeRanged=1')
+
+    # Force race prefix for non-hero units that share a name with another race's unit
+    from collections import Counter
+    name_counts = Counter(r['name'] for r in records if r['category'] != 'Heroes')
+    for r in records:
+        if r['category'] == 'Heroes':
+            continue
+        if name_counts[r['name']] > 1:
+            race = RACE_NAMES.get(r['race'])
+            if race and race != 'Special' and not r['name'].startswith(race):
+                r['name'] = race + ' ' + r['name']
 
     # Keyed by id (string) to match units_from_changeunit.json convention
     output = {str(r['id']): r for r in records}

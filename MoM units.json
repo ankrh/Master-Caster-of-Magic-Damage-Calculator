@@ -1176,7 +1176,7 @@
     "sort_order": 11,
     "abilities": [
       "ColdImmunity",
-      "DeathGaze=12",
+      "DeathGaze=-2",
       "DeathImmunity",
       "GazeRanged=1",
       "IllusionImmunity",
@@ -1430,13 +1430,12 @@
     "category": "Chaos Creatures",
     "sort_order": 7,
     "abilities": [
-      "DeathGaze=14",
+      "DeathGaze=-4",
       "DoomGaze=4",
       "Fear",
       "Flying",
-      "GazeRanged=4",
       "Poison=4",
-      "StoningGaze=14"
+      "StoningGaze=-4"
     ]
   },
   "1022": {
@@ -1561,7 +1560,7 @@
     "sort_order": 4,
     "abilities": [
       "Flying",
-      "StoningTouch=13"
+      "StoningTouch=-3"
     ]
   },
   "1029": {
@@ -1579,7 +1578,7 @@
     "sort_order": 5,
     "abilities": [
       "GazeRanged=1",
-      "StoningGaze=11"
+      "StoningGaze=-1"
     ]
   },
   "1030": {
@@ -1618,7 +1617,7 @@
     "abilities": [
       "Flying",
       "GazeRanged=1",
-      "StoningGaze=12"
+      "StoningGaze=-2"
     ]
   },
   "1032": {

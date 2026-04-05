@@ -13,10 +13,16 @@ VERIFIED UNITS.DAT ACCURATE IN-GAME CoM2
   - **Code 33** (death bolt): Wiki says Chaos-colored, but used by Death realm creatures (Shadow Demons, Demon Lord, Ghouls). Need to confirm whether CoM2 treats these as Chaos or has a separate Death realm for damage purposes.
   - General question: Does CoM2 use the same realm-color assignments as MoM, or has it changed any?
 
-- **UNITS.DAT validity** The data on settlers in the UNITS.DAT file seems to match the behavior of CoM1, not CoM2. Are we sure that the UNITS.DAT from the CoM2 folder actually describes CoM2 units?
+- **UNITS.INI validity** The data on settlers in the UNITS.INI file has no lucky settlers, but they exist in game in CoM2. Are we sure that the UNITS.INI from the CoM2 folder actually describes CoM2 units?
 
 - **Night Stalker "ranged"** Does the night stalker in CoM2 still have the 1 magical ranged attack that the death gaze is attached to in MoM?
 
 - **What is Doom Bat "Doom"** It does not seem to be the same as Doom gaze.
 
 - **What is lightning resistance** (Sky drake, Storm giant)
+
+- **Which races have access to catapults and ships?**
+
+- **Any source for ammo of MoM units?**
+
+- **CoM2 hero caster stats?**

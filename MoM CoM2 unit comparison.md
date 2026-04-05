@@ -1,9 +1,8 @@
 # MoM CoM2 unit comparison
 
-CoM2 stats at base level. Where a stat differs from MoM, shown as `MoM → CoM2`.
-CoM2 ToHit uses 1% increments; MoM uses 10% increments.
+Where a stat differs, it's shown as `MoM → CoM2`.
 
-## Heroes
+## Heroes - NOTE: Incomplete data
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
@@ -43,15 +42,24 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 | Necromancer (Ravashack)        |          1 |      - → 1 |      5 → 7 |      5 → 8 |     4 → 10 |     - | 6 (Magic(C)) → 11 (Magic(C)) | -                | Missile Imm, Life Steal 10 → Negate FS, Missile Imm, Illusion Imm, Death Imm, Life Steal -3 |
 | Chaos Warrior (Warrax)         |          1 |     7 → 12 |      5 → 7 |      8 → 7 |     7 → 13 |     - | 7 (Magic(C)) → 12 (Magic(C)) | -                | Armor Piercing → Armor Piercing, Negate FS |
 
+## General
+
+| Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
+|--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
+| Trireme                        |          1 |     6 → 12 |          4 |      4 → 6 |    10 → 15 |     - | -                | -                |  |
+| Catapult                       |          1 |          - |          2 |      4 → 3 |         10 | - → +20% | 10 (Rock) → 9 (Rock) | -                | Long Range → Long Range, Wall Crusher |
+| Galley                         |          1 |     8 → 14 |          4 |      6 → 7 |         20 |     - | 2 (Missile) → 10 (Missile) | -                |  |
+| Warship                        |          1 |    10 → 16 |          5 |          7 |    30 → 25 |     - | 10 (Rock) → 14 (Rock) | -                | Long Range |
+
 ## Barbarian
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      1 → 2 |      2 → 1 |      5 → 2 |          1 | - → +10% | -                | 1 (Thrown)       |  |
-| Swordsmen                      |          6 |          3 |      2 → 3 |      5 → 3 |          1 | - → +10% | -                | 1 (Thrown) → 2 (Thrown) | Large Shield |
-| Bowmen                         |          6 |          1 |          1 |      5 → 3 |          1 | - → +10% | 1 (Missile) → 3 (Missile) | -                |  |
-| Cavalry                        |          4 |      4 → 5 |          2 |      5 → 3 |          3 | - → +10% | -                | 1 (Thrown) → 3 (Thrown) | First Strike |
-| Shamans → Shaman               |          4 |          2 |          3 |      7 → 5 |          1 | - → +10% | 2 (Magic(N)) → 3 (Magic(N)) | -                |  |
+| Barbarian Spearmen             |      8 → 6 |      1 → 2 |      2 → 1 |      5 → 2 |          1 | - → +10% | -                | 1 (Thrown)       |  |
+| Barbarian Swordsmen            |          6 |          3 |      2 → 3 |      5 → 3 |          1 | - → +10% | -                | 1 (Thrown) → 2 (Thrown) | Large Shield |
+| Barbarian Bowmen               |          6 |          1 |          1 |      5 → 3 |          1 | - → +10% | 1 (Missile) → 3 (Missile) | -                |  |
+| Barbarian Cavalry              |          4 |      4 → 5 |          2 |      5 → 3 |          3 | - → +10% | -                | 1 (Thrown) → 3 (Thrown) | First Strike |
+| Barbarian Shamans → Barbarian Shaman |          4 |          2 |          3 |      7 → 5 |          1 | - → +10% | 2 (Magic(N)) → 3 (Magic(N)) | -                |  |
 | Berserkers                     |          6 |          7 |          3 |      7 → 3 |          3 | - → +10% | -                | 3 (Thrown)       |  |
 | Gladiators                     |      - → 3 |      - → 5 |      - → 6 |      - → 5 |      - → 6 | - → +20% | -                | - → 4 (Thrown)   | - → Large Shield |
 | Spellserkers                   |      - → 4 |      - → 3 |      - → 4 |      - → 6 |      - → 4 | - → +10% | -                | - → 5 (Thrown)   | - → Missile Imm |
@@ -60,9 +68,9 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      3 → 4 |      2 → 1 |      4 → 3 |          1 |     - | -                | -                |  |
-| Swordsmen                      |          6 |          5 |      2 → 3 |          4 |          1 |     - | -                | -                | Large Shield |
-| Halberdiers                    |          6 |      6 → 7 |      3 → 4 |      4 → 5 |      1 → 2 |     - | -                | -                | First Strike, Negate FS → Negate FS |
+| Gnoll Spearmen                 |      8 → 6 |      3 → 4 |      2 → 1 |      4 → 3 |          1 |     - | -                | -                |  |
+| Gnoll Swordsmen                |          6 |          5 |      2 → 3 |          4 |          1 |     - | -                | -                | Large Shield |
+| Gnoll Halberdiers              |          6 |      6 → 7 |      3 → 4 |      4 → 5 |      1 → 2 |     - | -                | -                | First Strike, Negate FS → Negate FS |
 | Wolf Riders                    |          4 |          7 |          3 |      4 → 5 |          5 |     - | -                | -                |  |
 | Jackal Riders                  |      - → 8 |      - → 6 |      - → 3 |      - → 5 |      - → 3 |     - | -                | -                | - → Fear |
 
@@ -70,23 +78,23 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |          8 |          1 |      2 → 1 |      6 → 3 |          1 |     - | -                | -                | Lucky |
-| Bowmen                         |          6 |          1 |          1 |      6 → 4 |          1 |     - | 1 (Missile) → 3 (Missile) | -                | Lucky |
-| Swordsmen                      |          8 |          2 |      2 → 3 |      6 → 4 |          1 |     - | -                | -                | Large Shield, Lucky |
-| Shamans → Shaman               |          4 |          1 |          3 |      8 → 6 |          1 |     - | 2 (Magic(N)) → 3 (Magic(N)) | -                | Lucky |
+| Halfling Spearmen              |          8 |          1 |      2 → 1 |      6 → 3 |          1 |     - | -                | -                | Lucky |
+| Halfling Bowmen                |          6 |          1 |          1 |      6 → 4 |          1 |     - | 1 (Missile) → 3 (Missile) | -                | Lucky |
+| Halfling Swordsmen             |          8 |          2 |      2 → 3 |      6 → 4 |          1 |     - | -                | -                | Large Shield, Lucky |
+| Halfling Shamans → Halfling Shaman |          4 |          1 |          3 |      8 → 6 |          1 |     - | 2 (Magic(N)) → 3 (Magic(N)) | -                | Lucky |
 | Slingers                       |          8 |          1 |      2 → 1 |      6 → 4 |          1 |     - | 2 (Missile) → 4 (Missile) | -                | Lucky |
-| Magicians                      |      - → 4 |      - → 1 |      - → 3 |      - → 8 |      - → 1 |     - | - → 7 (Magic(C)) | -                | - → Lucky, Missile Imm |
+| Halfling Magicians             |      - → 4 |      - → 1 |      - → 3 |      - → 8 |      - → 1 |     - | - → 7 (Magic(C)) | -                | - → Lucky, Missile Imm |
 
 ## High Elf
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      1 → 2 |      2 → 1 |      6 → 4 |          1 |  +10% | -                | -                |  |
-| Swordsmen                      |          6 |          3 |      2 → 3 |      6 → 5 |          1 |  +10% | -                | -                | Large Shield |
-| Cavalry                        |          4 |      4 → 5 |          2 |      6 → 5 |          3 |  +10% | -                | -                | First Strike |
+| High Elf Spearmen              |      8 → 6 |      1 → 2 |      2 → 1 |      6 → 4 |          1 |  +10% | -                | -                |  |
+| High Elf Swordsmen             |          6 |          3 |      2 → 3 |      6 → 5 |          1 |  +10% | -                | -                | Large Shield |
+| High Elf Cavalry               |          4 |      4 → 5 |          2 |      6 → 5 |          3 |  +10% | -                | -                | First Strike |
 | Longbowmen                     |          6 |          1 |          2 |      6 → 5 |          1 |  +10% | 3 (Missile)      | -                |  → Long Range |
-| Halberdiers                    |          6 |      4 → 5 |      3 → 4 |          6 |      1 → 2 |  +10% | -                | -                |  → Negate FS |
-| Magicians                      |          4 |          1 |          3 |     10 → 9 |          1 |  +10% | 5 (Magic(C)) → 7 (Magic(C)) | -                |  → Missile Imm |
+| High Elf Halberdiers           |          6 |      4 → 5 |      3 → 4 |          6 |      1 → 2 |  +10% | -                | -                |  → Negate FS |
+| High Elf Magicians             |          4 |          1 |          3 |     10 → 9 |          1 |  +10% | 5 (Magic(C)) → 7 (Magic(C)) | -                |  → Missile Imm |
 | Pegasai → Pegasi               |      2 → 4 |      5 → 4 |          4 |          8 |      5 → 4 |  +10% | 3 (Missile)      | -                | Flying |
 | Elven Lords                    |          4 |          5 |      4 → 6 |     9 → 10 |      3 → 4 |  +20% | -                | -                | Armor Piercing, First Strike → Armor Piercing, First Strike, Poison Imm |
 
@@ -94,50 +102,50 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      1 → 2 |      2 → 1 |      4 → 1 |          1 |     - | -                | -                |  |
-| Swordsmen                      |          6 |          3 |      2 → 3 |      4 → 2 |          1 |     - | -                | -                | Large Shield |
-| Bowmen                         |          6 |          1 |          1 |      4 → 2 |          1 |     - | 1 (Missile) → 3 (Missile) | -                |  |
-| Cavalry                        |          4 |      4 → 5 |          2 |      4 → 2 |          3 |     - | -                | -                | First Strike |
-| Engineers                      |          6 |          1 |          1 |          4 |          1 |     - | -                | -                |  → Wall Crusher |
+| High Men Spearmen              |      8 → 6 |      1 → 2 |      2 → 1 |      4 → 1 |          1 |     - | -                | -                |  |
+| High Men Swordsmen             |          6 |          3 |      2 → 3 |      4 → 2 |          1 |     - | -                | -                | Large Shield |
+| High Men Bowmen                |          6 |          1 |          1 |      4 → 2 |          1 |     - | 1 (Missile) → 3 (Missile) | -                |  |
+| High Men Cavalry               |          4 |      4 → 5 |          2 |      4 → 2 |          3 |     - | -                | -                | First Strike |
+| High Men Engineers             |          6 |          1 |          1 |          4 |          1 |     - | -                | -                |  → Wall Crusher |
 | Crusaders                      |      - → 8 |      - → 5 |      - → 4 |      - → 6 |      - → 2 |     - | -                | -                | - → Large Shield |
 | Knights                        |      - → 4 |      - → 6 |      - → 5 |      - → 5 |      - → 3 |     - | -                | -                | - → First Strike |
-| Pikemen                        |          8 |      5 → 4 |      3 → 4 |      5 → 4 |      1 → 2 |     - | -                | -                | Armor Piercing, First Strike, Negate FS → Armor Piercing, Negate FS |
-| Priests                        |          4 |          3 |          4 |      7 → 6 |      1 → 2 |     - | 4 (Magic(N)) → 5 (Magic(N)) | -                |  → Resist All 1 |
-| Magicians                      |          6 |          1 |          3 |      8 → 6 |          1 |     - | 5 (Magic(C)) → 7 (Magic(C)) | -                | Missile Imm |
+| High Men Pikemen               |          8 |      5 → 4 |      3 → 4 |      5 → 4 |      1 → 2 |     - | -                | -                | Armor Piercing, First Strike, Negate FS → Armor Piercing, Negate FS |
+| High Men Priests               |          4 |          3 |          4 |      7 → 6 |      1 → 2 |     - | 4 (Magic(N)) → 5 (Magic(N)) | -                |  → Resist All 1 |
+| High Men Magicians             |          6 |          1 |          3 |      8 → 6 |          1 |     - | 5 (Magic(C)) → 7 (Magic(C)) | -                | Missile Imm |
 | Paladins                       |          4 |          6 |          5 |          8 |      4 → 5 |     - | -                | -                | Armor Piercing, First Strike, Magic Imm, Holy Bonus 1 → Armor Piercing, First Strike, Illusion Imm, Death Imm, Holy Bonus 1 |
 
 ## Klackon
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      1 → 2 |      4 → 3 |      5 → 3 |          1 |     - | -                | -                |  |
-| Engineers                      |          6 |          1 |          1 |      5 → 4 |          1 |     - | -                | -                |  → Wall Crusher |
-| Swordsmen                      |          6 |          3 |      4 → 5 |      5 → 4 |          1 |     - | -                | -                | Large Shield |
-| Halberdiers                    |          6 |      4 → 5 |      5 → 6 |          5 |      1 → 2 |     - | -                | -                |  → Negate FS |
+| Klackon Spearmen               |      8 → 6 |      1 → 2 |      4 → 3 |      5 → 3 |          1 |     - | -                | -                |  |
+| Klackon Engineers              |          6 |          1 |          1 |      5 → 4 |          1 |     - | -                | -                |  → Wall Crusher |
+| Klackon Swordsmen              |          6 |          3 |      4 → 5 |      5 → 4 |          1 |     - | -                | -                | Large Shield |
+| Klackon Halberdiers            |          6 |      4 → 5 |      5 → 6 |          5 |      1 → 2 |     - | -                | -                |  → Negate FS |
 | Stag Beetle                    |          1 |         15 |          7 |      6 → 7 |         20 |     - | -                | 5 (Fire)         |  |
 
 ## Lizardman
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      1 → 2 |      3 → 1 |      4 → 2 |          2 |     - | -                | -                |  |
-| Swordsmen                      |          6 |          3 |          3 |      4 → 3 |          2 |     - | -                | -                | Large Shield |
-| Halberdiers                    |          6 |      4 → 5 |          4 |          4 |      2 → 3 |     - | -                | -                | First Strike, Negate FS → Negate FS |
-| Shamans → Shaman               |          4 |          2 |      3 → 2 |      6 → 5 |          2 |     - | 2 (Magic(N)) → 3 (Magic(N)) | -                |  |
+| Lizardmen Spearmen → Lizardman Spearmen |      8 → 6 |      1 → 2 |      3 → 1 |      4 → 2 |          2 |     - | -                | -                |  |
+| Lizardmen Swordsmen → Lizardman Swordsmen |          6 |          3 |          3 |      4 → 3 |          2 |     - | -                | -                | Large Shield |
+| Lizardmen Halberdiers → Lizardman Halberdiers |          6 |      4 → 5 |          4 |          4 |      2 → 3 |     - | -                | -                | First Strike, Negate FS → Negate FS |
+| Lizardmen Shamans → Lizardman Shaman |          4 |          2 |      3 → 2 |      6 → 5 |          2 |     - | 2 (Magic(N)) → 3 (Magic(N)) | -                |  |
 | Javelineers                    |          6 |      4 → 5 |      4 → 3 |          5 |          2 |     - | 3 (Missile) → 4 (Missile) | -                |  |
-| Carrack                        |      - → 1 |     - → 14 |      - → 4 |      - → 6 |     - → 15 |     - | - → 8 (Missile)  | -                |  |
+| Lizardman Carrack              |      - → 1 |     - → 14 |      - → 4 |      - → 6 |     - → 15 |     - | - → 8 (Missile)  | -                |  |
 | Dragon Turtle                  |          1 |         10 |      8 → 9 |     8 → 12 |    15 → 20 |     - | -                | 5 (Fire) → 5 (Lightning) |  → Fire Imm |
 
 ## Nomad
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      1 → 2 |      2 → 1 |      4 → 6 |          1 |     - | - → 1 (Missile)  | -                |  |
-| Swordsmen                      |          6 |          3 |      2 → 3 |      4 → 7 |          1 |     - | - → 2 (Missile)  | -                | Large Shield |
+| Nomad Spearmen                 |      8 → 6 |      1 → 2 |      2 → 1 |      4 → 6 |          1 |     - | - → 1 (Missile)  | -                |  |
+| Nomad Swordsmen                |          6 |          3 |      2 → 3 |      4 → 7 |          1 |     - | - → 2 (Missile)  | -                | Large Shield |
 | Horsebowmen                    |          4 |          4 |          2 |      4 → 7 |          3 |     - | 2 (Missile) → 4 (Missile) | -                |  → First Strike |
-| Pikemen                        |      8 → 6 |      5 → 4 |      3 → 4 |      5 → 8 |      1 → 2 |     - | -                | -                | Armor Piercing, First Strike, Negate FS → Armor Piercing, Negate FS |
-| Priests                        |          4 |          3 |          4 |     7 → 11 |      1 → 2 |     - | 4 (Magic(N)) → 5 (Magic(N)) | -                |  |
-| Magicians                      |      - → 4 |      - → 1 |      - → 3 |     - → 11 |      - → 1 |     - | - → 7 (Magic(C)) | -                | - → Missile Imm |
+| Nomad Pikemen                  |      8 → 6 |      5 → 4 |      3 → 4 |      5 → 8 |      1 → 2 |     - | -                | -                | Armor Piercing, First Strike, Negate FS → Armor Piercing, Negate FS |
+| Nomad Priests                  |          4 |          3 |          4 |     7 → 11 |      1 → 2 |     - | 4 (Magic(N)) → 5 (Magic(N)) | -                |  |
+| Nomad Magicians                |      - → 4 |      - → 1 |      - → 3 |     - → 11 |      - → 1 |     - | - → 7 (Magic(C)) | -                | - → Missile Imm |
 | Rangers                        |          4 |      4 → 6 |      4 → 3 |      6 → 8 |      2 → 3 |     - | 3 (Missile) → 7 (Missile) | -                |  → Long Range, Poison Imm |
 | Griffins                       |          2 |          9 |          5 |      7 → 8 |         10 |     - | -                | -                | Flying, Armor Piercing, First Strike |
 
@@ -145,29 +153,29 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      1 → 2 |      2 → 1 |      4 → 3 |          1 |     - | -                | -                |  |
-| Swordsmen                      |          6 |          3 |      2 → 3 |          4 |          1 |     - | -                | -                | Large Shield |
-| Bowmen                         |          6 |          1 |          1 |          4 |          1 |     - | 1 (Missile) → 3 (Missile) | -                |  |
-| Cavalry                        |          4 |      4 → 5 |          2 |          4 |          3 |     - | -                | -                |  → First Strike |
-| Engineers                      |          6 |          1 |          1 |          4 |          1 |     - | -                | -                |  → Wall Crusher |
-| Shamans → Shaman               |          4 |          2 |          3 |          6 |          1 |     - | 2 (Magic(N)) → 3 (Magic(N)) | -                |  |
-| Halberdiers                    |          6 |      4 → 5 |      3 → 4 |      4 → 5 |      1 → 2 |     - | -                | -                |  → Negate FS |
-| Horde                          |      - → 8 |      - → 6 |      - → 5 |      - → 5 |      - → 2 |     - | -                | -                | - → Large Shield, Negate FS |
-| Magicians                      |          4 |          1 |          3 |          8 |          1 |     - | 5 (Magic(C)) → 7 (Magic(C)) | -                |  → Missile Imm |
+| Orc Spearmen                   |      8 → 6 |      1 → 2 |      2 → 1 |      4 → 3 |          1 |     - | -                | -                |  |
+| Orc Swordsmen                  |          6 |          3 |      2 → 3 |          4 |          1 |     - | -                | -                | Large Shield |
+| Orc Bowmen                     |          6 |          1 |          1 |          4 |          1 |     - | 1 (Missile) → 3 (Missile) | -                |  |
+| Orc Cavalry                    |          4 |      4 → 5 |          2 |          4 |          3 |     - | -                | -                |  → First Strike |
+| Orc Engineers                  |          6 |          1 |          1 |          4 |          1 |     - | -                | -                |  → Wall Crusher |
+| Orc Shamans → Orc Shaman       |          4 |          2 |          3 |          6 |          1 |     - | 2 (Magic(N)) → 3 (Magic(N)) | -                |  |
+| Orc Halberdiers                |          6 |      4 → 5 |      3 → 4 |      4 → 5 |      1 → 2 |     - | -                | -                |  → Negate FS |
+| Orc Horde                      |      - → 8 |      - → 6 |      - → 5 |      - → 5 |      - → 2 |     - | -                | -                | - → Large Shield, Negate FS |
+| Orc Magicians                  |          4 |          1 |          3 |          8 |          1 |     - | 5 (Magic(C)) → 7 (Magic(C)) | -                |  → Missile Imm |
 | Wyvern Riders                  |          2 |      5 → 7 |          5 |          7 |         10 |     - | -                | -                | Flying, Poison Touch 6 → Flying, Poison Touch 5 |
 
 ## Beastmen
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      2 → 3 |      2 → 1 |      5 → 3 |          2 |     - | -                | -                |  |
-| Swordsmen                      |          6 |          4 |      2 → 3 |      5 → 4 |          2 |     - | -                | -                | Large Shield |
-| Bowmen                         |          6 |          2 |          1 |      5 → 4 |          2 |     - | 1 (Missile) → 3 (Missile) | -                |  |
-| Engineers                      |          6 |          2 |          1 |      5 → 4 |          2 |     - | -                | -                |  → Wall Crusher |
-| Halberdiers                    |          6 |      5 → 6 |      3 → 4 |          5 |      2 → 3 |     - | -                | -                |  → Negate FS |
+| Beastmen Spearmen              |      8 → 6 |      2 → 3 |      2 → 1 |      5 → 3 |          2 |     - | -                | -                |  |
+| Beastmen Swordsmen             |          6 |          4 |      2 → 3 |      5 → 4 |          2 |     - | -                | -                | Large Shield |
+| Beastmen Bowmen                |          6 |          2 |          1 |      5 → 4 |          2 |     - | 1 (Missile) → 3 (Missile) | -                |  |
+| Beastmen Engineers             |          6 |          2 |          1 |      5 → 4 |          2 |     - | -                | -                |  → Wall Crusher |
+| Beastmen Halberdiers           |          6 |      5 → 6 |      3 → 4 |          5 |      2 → 3 |     - | -                | -                |  → Negate FS |
 | Centaurs                       |          4 |      3 → 5 |          3 |          5 |      3 → 4 |     - | 2 (Missile) → 5 (Missile) | -                |  |
-| Priests                        |          4 |          4 |          4 |          8 |      2 → 3 |     - | 4 (Magic(N)) → 5 (Magic(N)) | -                |  |
-| Magicians                      |          4 |          2 |          3 |      9 → 8 |          2 |     - | 5 (Magic(C)) → 7 (Magic(C)) | -                | Missile Imm |
+| Beastmen Priests               |          4 |          4 |          4 |          8 |      2 → 3 |     - | 4 (Magic(N)) → 5 (Magic(N)) | -                |  |
+| Beastmen Magicians             |          4 |          2 |          3 |      9 → 8 |          2 |     - | 5 (Magic(C)) → 7 (Magic(C)) | -                | Missile Imm |
 | Manticores                     |      2 → 3 |      5 → 7 |          3 |      6 → 8 |      7 → 6 | - → +10% | - → 1 (Missile)  | -                | Flying, Poison Touch 6 → Flying, Weapon Imm, Poison Touch 4 |
 | Minotaurs                      |          2 |         12 |      4 → 5 |          7 |         12 |  +20% | -                | -                | Large Shield |
 
@@ -175,12 +183,12 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      1 → 2 |      2 → 1 |      7 → 5 |          1 |     - | 1 (Magic(C))     | -                |  |
-| Swordsmen                      |          6 |          3 |      2 → 3 |      7 → 6 |          1 |     - | 1 (Magic(C)) → 2 (Magic(C)) | -                | Large Shield |
-| Cavalry                        |          4 |      4 → 5 |          2 |      7 → 6 |          3 |     - | 1 (Magic(C)) → 3 (Magic(C)) | -                | First Strike |
+| Dark Elf Spearmen              |      8 → 6 |      1 → 2 |      2 → 1 |      7 → 5 |          1 |     - | 1 (Magic(C))     | -                |  |
+| Dark Elf Swordsmen             |          6 |          3 |      2 → 3 |      7 → 6 |          1 |     - | 1 (Magic(C)) → 2 (Magic(C)) | -                | Large Shield |
+| Dark Elf Cavalry               |          4 |      4 → 5 |          2 |      7 → 6 |          3 |     - | 1 (Magic(C)) → 3 (Magic(C)) | -                | First Strike |
 | Apprentices                    |      - → 6 |      - → 1 |      - → 2 |      - → 6 |      - → 1 |     - | - → 3 (Magic(C)) | -                | - → Large Shield |
-| Halberdiers                    |          6 |      4 → 5 |      3 → 4 |          7 |      1 → 2 |     - | 1 (Magic(C)) → 3 (Magic(C)) | -                |  |
-| Priests                        |          4 |          3 |          4 |         10 |      1 → 2 |     - | 6 (Magic(N)) → 7 (Magic(N)) | -                |  |
+| Dark Elf Halberdiers           |          6 |      4 → 5 |      3 → 4 |          7 |      1 → 2 |     - | 1 (Magic(C)) → 3 (Magic(C)) | -                |  |
+| Dark Elf Priests               |          4 |          3 |          4 |         10 |      1 → 2 |     - | 6 (Magic(N)) → 7 (Magic(N)) | -                |  |
 | Nightblades                    |          6 |      4 → 5 |      3 → 4 |          7 |      1 → 3 |     - | -                | -                | Poison Touch 1, Invisible → Poison Touch 2, Invisible |
 | Warlocks                       |          4 |          1 |          4 |          9 |          1 |     - | 7 (Magic(C)) → 9 (Magic(C)) | -                | Missile Imm |
 | Nightmares                     |          2 |          8 |          4 |     8 → 12 |     10 → 8 | - → +20% | 5 (Magic(C)) → 8 (Magic(C)) | -                | Flying |
@@ -189,12 +197,12 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |      8 → 6 |      1 → 2 |      3 → 2 |      6 → 4 |          1 |     - | -                | 1 (Fire)         | Flying |
-| Swordsmen                      |          6 |          3 |      3 → 4 |      6 → 5 |          1 |     - | -                | 1 (Fire) → 2 (Fire) | Flying, Large Shield |
-| Bowmen                         |      6 → 5 |          1 |      2 → 1 |      6 → 5 |          1 |     - | 1 (Missile) → 3 (Missile) | -                | Flying |
-| Halberdiers                    |          6 |      4 → 5 |      4 → 5 |          6 |      1 → 2 |     - | -                | 1 (Fire) → 3 (Fire) | Flying |
-| Saints                         |      - → 5 |      - → 2 |      - → 5 |      - → 7 |      - → 2 |     - | - → 4 (Magic(N)) | -                | - → Flying |
-| Magicians                      |          4 |          1 |          4 |     10 → 9 |          1 |     - | 5 (Magic(C)) → 7 (Magic(C)) | -                | Flying → Flying, Missile Imm |
+| Draconian Spearmen             |      8 → 6 |      1 → 2 |      3 → 2 |      6 → 4 |          1 |     - | -                | 1 (Fire)         | Flying |
+| Draconian Swordsmen            |          6 |          3 |      3 → 4 |      6 → 5 |          1 |     - | -                | 1 (Fire) → 2 (Fire) | Flying, Large Shield |
+| Draconian Bowmen               |      6 → 5 |          1 |      2 → 1 |      6 → 5 |          1 |     - | 1 (Missile) → 3 (Missile) | -                | Flying |
+| Draconian Halberdiers          |          6 |      4 → 5 |      4 → 5 |          6 |      1 → 2 |     - | -                | 1 (Fire) → 3 (Fire) | Flying |
+| Draconian Saints               |      - → 5 |      - → 2 |      - → 5 |      - → 7 |      - → 2 |     - | - → 4 (Magic(N)) | -                | - → Flying |
+| Draconian Magicians            |          4 |          1 |          4 |     10 → 9 |          1 |     - | 5 (Magic(C)) → 7 (Magic(C)) | -                | Flying → Flying, Missile Imm |
 | Air Ship                       |          1 |          5 |          5 |          8 |         20 |     - | 10 (Rock) → 15 (Rock) | -                | Flying → Flying, Wall Crusher |
 | Doom Drakes                    |          2 |     8 → 10 |      3 → 5 |      9 → 7 |         10 |     - | -                | 6 (Fire) → 7 (Fire) | Flying → Flying, Fear |
 
@@ -202,9 +210,9 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Swordsmen                      |          6 |          3 |      2 → 3 |      8 → 6 |      3 → 2 |     - | -                | -                | Large Shield |
-| Engineers                      |          6 |          1 |          1 |          8 |      3 → 2 |     - | -                | -                |  → Wall Crusher |
-| Halberdiers                    |          6 |      4 → 5 |      3 → 4 |      8 → 7 |          3 |     - | -                | -                |  → Negate FS |
+| Dwarf Swordsmen                |          6 |          3 |      2 → 3 |      8 → 6 |      3 → 2 |     - | -                | -                | Large Shield |
+| Dwarf Engineers                |          6 |          1 |          1 |          8 |      3 → 2 |     - | -                | -                |  → Wall Crusher |
+| Dwarf Halberdiers              |          6 |      4 → 5 |      3 → 4 |      8 → 7 |          3 |     - | -                | -                |  → Negate FS |
 | Steam Cannon                   |          1 |          - |      2 → 5 |          9 |         12 |     - | 12 (Rock) → 15 (Rock) | -                |  → Long Range, Poison Imm, Wall Crusher |
 | Hammerhands                    |          6 |          8 |          4 |     9 → 10 |          4 |     - | -                | -                |  |
 | Golem                          |          1 |    12 → 14 |      8 → 7 |         15 |         20 |     - | -                | -                | Death Imm, Poison Imm → Death Imm, Fire Imm, Cold Imm, Poison Imm, Stone Imm, Wall Crusher |
@@ -213,22 +221,13 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 
 | Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
 |--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Spearmen                       |          4 |      3 → 4 |      2 → 1 |      7 → 5 |          4 |     - | -                | -                | Regen 1 |
-| Swordsmen                      |          4 |          5 |      2 → 3 |      7 → 5 |          4 |     - | -                | -                | Large Shield, Regen 1 |
-| Shamans → Shaman               |          4 |          4 |          3 |      8 → 6 |          4 |     - | 2 (Magic(N)) → 3 (Magic(N)) | -                | Regen 1 → Regen 2 |
-| Halberdiers                    |          4 |      6 → 7 |      3 → 4 |      7 → 5 |      4 → 6 |     - | -                | -                | First Strike, Negate FS, Regen 1 → Negate FS, Regen 1 |
+| Troll Spearmen                 |          4 |      3 → 4 |      2 → 1 |      7 → 5 |          4 |     - | -                | -                | Regen 1 |
+| Troll Swordsmen                |          4 |          5 |      2 → 3 |      7 → 5 |          4 |     - | -                | -                | Large Shield, Regen 1 |
+| Troll Shamans → Troll Shaman   |          4 |          4 |          3 |      8 → 6 |          4 |     - | 2 (Magic(N)) → 3 (Magic(N)) | -                | Regen 1 → Regen 2 |
+| Troll Halberdiers              |          4 |      6 → 7 |      3 → 4 |      7 → 5 |      4 → 6 |     - | -                | -                | First Strike, Negate FS, Regen 1 → Negate FS, Regen 1 |
 | War Trolls                     |          4 |          8 |          4 |      8 → 6 |      5 → 8 |     - | -                | -                | Regen 1 |
-| Magicians                      |      - → 4 |      - → 4 |      - → 2 |      - → 8 |      - → 4 |     - | - → 7 (Magic(C)) | -                | - → Missile Imm, Regen 1 |
+| Troll Magicians                |      - → 4 |      - → 4 |      - → 2 |      - → 8 |      - → 4 |     - | - → 7 (Magic(C)) | -                | - → Missile Imm, Regen 1 |
 | War Mammoths                   |      2 → 3 |    10 → 12 |          6 |      9 → 8 |         12 |     - | -                | -                | First Strike → First Strike, Cold Imm, Wall Crusher |
-
-## Ships
-
-| Unit                           |  Fig       | Melee      | Def        | Res        | HP         | ToHit | Ranged           | Thrown/Breath    | Abilities |
-|--------------------------------|------------|------------|------------|------------|------------|-------|------------------|------------------|-----------|
-| Trireme                        |          1 |     6 → 12 |          4 |      4 → 6 |    10 → 15 |     - | -                | -                |  |
-| Catapult                       |          1 |          - |          2 |      4 → 3 |         10 | - → +20% | 10 (Rock) → 9 (Rock) | -                | Long Range → Long Range, Wall Crusher |
-| Galley                         |          1 |     8 → 14 |          4 |      6 → 7 |         20 |     - | 2 (Missile) → 10 (Missile) | -                |  |
-| Warship                        |          1 |    10 → 16 |          5 |          7 |    30 → 25 |     - | 10 (Rock) → 14 (Rock) | -                | Long Range |
 
 ## Summoned — Life
 
@@ -249,7 +248,7 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 | Ghouls                         |          4 |      4 → 5 |          3 |          6 |          3 | +10% → - | - → 4 (Magic(C)) | -                | Illusion Imm, Death Imm, Cold Imm, Poison Imm, Poison Touch 1 |
 | Werewolves                     |          6 |          6 |          3 |          4 |          5 | - → +20% | -                | -                |  → Weapon Imm, Death Imm, Cold Imm |
 | Demon                          |          1 |         14 |          5 |          7 |         12 |  +10% | -                | -                | Flying, Missile Imm, Illusion Imm, Weapon Imm, Death Imm, Cold Imm, Poison Imm → Flying, Missile Imm, Illusion Imm, Weapon Imm, Death Imm |
-| Night Stalker                  |          1 |          7 |      3 → 5 |          8 |    10 → 13 |  +10% | -                | -                | Illusion Imm, Death Imm, Cold Imm, Poison Imm, Invisible, Death Gaze 12, Gaze Ranged 1 → Illusion Imm, Weapon Imm, Death Imm, Cold Imm, Poison Imm, Invisible, Death Gaze -3 |
+| Night Stalker                  |          1 |          7 |      3 → 5 |          8 |    10 → 13 |  +10% | -                | -                | Illusion Imm, Death Imm, Cold Imm, Poison Imm, Invisible, Death Gaze -2, Gaze Ranged 1 → Illusion Imm, Weapon Imm, Death Imm, Cold Imm, Poison Imm, Invisible, Death Gaze -3, Gaze Ranged 1 |
 | Shadow Demons                  |          4 |          5 |          4 |      8 → 6 |          5 |  +20% | 4 (Magic(C)) → 5 (Magic(C)) | -                | Flying, Non-Corp, Illusion Imm, Weapon Imm, Death Imm, Cold Imm, Poison Imm, Regen 1 → Flying, Non-Corp, Illusion Imm, Weapon Imm, Death Imm, Cold Imm, Poison Imm, Regen 2 |
 | Vampire                        |      - → 1 |     - → 20 |     - → 10 |      - → 6 |     - → 25 | - → +20% | -                | -                | - → Flying, Illusion Imm, Weapon Imm, Death Imm, Cold Imm, Poison Imm, Regen 2, Blood Sucker |
 | Wraiths                        |          4 |     7 → 10 |          6 |          8 |          8 |  +20% | -                | -                | Flying, Non-Corp, Illusion Imm, Weapon Imm, Death Imm, Cold Imm, Poison Imm, Life Steal 13 → Flying, Non-Corp, Illusion Imm, Weapon Imm, Death Imm, Cold Imm, Poison Imm, Life Steal -3 |
@@ -265,7 +264,7 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 | Gargoyles                      |          4 |      4 → 5 |      8 → 9 |      7 → 9 |          4 |  +10% | -                | -                | Flying, Poison Imm, Stone Imm |
 | Fire Giant                     |          1 |    10 → 18 |          5 |          7 |    15 → 18 |  +10% | 10 (Rock) → 12 (Magic(C)) | -                | Fire Imm → Fire Imm, Wall Crusher |
 | Chimeras → Chimera             |          4 |     7 → 10 |          5 |          8 |          8 |  +10% | -                | 4 (Fire) → 6 (Fire) | Flying |
-| Chaos Spawn                    |          1 |          1 |      6 → 8 |    10 → 12 |    15 → 22 |     - | -                | -                | Flying, Poison Touch 4, Fear, Death Gaze 14, Stone Gaze 14, Doom Gaze 4, Gaze Ranged 4 → Flying, Illusion Imm, Poison Touch 4, Fear, Death Gaze -4, Stone Gaze -4, Doom Gaze 4 |
+| Chaos Spawn                    |          1 |          1 |      6 → 8 |    10 → 12 |    15 → 22 |     - | -                | -                | Flying, Poison Touch 4, Fear, Death Gaze -4, Stone Gaze -4, Doom Gaze 4 → Flying, Illusion Imm, Poison Touch 4, Fear, Death Gaze -4, Stone Gaze -4, Doom Gaze 4 |
 | Hydra                          |          9 |      6 → 9 |          4 |    11 → 12 |         10 |  +10% | -                | 5 (Fire) → 6 (Fire) | Regen 1 → Regen 7, Supernatural |
 | Efreet                         |          1 |     9 → 15 |          7 |     10 → 9 |    12 → 27 |  +20% | 9 (Magic(C)) → 18 (Magic(C)) | -                | Flying, Fire Imm → Flying, Fire Imm, Immolation |
 | Doom Bat                       |          1 |    10 → 16 |      5 → 7 |     9 → 10 |    20 → 30 | +10% → +20% | -                | -                | Flying, Immolation 4 → Flying, Negate FS, Immolation, Doom |
@@ -279,11 +278,11 @@ CoM2 ToHit uses 1% increments; MoM uses 10% increments.
 | Sprites                        |      4 → 5 |          2 |          2 |          8 |          1 |  +10% | 3 (Magic(N)) → 4 (Magic(N)) | -                | Flying |
 | War Bears                      |      2 → 3 |          7 |      3 → 5 |          6 |      8 → 7 | - → +10% | -                | -                |  |
 | Giant Spiders                  |      2 → 4 |      4 → 6 |      3 → 5 |      7 → 9 |     10 → 5 |  +10% | -                | -                | Poison Touch 4 → Poison Touch 3 |
-| Cockatrices                    |          4 |          4 |      3 → 5 |          7 |      3 → 7 |  +10% | -                | -                | Flying, Stone Touch 13 → Flying, Stone Touch -4 |
+| Cockatrices                    |          4 |          4 |      3 → 5 |          7 |      3 → 7 |  +10% | -                | -                | Flying, Stone Touch -3 → Flying, Stone Touch -4 |
 | Earth Elemental                |          1 |         25 |          4 |          8 |         30 |  +10% | -                | -                | Poison Imm, Stone Imm → Poison Imm, Stone Imm, Wall Crusher |
 | Great Lizard                   |      - → 1 |     - → 18 |      - → 7 |      - → 7 |     - → 30 | - → +20% | -                | -                | - → Regen 2 |
 | Stone Giant                    |          1 |    15 → 20 |     8 → 12 |     9 → 10 |    20 → 25 |  +20% | 15 (Rock) → 20 (Rock) | -                | Poison Imm, Stone Imm → Poison Imm, Stone Imm, Wall Crusher |
-| Gorgons                        |      4 → 3 |     8 → 15 |          7 |          9 |     9 → 14 |  +20% | -                | -                | Flying, Stone Gaze 12, Gaze Ranged 1 → Stone Gaze -3, Supernatural |
+| Gorgons                        |      4 → 3 |     8 → 15 |          7 |          9 |     9 → 14 |  +20% | -                | -                | Flying, Stone Gaze -2, Gaze Ranged 1 → Stone Gaze -3, Supernatural |
 | Behemoth                       |          1 |         25 |     9 → 15 |    10 → 13 |    45 → 42 |  +20% | -                | -                |  → Negate FS, Regen 3, Supernatural |
 | Colossus                       |          1 |    20 → 25 |    10 → 12 |         15 |    30 → 37 |  +30% | 20 (Rock) → 25 (Rock) | -                | First Strike, Poison Imm, Stone Imm → First Strike, Illusion Imm, Poison Imm, Stone Imm, Wall Crusher, Supernatural |
 | Great Wyrm                     |          1 |    25 → 36 |     12 → 8 |    12 → 14 |         45 |  +30% | -                | -                | Poison Touch 15 → Armor Piercing, Negate FS, Poison Touch 25, Supernatural |

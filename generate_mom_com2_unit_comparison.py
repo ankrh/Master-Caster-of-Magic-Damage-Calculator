@@ -201,20 +201,11 @@ def unit_row(com2_u, mom_u=None):
         ab_s = c_ab
 
     ini_name = c.get("ini_name") or c.get("name", "?")
-    if m and m.get("category") == "Heroes":
-        import re
-        mom_full = m.get("name", ini_name)
-        mom_archetype = re.sub(r"\s*\(.*?\)", "", mom_full).strip()
-        if mom_archetype != ini_name:
-            # Hero was renamed between MoM and CoM2, e.g. "Orc Warrior (Bahgtru) → Orc Archer (Bahgtru)"
-            parens = re.search(r"\(.*?\)", mom_full)
-            suffix = f" {parens.group()}" if parens else ""
-            name = f"{mom_full} → {ini_name}{suffix}"
-        else:
-            name = mom_full
-    else:
-        mom_name = NAME_ALIASES.get(ini_name)
-        name = f"{mom_name} → {ini_name}" if mom_name else ini_name
+    display_name = c.get("name", ini_name)
+    # Prefer the matched MoM unit's actual name (includes race prefix),
+    # fall back to NAME_ALIASES for heroes or other edge cases.
+    mom_name = (m.get("name") if m else None) or NAME_ALIASES.get(ini_name)
+    name = f"{mom_name} → {display_name}" if mom_name and mom_name != display_name else display_name
     return (
         f"| {name:<30} "
         f"| {fig_s:>10} "
@@ -306,9 +297,7 @@ def main():
     lines = [
         "# MoM CoM2 unit comparison",
         "",
-        "CoM2 stats at base level. "
-        "Where a stat differs from MoM, shown as `MoM → CoM2`.",
-        "CoM2 ToHit uses 1% increments; MoM uses 10% increments.",
+        "Where a stat differs, it's shown as `MoM → CoM2`.",
         "",
     ]
 
@@ -320,7 +309,7 @@ def main():
 
     # --- Heroes ---
     heroes = sorted(get_cat("Heroes"), key=sort_key)
-    hero_lines = ["## Heroes", "", HEADER, DIVIDER]
+    hero_lines = ["## Heroes - NOTE: Incomplete data", "", HEADER, DIVIDER]
     for u in heroes:
         hero_name = u.get("ini_name") or u.get("name", "")
         mom_key = NAME_ALIASES.get(hero_name, hero_name)
@@ -328,6 +317,11 @@ def main():
         hero_lines.append(unit_row(u, mom_match))
     hero_lines.append("")
     lines.append("\n".join(hero_lines))
+
+    # --- General (ships, catapult) ---
+    general = sorted(get_cat("General"), key=sort_key)
+    if general:
+        lines.append(section("General", general, mom_name_lookup))
 
     # --- Category order mirrors index.html categoryOrder ---
     RACE_CATEGORIES = [
@@ -346,11 +340,6 @@ def main():
         mom_cat = MOM_CAT_NAME.get(cat, cat)
         cat_lookup = build_mom_name_lookup(mom_units, strip_prefix=mom_cat)
         lines.append(section(cat, units, cat_lookup))
-
-    # --- Ships / General ---
-    ships = sorted(get_cat("General"), key=sort_key)
-    if ships:
-        lines.append(section("Ships", ships, mom_name_lookup))
 
     # --- Summoned creatures (order mirrors index.html) ---
     SUMMON_CATEGORIES = [

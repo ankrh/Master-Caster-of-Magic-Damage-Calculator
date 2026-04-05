@@ -7,8 +7,8 @@ Combat stats are parsed from changeunit.js.
 import json
 import re
 
-CHANGEUNIT_INPUT = "CoM1 or MoM material/extracted_changeunit.js"
-CHANGERACE_INPUT = "CoM1 or MoM material/extracted_changerace.js"
+CHANGEUNIT_INPUT = "MoM material/extracted_changeunit.js"
+CHANGERACE_INPUT = "MoM material/extracted_changerace.js"
 OUTPUT = "MoM units.json"
 
 # MoM rangedtypex numeric -> ranged_type string (matches CoM2 RANGED_TYPE_MAP strings)
@@ -223,6 +223,12 @@ def parse_case_body(body):
         m = re.search(rf'{js_name}\s*=\s*(\d+)', body)
         if m:
             stats[key] = int(m.group(1))
+    # DeathGaze/StoningGaze in the wiki calculator are stored as (10 + |penalty|);
+    # convert to negative resistance modifiers (e.g. 14 → -4).
+    # DoomGaze is flat damage and should not be converted.
+    for gaze_key in ('DeathGaze', 'StoningGaze', 'StoningTouch'):
+        if gaze_key in stats and stats[gaze_key] > 0:
+            stats[gaze_key] = -(stats[gaze_key] - 10)
     return stats
 
 
@@ -331,6 +337,10 @@ def main():
             stats['breath_type'] = MOM_BREATH_TYPE.get(stats['breath_type'], 'fire')
 
         # Move ability flags into abilities list
+        # Hardcoded fixes for wiki calculator data errors
+        if base_name == "Chaos Spawn":
+            stats.pop('GazeRanged', None)  # Chaos Spawn does not have ranged gaze
+
         abilities = []
         # Add CreateOutpost for settlers so they can be filtered by the calculator
         if base_name == "Settlers":

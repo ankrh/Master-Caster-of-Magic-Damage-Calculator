@@ -1,4 +1,4 @@
-MoM v1.03.01
-MoM CP v1.60.00
+MoM (Launcher: v1.03.01, Manual: 1.3.1, Wiki and Seravy: 1.31)
+MoM Community Patch v1.60.00
 CoM 6.08
 CoM2 1.05.11

@@ -232,6 +232,46 @@
   }
   .common-fields input { width: 62px; }
   .common-fields select { text-align: left; }
+  /* --- Combat Enchantments Box --- */
+  .combat-enchantments {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    margin: 0 auto 1rem;
+    max-width: calc(340px + 340px + 1.5rem);
+  }
+  .combat-enchantments summary {
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--muted);
+    user-select: none;
+  }
+  .combat-enchantments summary:hover {
+    color: var(--text);
+  }
+  .enchantments-content {
+    padding-top: 0.5rem;
+  }
+  .enchantments-content .abil-grid {
+    margin-bottom: 0.4rem;
+  }
+  .enchant-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+  }
+  .enchant-row select {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.9rem;
+    text-align: left;
+  }
   .check-label {
     display: flex;
     align-items: center;
@@ -316,6 +356,84 @@
     max-height: 460px;
     overflow-y: auto;
   }
+  /* --- Abilities Expandable Section --- */
+  .abilities-section {
+    margin-top: 0.75rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+  }
+  .abilities-section summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--muted);
+    user-select: none;
+    padding: 0.25rem 0;
+  }
+  .abilities-section summary:hover {
+    color: var(--text);
+  }
+  .abilities-content {
+    padding-top: 0.5rem;
+  }
+  .abilities-content.locked input[type="checkbox"],
+  .abilities-content.locked input[type="number"] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .abilities-content.locked label {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .abil-group-header {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin: 0.5rem 0 0.25rem;
+    padding-bottom: 0.15rem;
+    border-bottom: 1px solid rgba(15, 52, 96, 0.4);
+  }
+  .abil-group-header:first-child {
+    margin-top: 0;
+  }
+  .abil-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.2rem 0.5rem;
+  }
+  .abil-check {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .abil-check input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+  }
+  .abil-num-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    margin: 0.15rem 0;
+  }
+  .abil-num-row label {
+    flex: 1;
+    white-space: nowrap;
+  }
+  .abil-num-row input[type="number"] {
+    width: 50px;
+    padding: 0.2rem 0.3rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.8rem;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
@@ -324,8 +442,8 @@
 <div class="version-bar">
   <label for="gameVersion">Game Version:</label>
   <select id="gameVersion">
-    <option value="mom_1.03.01" selected>MoM v1.03.01</option>
-    <option value="mom_cp_1.60.00">MoM CP v1.60.00</option>
+    <option value="mom_1.03.01" selected>MoM 1.31</option>
+    <option value="mom_cp_1.60.00">MoM CP 1.60</option>
     <option value="com_6.08">CoM 6.08</option>
     <option value="com2_1.05.11">CoM2 1.05.11</option>
   </select>
@@ -407,6 +525,10 @@
         <option value="adamantium">Adamantium</option>
       </select>
     </div>
+    <details class="abilities-section">
+      <summary>Abilities/Enchantments</summary>
+      <div class="abilities-content" id="aAbilities"></div>
+    </details>
   </div>
 
   <div class="panel">
@@ -476,8 +598,33 @@
         <option value="adamantium">Adamantium</option>
       </select>
     </div>
+    <details class="abilities-section">
+      <summary>Abilities/Enchantments</summary>
+      <div class="abilities-content" id="bAbilities"></div>
+    </details>
   </div>
 </div>
+
+<details class="combat-enchantments">
+  <summary>Combat Enchantments</summary>
+  <div class="enchantments-content">
+    <div class="abil-grid">
+      <label class="abil-check"><input type="checkbox" id="enchPrayer"> Prayer</label>
+      <label class="abil-check"><input type="checkbox" id="enchHighPrayer"> High Prayer</label>
+      <label class="abil-check"><input type="checkbox" id="enchDarkness"> Darkness</label>
+      <label class="abil-check"><input type="checkbox" id="enchHeavenlyLight"> Heavenly Light</label>
+    </div>
+    <div class="enchant-row">
+      <label>Node aura:</label>
+      <select id="nodeAura">
+        <option value="none" selected>None</option>
+        <option value="chaos">Chaos</option>
+        <option value="nature">Nature</option>
+        <option value="sorcery">Sorcery</option>
+      </select>
+    </div>
+  </div>
+</details>
 
 <div class="common-fields">
   <label id="rangedCheckLabel" class="check-label">
@@ -485,12 +632,11 @@
   </label>
   <label id="rangedDistLabel">Ranged attack distance:</label>
   <input type="number" id="rangedDist" min="1" max="99" value="1">
-  <label>Node aura:</label>
-  <select id="nodeAura">
+  <label>City walls:</label>
+  <select id="cityWalls">
     <option value="none" selected>None</option>
-    <option value="chaos">Chaos</option>
-    <option value="nature">Nature</option>
-    <option value="sorcery">Sorcery</option>
+    <option value="1">+1 def</option>
+    <option value="3">+3 def</option>
   </select>
 </div>
 
@@ -528,6 +674,143 @@ const RANGED_TYPE_MAP = {
   37: 'magic_n', // nature — sprite shimmer (Sprites)
   38: 'magic_n', // nature — green bolt (Druid hero, Elven Archer hero)
 };
+
+// --- Ability Definitions ---
+// Each ability: { key, label, type: 'bool'|'num', match, group }
+// 'match' is used to find the ability in the unit's abilities array.
+// For bool: matches exact name or name=value. For num: matches name=value and extracts value.
+const ABILITY_DEFS = [
+  // Abilities (innate unit abilities)
+  { key: 'armorPiercing', label: 'Armor Piercing', type: 'bool', match: 'ArmorPiercing', group: 'Abilities' },
+  { key: 'firstStrike', label: 'First Strike', type: 'bool', match: 'FirstStrike', group: 'Abilities' },
+  { key: 'negateFirstStrike', label: 'Negate First Strike', type: 'bool', match: 'NegateFirstStrike', group: 'Abilities' },
+  { key: 'largeShield', label: 'Large Shield', type: 'bool', match: 'LargeShield', group: 'Abilities' },
+  { key: 'lucky', label: 'Lucky', type: 'bool', match: 'Lucky', group: 'Abilities' },
+  { key: 'noncorporeal', label: 'Noncorporeal', type: 'bool', match: 'Noncorporeal', group: 'Abilities' },
+  { key: 'illusion', label: 'Illusion', type: 'bool', match: 'Illusion', group: 'Abilities' },
+  { key: 'invisibility', label: 'Invisible', type: 'bool', match: 'Invisibility', group: 'Abilities' },
+  { key: 'longRange', label: 'Long Range', type: 'bool', match: 'LongRange', group: 'Abilities' },
+  { key: 'fear', label: 'Cause Fear', type: 'bool', match: 'Fear', group: 'Abilities' },
+  { key: 'doom', label: 'Doom Damage', type: 'bool', match: 'Doom', group: 'Abilities' },
+  { key: 'immolation', label: 'Immolation', type: 'bool', match: 'Immolation', group: 'Abilities' },
+  { key: 'missileImmunity', label: 'Missile Immunity', type: 'bool', match: 'MissileImmunity', group: 'Abilities' },
+  { key: 'magicImmunity', label: 'Magic Immunity', type: 'bool', match: 'MagicImmunity', group: 'Abilities' },
+  { key: 'weaponImmunity', label: 'Weapon Immunity', type: 'bool', match: 'WeaponImmunity', group: 'Abilities' },
+  { key: 'fireImmunity', label: 'Fire Immunity', type: 'bool', match: 'FireImmunity', group: 'Abilities' },
+  { key: 'coldImmunity', label: 'Cold Immunity', type: 'bool', match: 'ColdImmunity', group: 'Abilities' },
+  { key: 'deathImmunity', label: 'Death Immunity', type: 'bool', match: 'DeathImmunity', group: 'Abilities' },
+  { key: 'poisonImmunity', label: 'Poison Immunity', type: 'bool', match: 'PoisonImmunity', group: 'Abilities' },
+  { key: 'stoningImmunity', label: 'Stoning Immunity', type: 'bool', match: 'StoningImmunity', group: 'Abilities' },
+  { key: 'illusionImmunity', label: 'Illusion Immunity', type: 'bool', match: 'IllusionImmunity', group: 'Abilities' },
+  { key: 'counterImmunity', label: 'Counter Immunity', type: 'bool', match: 'CounterImmunity', group: 'Abilities' },
+  { key: 'lightningResist', label: 'Lightning Resist', type: 'bool', match: 'LightningResist', group: 'Abilities' },
+  // Abilities/Enchantments (innate or granted by spells)
+  { key: 'bless', label: 'Bless', type: 'bool', match: 'Bless', group: 'Abilities/Enchantments' },
+  { key: 'holyWeapon', label: 'Holy Weapon/Holy Arms', type: 'bool', match: 'HolyWeapon', group: 'Abilities/Enchantments' },
+  { key: 'holyArmor', label: 'Holy Armor', type: 'bool', match: 'HolyArmor', group: 'Abilities/Enchantments' },
+  { key: 'trueSight', label: 'True Sight', type: 'bool', match: 'TrueSight', group: 'Abilities/Enchantments' },
+  { key: 'invulnerability', label: 'Invulnerability', type: 'bool', match: 'Invulnerability', group: 'Abilities/Enchantments' },
+  { key: 'righteousness', label: 'Righteousness', type: 'bool', match: 'Righteousness', group: 'Abilities/Enchantments' },
+  // Enchantments (spell-granted only)
+  { key: 'charmOfLife', label: 'Charm of Life', type: 'bool', match: 'CharmOfLife', group: 'Enchantments' },
+  { key: 'wraithForm', label: 'Wraith Form', type: 'bool', match: 'WraithForm', group: 'Enchantments' },
+  { key: 'eldritchWeapon', label: 'Eldritch Weapon', type: 'bool', match: 'EldritchWeapon', group: 'Enchantments' },
+  // Numeric abilities (no group header needed)
+  { key: 'poison', label: 'Poison Touch', type: 'num', match: 'Poison' },
+  { key: 'lifeSteal', label: 'Life Steal', type: 'num', match: 'LifeSteal' },
+  { key: 'stoningTouch', label: 'Stoning Touch', type: 'num', match: 'StoningTouch' },
+  { key: 'deathGaze', label: 'Death Gaze', type: 'num', match: 'DeathGaze' },
+  { key: 'stoningGaze', label: 'Stoning Gaze', type: 'num', match: 'StoningGaze' },
+  { key: 'doomGaze', label: 'Doom Gaze', type: 'num', match: 'DoomGaze' },
+  { key: 'gazeRanged', label: 'Hidden Gaze Attack', type: 'num', match: 'GazeRanged' },
+  { key: 'resistanceToAll', label: 'Resistance to All', type: 'num', match: 'ResistanceToAll' },
+  { key: 'holyBonus', label: 'Holy Bonus', type: 'num', match: 'HolyBonus' },
+];
+
+function buildAbilitiesUI(prefix) {
+  const container = document.getElementById(prefix + 'Abilities');
+  let gridDiv = null;
+  let currentGroup = '';
+  for (const abil of ABILITY_DEFS) {
+    if (abil.group && abil.group !== currentGroup) {
+      currentGroup = abil.group;
+      gridDiv = null;
+      const header = document.createElement('div');
+      header.className = 'abil-group-header';
+      header.textContent = currentGroup;
+      container.appendChild(header);
+    }
+    const id = prefix + 'Abil_' + abil.key;
+    if (abil.type === 'bool') {
+      if (!gridDiv) {
+        gridDiv = document.createElement('div');
+        gridDiv.className = 'abil-grid';
+        container.appendChild(gridDiv);
+      }
+      const lbl = document.createElement('label');
+      lbl.className = 'abil-check';
+      lbl.innerHTML = `<input type="checkbox" id="${id}"> ${abil.label}`;
+      gridDiv.appendChild(lbl);
+    } else {
+      gridDiv = null;
+      const row = document.createElement('div');
+      row.className = 'abil-num-row';
+      row.innerHTML = `<label for="${id}">${abil.label}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
+      container.appendChild(row);
+    }
+  }
+}
+
+function parseAbilitiesFromUnit(unit) {
+  const result = {};
+  const abilities = unit.abilities || [];
+  for (const abil of ABILITY_DEFS) {
+    if (abil.type === 'bool') {
+      // Match exact name or name=value
+      result[abil.key] = abilities.some(a => a === abil.match || a.startsWith(abil.match + '='));
+    } else {
+      // Find name=value and extract the number
+      const found = abilities.find(a => a.startsWith(abil.match + '='));
+      if (found) {
+        result[abil.key] = parseInt(found.split('=')[1]) || 0;
+      } else if (abilities.includes(abil.match)) {
+        // Value-less version (e.g., "Immolation" in CoM2)
+        result[abil.key] = 1;
+      } else {
+        result[abil.key] = 0;
+      }
+    }
+  }
+  return result;
+}
+
+function applyAbilities(prefix, abilValues) {
+  for (const abil of ABILITY_DEFS) {
+    const el = document.getElementById(prefix + 'Abil_' + abil.key);
+    if (!el) continue;
+    if (abil.type === 'bool') {
+      el.checked = !!abilValues[abil.key];
+    } else {
+      el.value = abilValues[abil.key] || 0;
+    }
+  }
+}
+
+function clearAbilities(prefix) {
+  for (const abil of ABILITY_DEFS) {
+    const el = document.getElementById(prefix + 'Abil_' + abil.key);
+    if (!el) continue;
+    if (abil.type === 'bool') {
+      el.checked = false;
+    } else {
+      el.value = 0;
+    }
+  }
+}
+
+// Build UI on load
+buildAbilitiesUI('a');
+buildAbilitiesUI('b');
 
 // Parsed unit databases per version. Loaded on demand.
 const unitDatabases = {};
@@ -751,6 +1034,9 @@ function applyUnit(prefix, unitIndex) {
   document.getElementById(prefix + 'Dmg').value = 0;
   document.getElementById(prefix + 'RangedType').value = unit.ranged_type || 'none';
   document.getElementById(prefix + 'ThrownType').value = unit.breath_type || 'none';
+  // Set abilities
+  const abilValues = parseAbilitiesFromUnit(unit);
+  applyAbilities(prefix, abilValues);
   // Apply level bonuses on top of base stats
   applyLevelBonuses(prefix);
 }
@@ -758,8 +1044,10 @@ function applyUnit(prefix, unitIndex) {
 function updateUnitLock(prefix) {
   const sel = document.getElementById(prefix + 'Unit');
   const fields = sel.closest('.panel').querySelector('.panel-fields');
+  const abilContent = document.getElementById(prefix + 'Abilities');
   const isCustom = sel.value === 'custom';
   fields.classList.toggle('locked', !isCustom);
+  abilContent.classList.toggle('locked', !isCustom);
 
   const levelSel = document.getElementById(prefix + 'Level');
   const weaponSel = document.getElementById(prefix + 'Weapon');
@@ -1283,6 +1571,7 @@ function applyPreset(name) {
     document.getElementById(prefix + 'ThrownType').value = u.thrownType;
     document.getElementById(prefix + 'Thrown').value = u.thrown;
     document.getElementById(prefix + 'Weapon').value = u.weapon;
+    clearAbilities(prefix);
   }
   setUnit('a', preset.a);
   setUnit('b', preset.b);

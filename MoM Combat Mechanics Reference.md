@@ -331,3 +331,235 @@ Resolve per defending figure separately (each gets own Attack Roll + Defense Rol
 
 ### Special Damage (Resistance-based)
 Per affected figure: roll d10, succeed if ≤ (Resistance − penalty). On failure, effect applies (usually 1 figure killed). Distribution is Binomial over number of figures rolled.
+
+---
+
+## 11. Version Differences: v1.31 vs v1.40n
+
+The MoM Advanced Damage Calculator supports two game versions. The version selection does **not** affect unit stats, rosters, or base abilities — only the following combat mechanics differ.
+
+### 11a. Lucky: Opponent To Hit Penalty (v1.31 only)
+
+In **v1.31**, Lucky reduces the **opponent's To Hit** by −10% (for melee, ranged, and breath attacks), in addition to its standard +10% To Hit / +10% To Block on the Lucky unit's own rolls.
+
+In **v1.40n**, Lucky only provides the self-bonus (+10% To Hit, +10% To Block). It no longer penalizes the opponent's To Hit.
+
+This is a significant nerf to Lucky in v1.40n — in v1.31 it was effectively a 20% swing (your To Hit +10%, enemy To Hit −10%), while in v1.40n it is only a 10% self-buff to each.
+
+### 11b. Weapon Immunity / Missile Immunity Interaction (v1.31 only)
+
+When a unit has **both** Weapon Immunity and Missile Immunity and is attacked by Ranged Missile (arrow) attacks from a non-magical attacker:
+
+- **v1.31**: Weapon Immunity applies first (Defense → 10) and **blocks** Missile Immunity from also applying. The defender gets Defense 10, not 50.
+- **v1.40n**: Weapon Immunity applies (Defense → 10), but then Missile Immunity **overrides** it (Defense → 50).
+
+In practice, v1.40n is more favorable to the defender in this edge case. This only matters for units that have both immunities and face non-magical missile attacks.
+
+### 11c. Hero Random Ability Picks: Arcane Power Waste (v1.31 only)
+
+When randomizing hero ability picks for heroes that already have Arcane Power as a guaranteed ability (e.g., Torin, Alorra):
+
+- **v1.31**: Arcane Power can still be "rolled" as a random pick, wasting a pick slot.
+- **v1.40n**: Arcane Power is excluded from the random pool, so all picks are effective.
+
+### Other
+
+Demon Skin no longer applies its Defense bonus twice in combat.
+The Cause Fear ability now affects the correct unit.
+Thrown- and Breath Attacks no longer ignore ranged To Hit modifiers.
+Extra chance To Block no longer reduces the enemy's chance To Hit with Melee Attacks in addition to its normal effect.
+ Spell Save modifiers now apply to Life Drain, Death Spell, and Holy Word. 
+ Units standing on the central tiles of a Town with City Walls in combat now receive  +3 as though there were intact walls there. (IW082)
+Defending units now get  +2 during sieges in strategic combat if the City has either City Walls or a Wall of Fire. (IW084)
+Introduced bug : Weapon Immunity provides  +50 instead of  +10 against physical non-melee attacks ( Thrown,  Boulder,  Missile).
+
+## 1.40n vs 1.51
+
+Units having a Wind Walking enchantment on them are no longer impossible to attack in combat using ground units.
+Fixes the healing bug that grants extra  Health to units. Affects Regeneration, Life Steal, Healing, Mass Healing. (113)
+Undead units now have the expected Illusion Immunity, Death Immunity, Cold Immunity, Poison Immunity. (144)
+Berserk now sets  0 instead of  -20. More of a precaution than a bugfix, in case negative defense causes unexpected trouble. (145)
+Black Sleep now causes units to lose all their movement types instead of remaining a Icon Movement Air unit, preventing attacks to it. (146)
+Thrown no longer ignores Weapon Immunity (152)
+Units no longer fail using Gaze or other special attack types if their associated attack strength is 0 (153), also known as the hidden ranged attack problem.
+Immolation no longer works with ranged attacks (no more shooting flaming arrows) (154)
+Blur works as intended, no rolls are lost on successes and Illusion Immunity is no longer checked on the wrong unit (156)
+Wraith Form no longer grants immunity against Flame Strike, Death Spell, and Holy Word (318)
+Fixed bug : Icon Movement SailingSailing Ships and Catapults ignore Weapon Immunity. (635)
+Fixed Insecticide bug : Weapon Immunity provides  +50 instead of  +10 against physical non-melee attacks ( Thrown,  Boulder,  Missile). (637)
+Fixed bug : Weakness does not affect  Thrown attacks. (638)
+Fixed bug: Life Stealing units ignore Irreversible Damage. (700)
+Fixed bug:  Ranged Magical Attacks are not always doubled correctly by Haste. (744)
+Fixed bug: Ability FirstStrike First Strike  figures slain by Ability DoomGaze Doom Gaze sometimes still participate in melee. (746)
+
+## 1.51 to 1.60 (Community Patch)
+Actually nothing
+
+---
+
+## 12. Caster of Magic (CoM) — Changes Affecting Damage Calculation
+
+Extracted from `CoM2 material/CoM change log.txt`. Covers lines 2700–10639 of the changelog. **Lines 1–2699 (versions 0.2 through ~1.0b) were not reviewed** and may contain additional combat-relevant changes from early development.
+
+All entries below describe how CoM2 deviates from the MoM mechanics described in §1–§11 above.
+
+### 12a. Critical Mechanic Changes
+
+These fundamentally alter how the damage pipeline works compared to MoM.
+
+1. **To Hit / To Defend cap at +7** — Maximum bonus is +7 (base 30% + 7×10% = 100%). Bonuses above +7 have no further effect. `[v5.15]`
+
+2. **To Defend bonus only applies to the first 15 defense points** — Defense dice above 15 always roll at base 30% To Block, regardless of To Defend bonuses. `[v1.4]`
+
+3. **Range penalties completely reworked** — MoM's simple 3-tier system is replaced by: 1–5 tiles: 1×, 6–8: 1.2×, 9–13: 1.5×, 14–17: 2×, 18–20: 2.5×, 21+: 3×. **Heroes with bows ignore range penalties entirely.** `[v5.44, v5.21]`
+
+4. **"Supernatural" minimum damage mechanic** — Units with the `Supernatural` ability partially bypass shields. For each single-figure attack dealing 7+ damage: 1 point of damage ignores all defensive reductions, plus an additional 1 per 2 points above 7 (rounded down). Example: 15 damage → 1 + (8/2) = 5 minimum damage. Does NOT apply vs full immunities (Magic, Missile, Fire Immunity). Only affects unit attacks, not spells. `[EXP12, refined EXP13]`
+
+5. **First Strike HP threshold** — First Strike only works against figures with ≤24 remaining HP. Figures with 25+ HP still retaliate even against First Strike attackers. `[v2.7]`
+
+6. **Magic Immunity no longer blocks Breath attacks** — Fire Breath and Lightning Breath now bypass Magic Immunity entirely. Magic Immunity still protects against other magical attacks (gaze, touch, spells, magical ranged). `[v2.3, fix confirmed v2.52]`
+
+7. **Blur and Invisibility rework** — Blur provides a 20% chance of completely blocking an incoming attack (per attack, not per die). Invisibility now works the same way as Blur (no longer a To Hit penalty). If both Blur and Invisibility are active, the combined block chance is 30%. `[v5.4, v5.5]`
+
+8. **Haste no longer doubles counterattacks** — Haste still doubles the unit's own attacks when it is the active attacker, but does not grant extra counterattacks when defending. `[v1.4]`
+
+9. **Separate To Melee / To Range bonuses** — CoM2 units can have different To Hit bonuses for melee and ranged attacks (displayed as "To Melee" and "To Range" in the UI). `[v1.21]`
+
+10. **Weapon Immunity = +8 defense** — Against non-magical physical attacks (melee, thrown, boulder, missile from Normal Units), Weapon Immunity provides +8 defense (not +10 as in MoM). Was bugged as full immunity vs ranged physical in some versions; fixed in v5.12. `[v4.01, v5.12]`
+
+### 12b. Ability Mechanic Changes
+
+11. **Regeneration is now variable** — Ability is `Regeneration X`, where X = HP restored per combat turn. Values vary by unit (e.g., Werewolves: 1, Shadow Demons: 2, Behemoth: 3, Hydra: 7, Trolls: 1, Troll Shaman: 2). Spells grant Regeneration 2, items grant Regeneration 1. Only the highest value applies (no stacking). `[v5.44, EXP9G]`
+
+12. **Thrown/Breath level bonuses reduced** — Only +1 from the Veteran level. Regular and Ultra Elite levels no longer increase Thrown or Breath attack strength. `[v5.44]`
+
+13. **Poison now has a universal -1 save modifier** — All poison attacks (Poison Touch, Poison ranged) apply a -1 penalty to the target's Resistance roll. `[v5.03]`
+
+14. **Large Shield = +3 defense vs ranged attacks** — Replaces the MoM Large Shield behavior. `[v2.0]`
+
+15. **Blood Lust** (Death Uncommon, overland enchantment) — Unit becomes undead. Melee attack is **doubled** vs normal (non-fantastic) units. `[v2.93]`
+
+16. **Warp Creature rework** — "Halved Attack" now applies to ALL attack types (melee, ranged, thrown, breath, etc.), not just melee. "Halved Defense" is now 1/3 defense instead of 1/2. `[v3.04]`
+
+### 12c. Enchantment and Buff Spell Changes
+
+17. **Bless rework** — Now grants +5 defense and +5 resistance, but only against Chaos/Death realm spells and ranged/breath/gaze attacks from Chaos/Death creatures. Does NOT add defense vs magical ranged attacks (v5.4 change), but still works vs spells. No longer protects against normal melee from Chaos/Death creatures. `[v1.4, v2.4, v5.4]`
+
+18. **Resist Elements rework** — Grants defense against all magical ranged attacks and spells, but resistance bonus only applies against Nature realm effects (e.g., petrification). Does NOT affect thrown attacks. `[v2.3, v2.52]`
+
+19. **Elemental Armor rework** — Grants +12 defense against all magical ranged attacks and spells. No resistance bonus. Does NOT affect thrown attacks. `[v2.3, v2.52]`
+
+20. **Eldritch Weapon removed from the game.** `[v4.01]`
+
+21. **Flame Blade, Blazing March, Lionheart no longer add to Thrown attacks.** `[v5.44]`
+
+22. **Endurance = +2 flat defense** (not +1 To Defend as in MoM). `[v5.45]`
+
+23. **Holy Armor = +1 To Defend** if the unit has 6+ base defense. Now **overland only** — cannot be cast in combat. `[v5.45, v5.56]`
+
+24. **Chaos Channels now adds strength 4 Fire Breath** (in addition to other effects). `[v1.4]`
+
+25. **Vertigo rework** — Reduces target's To Defend by 1 and To Hit by 3 (no longer reduces flat defense). `[v2.4]`
+
+26. **Terror rework** — Resistance penalty is -3 (not -4). Additionally applies -1 To Hit to ALL enemy units (regardless of resistance or immunities). `[v1.35, v2.0]`
+
+27. **Wall of Fire no longer damages the owner's units.** `[v5.51]`
+
+28. **Heavenly Light** — Now also adds +1 to ranged/thrown/breath attack strength. Additionally grants magical weapons to all defending units (+1 To Hit where applicable). `[v5.4, v5.51]`
+
+29. **Holy Bonus now affects ranged attacks** (not just melee). `[v6.05]`
+
+30. **Mystic Surge** (Chaos Uncommon, new combat enchantment) — Grants +3 movement, +2 defense, random additional buffs. Drawbacks: -2 resistance, unit counts as fantastic, cannot be healed, reduced to 1 HP at end of battle. Its enemy To Defend reduction of -1 applies to ALL attack types. `[v4.01, v6.0]`
+
+31. **Wraith Form no longer grants Poison Immunity.** `[v5.03, v5.7]`
+
+32. **Holy Weapon can be cast in combat** (was overland only in MoM). `[v1.21a]`
+
+33. **Iron Skin, Holy Armor, Demon Skin (from Chaos Channels) apply armor AFTER Berserk reduces it to zero.** `[v1.2]`
+
+### 12d. Immunity System Changes
+
+34. **Death realm creatures no longer automatically receive Poison/Death/Cold/Illusion immunity.** Instead, only undead units get Death, Cold, and Illusion immunity (but NOT Poison immunity). Each unit's immunities must be checked individually. `[v5.45]`
+
+35. **Zombies and all undead lose Poison Immunity.** `[v5.45]`
+
+36. **Golems lost Magic Immunity** — Now have Cold, Fire, Stoning, Death immunity + Resist Elements instead. Lost Illusion Immunity in v5.12. `[v5.03, v5.04, v5.12]`
+
+37. **Weakness now ignores Death Immunity and affects all ranged attack types.** `[v5.45]`
+
+38. **Gate of Hades** (renamed from Wrack) — Deals irrecoverable damage that ignores Death Immunity. `[v5.45]`
+
+### 12e. Combat Spells (new or significantly changed)
+
+39. **Wave of Despair** (Death Rare, combat, cost 72) — Effective strength = 255 − (resistance + 10), divided among affected units. Deals irrecoverable cold damage. Ignores Bless, Resist Magic, Defense, and defense-vs-spells effects. Blocked by Cold Immunity and Magic Immunity. Unaffected by cost-modifying effects. `[v2.93, v5.21, v5.23, v5.42]`
+
+40. **Aether Sparks** (Sorcery Common, cost 12) — Strength 20 magical damage. Additionally causes target to lose half its mana and half its magical ammo. `[v2.0, v2.5b]`
+
+41. **Crack's Call** (cost 25) — Now deals the greater of 21 damage or 5 × living figures in the target unit. `[v2.6, v1.0c]`
+
+42. **Doom Bolt** — Now deals 12 damage, costs 45. `[v5.24]`
+
+43. **Psionic Blast** — Now strength 18. `[v5.24]`
+
+44. **Fireball split** — Strength 12 when cast by heroes or wizards. Strength 10 when cast via the Fireball Spell unit ability. `[v4.01]`
+
+45. **Life Drain** — Save modifier now -5. No longer produces SP. `[v5.2, v5.55]`
+
+46. **Syphon Life** — Save modifier now -11. No longer produces SP. `[v5.5, v5.55]`
+
+47. **Bonus HP cap** — Maximum +90 HP can be gained from Life Drain/Exaltation during a single combat. `[v5.15]`
+
+48. **Flame Strike** — Now strength 32. `[v4.01]`
+
+49. **Lightning Bolt** — Now strength 36. `[v5.21]`
+
+50. **Warp Lightning** — Now strength 12 warp attack. `[v2.95]`
+
+51. **Blizzard** — Now costs 120, strength 14 area cold attack. `[v2.0]`
+
+52. **Star Fires** — Now costs 12, strength 23, hits any fantastic creature (not just Death/Chaos). `[v2.0]`
+
+53. **Exorcise** (renamed from Dispel Evil/Holy Avenger) — Save -1 (additional -3 vs undead), hits any fantastic unit, costs 20. Touch attack version: save -3, additional -3 vs undead. `[v2.0]`
+
+54. **Call Lightning** — Now does strength 10 lightning bolts. `[EXP9J]`
+
+55. **Counter Magic rework** — No longer has a slider. Costs 50, creates a "counter pool" of 70 (was 80, reduced v5.6). Uranus' Blessing provides a strength 50 counter pool. `[EXP13, v5.6]`
+
+56. **Stasis** (can be used in combat) — Target resists at -5 or is locked in stasis. Costs 25. `[v2.0]`
+
+### 12f. New Hero Abilities (combat-relevant)
+
+57. **Guiding Beacon** — All units in army gain +(hero experience level / 3) to ranged attacks (both missile and magical). `[v1.4]`
+
+58. **Soul Linker** — All friendly fantastic creatures gain +1 To Hit or +1 To Defend per 2 hero levels. `[v1.4]`
+
+59. **Supply Commander** — All friendly units in combat have +2 ammo. `[v1.4]`
+
+60. **Divine Barrier** — All friendly units in combat gain +1 defense per 3 hero levels. `[v1.4]`
+
+61. **Tactician retort** — All wizard's units have +1 DEF during combat; heroes receive +2 DEF, +2 RES, and +2 to all attack strengths. Mutually exclusive with Warlord. `[v2.4, v5.44]`
+
+62. **Capacity** — Increases ammo by 1 per 2 hero levels. Super version exists. `[v1.4]`
+
+### 12g. Fortress and Siege Changes
+
+63. **Fortress Lightning formula** — Strength = (18 + Skill/8) / 2, maximum 60. Applies for the first 3 + (Skill/20) combat turns. `[v5.03, v5.6]`
+
+64. **Spell Ward rework** — No longer blocks fantastic creatures from entering. Instead applies -2 To Hit, -3 Defense, and -3 Resistance penalty in combat (values adjusted across versions). `[v2.11, EXP12, v5.42]`
+
+### 12h. Changelog Coverage Gaps
+
+The changelog file (`CoM2 material/CoM change log.txt`) is 10,639 lines long. Based on actual Read calls made by the sub-agents, the following lines were read:
+
+- **Lines 1–200**: Read directly (mostly AI priority changes, no combat entries).
+- **Lines 3001–5998**: Read by agents (with overlaps). Covers roughly versions 1.0c through 2.95.
+- **Lines 5999–6198**: Read by agent. Partial coverage of later versions.
+- **Lines 7351–8050**: Read by agent. Partial coverage.
+- **Lines 10101–10639**: Read by agent. Final portion of changelog.
+
+**Unread gaps (lines NOT reviewed):**
+- **Lines 201–3000** (~2800 lines) — early versions, 0.2 through ~1.0b
+- **Lines 6199–7350** (~1150 lines)
+- **Lines 8051–10100** (~2050 lines)
+
+In total, roughly **6000 of 10639 lines were not reviewed**. A future pass should read these gaps to ensure no combat-relevant mechanic changes were missed.

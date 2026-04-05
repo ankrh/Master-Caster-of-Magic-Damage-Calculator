@@ -48,7 +48,10 @@
       "Bash(python generate_unit_overview.py)",
       "Bash(python generate_com2_units_json.py)",
       "Bash(python parse_changeunit.py)",
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "Bash(python generate_com2_unit_roster.py)",
+      "Bash(python generate_mom_com2_unit_comparison.py)",
+      "Bash(node -e ':*)"
     ]
   }
 }
