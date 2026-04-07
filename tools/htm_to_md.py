@@ -8,6 +8,7 @@ Usage:
     python htm_to_md.py <input.htm>              # prints to stdout
     python htm_to_md.py <input.htm> -o out.md    # writes to file
     python htm_to_md.py --all <directory>         # converts all top-level .htm in dir
+    python .\tools\htm_to_md.py --all "C:\CoM2-damage-calculator\Manuals\MoM source - Fandom site\saved pages"
 """
 
 import sys

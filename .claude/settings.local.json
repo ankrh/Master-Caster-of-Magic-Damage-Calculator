@@ -58,7 +58,9 @@
       "Bash(python3 -c \"import json; f = open\\('MoM_units_parsed.json'\\); data = json.load\\(f\\); entries = [v for k, v in data.items\\(\\) if 'abilities' in v and len\\(v['abilities']\\) > 1]; [print\\(f\\\\\"{v['name']}: {v['abilities']}\\\\\"\\) for v in entries[:10]]\")",
       "Bash(python3)",
       "Bash(python3 parse_tweaker_unit_data.py)",
-      "Bash(python parse_tweaker_unit_data.py)"
+      "Bash(python parse_tweaker_unit_data.py)",
+      "Bash(python -m http.server 8765)",
+      "mcp__playwright__browser_console_messages"
     ]
   }
 }

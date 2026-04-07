@@ -1,0 +1,282 @@
+Spell Blast:
+Sorcery. Instant. Casting Cost: 50+ mana. Uncommon.
+Attempts, through the direct manipulation of magic power, to
+counter an enemy wizard’s spell as it is being cast. When spell blast
+takes effect, a wizard must expend an amount of his or her own
+magic power (from mana reserves) equal to the amount already put
+into the enemy wizard’s spell to blast that spell out of existence. If
+the wizard does not have enough mana, spell blast fails.
+Spell Lock:
+Sorcery. Creature Enchantment. Casting Cost: 20 or 100 mana;
+Upkeep: 1 mana/turn. Uncommon.
+Prevents a target unit’s positive enchantments from being
+dispelled. If the target unit is a summoned creature, it also protects
+the bonds that keep it tied to the controlling wizard. Spell lock must
+be dispelled before any further enchantments can be removed from
+the creature or unit.
+Spell of Mastery:
+Arcane. Global Enchantment. Casting Cost: 5000 mana. Very Rare.
+Gives a wizard, who successfully casts it, total control over all
+magic in both planes, with the result that enemy wizards can no
+longer cast spells. In addition, all summoned creatures are
+banished. The most important effect of successfully casting spell of
+mastery, however, is that by divesting all enemies of the ability to use
+magic, the casting wizard wins the game!
+Spell Ward:
+Sorcery. City Enchantment. Casting Cost: 350 mana;
+Upkeep: 5 mana/turn. Very Rare.
+Envelops the target town in protective magic, providing the city
+square with complete immunity from all overland spells of a specific
+magic type (chaos, death, life, nature or sorcery—spell caster’s
+choice). This protective influence bars combat spells of that warded
+type from being cast, and magically prohibits creatures (whether
+friendly or enemy) summoned from the warded realm from entering
+the town.
+Sprites:
+Nature. Summoning. Casting Cost: 100 mana; Upkeep: 3 mana/turn.
+Common.
+Summons sprites. Sprites are small, flying forest creatures that
+can hurl tiny magic attacks over long distances.
+30
+Star Fires:
+Life. Instant Combat. Casting Cost: 10 mana. Common.
+Causes a holy blaze of burning light from the stars (strength 15
+magic attack) to fall upon a target chaos or death unit (no other
+creatures can be affected).
+Stasis:
+Sorcery. Creature Enchantment. Casting Cost: 250 mana. Rare.
+Paralyzes all enemy units in a target map square for a minimum
+of one turn. After the first turn a unit passes in stasis, it has one
+opportunity per turn to free itself by successfully resisting (at a
+penalty of five to resistance) the stasis field.
+Stone Giant:
+Nature. Summoning. Casting Cost: 450 mana; Upkeep: 9 mana/turn.
+Rare.
+Summons an enormous, wall-crushing stone giant. The massive
+stone giant is impervious to stoning attacks and can hurl huge
+boulders at its enemies.
+Stone Skin:
+Nature. Creature Enchantment. Casting Cost: 10 or 50 mana;
+Upkeep: 1 mana/turn. Common.
+Causes a target unit’s skin to harden, increasing the unit’s
+defense (shields) by one.
+Storm Giant:
+Sorcery. Summoning. Casting Cost: 10 or 50 mana;
+Upkeep: 1 mana/turn. Rare.
+Summons a lightning bolt-wielding storm giant. Storm giants not
+only hurl vicious lightning bolts over long distances, they also use
+lightning bolts when fighting hand-to-hand with their enemies.
+Stream of Life:
+Life. City Enchantment. Casting Cost: 300 mana;
+Upkeep: 8 mana/turn. Rare.
+Turns an ordinary friendly city into a fertile utopia. Population
+growth rates double in the city and all units in the city heal
+completely at the end of every game turn. The citizens are so
+pleased with their town that unrest completely disappears!
+Subversion:
+Death. Instant. Casting Cost: 100 mana. Uncommon.
+Creates a state of universal contempt toward the target enemy
+wizard, causing his or her diplomatic relations with all other wizards
+to suffer severely.
+31
+Summon Champion:
+Arcane. Summoning. Casting Cost: 750 mana. Rare.
+Summons a random powerful hero to the wizard’s enchanted
+fortress. When summoned by this spell, the hero waives his or her
+usual hiring fee, offering to join the wizard for free. Note that a
+wizard is not obligated to accept the hero’s services. This spell
+cannot be cast if you already have a full complement of six heroes
+on your side.
+Summon Hero:
+Arcane. Summoning. Casting Cost: 300 mana. Uncommon.
+Summons a random hero (less powerful than those summoned
+by summon champion) to the wizard’s enchanted fortress. When
+summoned by this spell, the hero offers to join the wizard without
+requiring the usual initial gold payment. Note that a wizard is not
+obligated to accept the hero’s services. This spell cannot be cast if
+you already have six heroes on your side.
+Summoning Circle:
+Arcane. Instant. Casting Cost: 50 mana. Common.
+Moves the target summoning circle (originally present in the city
+with the wizard’s enchanted fortress) to a new city.
+Suppress Magic:
+Sorcery. Global Enchantment. Casting Cost: 50 mana;
+Upkeep: 40 mana/turn. Very Rare.
+Tries to prevent, with a strength 500 dispelling force,
+all enemy
+overland spells and enchantments.
+Terror:
+Death. Combat Enchantment. Casting Cost: 20 mana. Common.
+Casts a pall of fear on all enemy units. During every combat turn,
+each enemy unit must attempt (plus one bonus to resistance) to
+overcome the terror that grips it, or cower in fear. When a unit is
+cowering it cannot attack; however, the unit can still counterattack
+when it is defending against melee attacks initiated by the enemy.
+Time Stop:
+Sorcery. Global Enchantment. Casting Cost: 1500 mana;
+Upkeep: 150 mana/turn. Very Rare.
+Stops the passage of time for all enemy wizards. The rest of the
+world stops as well. Only the casting wizard may move units, and
+attack as normal. He or she must pay maintenance on this spell, but
+only on this spell!
+32
+Tranquility:
+Life. Global Enchantment. Casting Cost: 1100 mana;
+Upkeep: 10 mana/turn. Very Rare.
+Tries to prevent all chaos magic spells, requiring them to resist
+the forces of life as if a strong disjunction—strength 500—had just
+been cast.
+Transmute:
+Nature. Instant. Casting Cost: 60 mana. Uncommon.
+Transforms coal and ores in hills and mountains into different
+types: coal to gems, iron to gold and silver to mithril. The
+transmutation is permanent.
+True Light:
+Life. Combat Enchantment. Casting Cost: 20 mana. Common.
+Calls upon the forces of life magic to shine a holy light upon a
+field of battle. All creatures of life are bathed in the light’s glow and
+gain one to their attack strengths (swords), defense (shield), and
+resistance (cross). Creatures of death are hampered by the
+brightness, losing one to each of their attack strengths, defense, and
+resistance. True light and darkness exert opposite effects and therefore
+cancel each other’s effects.
+True Sight:
+Life. Creature Enchantment. Casting Cost: 20 or 100 mana;
+Upkeep: 2 mana/turn. Uncommon.
+Endows a target normal unit with the gift of immunity to illusions
+and allows the unit to see through wall of darkness.
+Unicorns:
+Life. Summoning. Casting Cost: 250 mana; Upkeep: 5 mana/turn.
+Uncommon.
+Calls a herd of magic unicorns. These lovely creatures can
+teleport to any location on the battlefield and inspire their allies with
+an increased ability to resist the effects of negative spells.
+Vertigo:
+Sorcery. Creature Enchantment. Casting Cost: 25 mana. Uncommon.
+Attempts to cause a target unit an acute attack of vertigo during
+combat. Affected units suffer a penalty to hit of two (i.e., they have
+a -20% chance to hit) and have more trouble defending than usual
+(lose one to defense).
+33
+Wall of Darkness:
+Death. City Enchantment. Casting Cost: 40 or 200 mana;
+Upkeep: 5 mana/turn. Uncommon.
+Surrounds a city with a wall of utter night, protecting the garrison
+from ranged attacks and preventing all enemy units (without true
+sight or immunity to illusions) from peering in. However, wall of darkness
+does not prevent those inside from launching ranged attacks on
+enemy units.
+Wall of Fire:
+Chaos. City Enchantment. Casting Cost: 30 or 150 mana;
+Upkeep: 2 mana/turn. Common.
+Calls upon the realm of chaos to surround a target city with a
+magic wall of flames. While ranged attacks and flying units are not
+affected, all non-flying creatures that attempt to breach this wall
+suffer from a strength five magic attack.
+Wall of Stone:
+Nature. City Enchantment. Casting Cost: 50 mana. Common.
+Surrounds a target city with a sturdy stone wall.
+War Bears:
+Nature. Summoning. Casting Cost: 70 mana; Upkeep: 2 mana/turn.
+Common.
+Summons a group of ferocious bears.
+Warp Creature:
+Chaos. Creature Enchantment. Casting Cost: 18 mana. Common.
+Attempts to mutate all creatures within a target unit during
+combat. Target creatures suffer a penalty of one to their resistance
+when trying to withstand being warped. Mutated or warped creatures
+suffer from one of the following degenerative changes: half strength
+attacks, half strength defense, or no magic resistance.
+Warp Lightning:
+Chaos. Instant Combat. Casting Cost: 35 mana. Rare.
+Sends a chain of lightning bolts ripping through a target unit. The
+first bolt of lightning has a strength of 10, the second has a strength
+of nine, and so on, until all figures in the unit are dead or the chain
+of lightning is exhausted (reduced to a strength of zero).
+Warp Node:
+Death. Global Enchantment. Casting Cost: 75 mana. Rare.
+Corrupts a magic node, causing it to suck five mana per turn out
+of the controlling wizard’s magic power reserve, instead of
+contributing to it! A warped node can only be returned to normal
+function by disenchant area or disenchant true.
+34
+Warp Reality:
+Chaos. Combat Enchantment. Casting Cost: 50 mana. Rare.
+Distorts
+all (both friendly and enemy) non-chaos units’ perception
+of reality. Affected units suffer a penalty to hit of two (–20%).
+Warp Wood:
+Chaos. Instant Combat. Casting Cost: 10 mana. Common.
+Immediately twists and destroys all missile (bow symbol)
+ammunition of a target normal group. There is no way to prevent the
+effect of this spell.
+Water Walking:
+Nature. Creature Enchantment. Casting Cost: 50 mana;
+Upkeep: 1 mana/turn. Common.
+Endows a figure with the ability to walk on water. The unit’s
+movement speed remains unchanged.
+Weakness:
+Death. Creature Enchantment. Casting Cost: 5 mana. Common.
+Saps the strength out of a target unit’s creatures during combat.
+All figures suffer a penalty of minus two to their melee, thrown and
+ranged attack strengths. Units get no chance to resist this spell.
+Web:
+Nature. Creature Enchantment. Casting Cost: 10 mana. Common.
+Casts a sticky web over the creatures in a target unit. Creatures
+stuck in this web may not move until they have destroyed the web.
+The web has a total of 12 “hit points” (hearts, but no defenses) and
+can only be destroyed by the trapped unit’s melee and magic ranged
+attacks, both of which do their full force in damage against webs.
+The sticky remnants of the web prevent flying units that were
+trapped from flying for the remainder of the battle.
+Wind Mastery:
+Sorcery. Global Enchantment. Casting Cost: 400 mana;
+Upkeep: 10 mana/turn. Uncommon.
+Calls the wind to the aid of a wizard. All of the wizard’s ships,
+including air ships and floating islands, may move at double their
+normal speed, while the wind hinders the movement of ships
+controlled by the wizard’s enemies, causing them to move at
+half speed.
+35
+Wind Walking:
+Sorcery. Creature Enchantment. Casting Cost: 250 mana;
+Upkeep: 20 mana/turn. Rare.
+Gives a target unit the power of flight (with a speed of three). All
+units stacked with wind walking creatures move at the same speed.
+Wind walking exerts no effects during combat; although, units
+stacked with wind walking creatures may fight over ocean squares
+during combat (they appear with small islands under their feet
+during combat).
+Word of Death:
+Death. Instant Combat. Casting Cost: 40 mana. Very Rare.
+Calls upon the power of death to attempt to instantly destroy all
+creatures within a target unit. Units suffer a penalty of minus five to
+resistance when trying to withstand this demonic utterance.
+Word of Recall:
+Sorcery. Instant. Casting Cost: 20 mana. Common.
+Transports a target friendly unit back to the wizard’s enchanted
+fortress. If there is no space in the enchanted fortress for the recalled
+unit, one of the units already occupying the city square is displaced
+onto a neighboring land square.
+Wrack:
+Death. Combat Enchantment. Casting Cost: 40 mana. Rare.
+Wracks all non-death creatures with the agonies of darkness
+every combat turn. All enemy figures that cannot resist this pain
+lose one hit point.
+Wraith:
+Death. Summoning. Casting Cost: 500 mana; Upkeep: 5 mana/turn.
+Rare.
+Summons lifestealing, non-corporeal wraiths.
+Wraithform:
+Death. Creature Enchantment. Casting Cost: 30 or 150 mana;
+Upkeep: 3 mana/turn. Rare.
+Gives a target unit weapon immunity and an insubstantial wraith-
+like form (the unit becomes non-corporeal).
+Zombie Mastery:
+Death. Global Enchantment. Casting Cost: 800 mana;
+Upkeep: 8 mana/turn. Rare.
+Causes all normal units that die in any combat to become, after
+the battle ends, mindless zombies under the control of the casting
+wizard. These zombies do not heal in
+any way, nor can they be
+raised from the dead.
