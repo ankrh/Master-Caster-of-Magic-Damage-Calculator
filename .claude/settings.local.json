@@ -60,7 +60,9 @@
       "Bash(python3 parse_tweaker_unit_data.py)",
       "Bash(python parse_tweaker_unit_data.py)",
       "Bash(python -m http.server 8765)",
-      "mcp__playwright__browser_console_messages"
+      "mcp__playwright__browser_console_messages",
+      "Bash(echo \"Server PID: $!\")",
+      "mcp__playwright__browser_close"
     ]
   }
 }

@@ -1,0 +1,508 @@
+:root {
+  --bg: #1a1a2e;
+  --panel: #16213e;
+  --border: #0f3460;
+  --accent: #e94560;
+  --text: #eee;
+  --muted: #999;
+  --two-panel-width: calc(480px * 2 + 1.5rem);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; scrollbar-color: var(--border) transparent; }
+*::-webkit-scrollbar { width: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+h1 {
+  text-align: center;
+  margin-bottom: 0.25rem;
+  font-size: 1.5rem;
+}
+.version-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0.25rem;
+}
+.version-bar label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.version-bar select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.swap-btn {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.swap-btn:hover { border-color: var(--accent); color: var(--accent); }
+.subtitle {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+/* --- Input Panels --- */
+.panels {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  min-width: 400px;
+  flex: 0 1 480px;
+}
+.panel h2 {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.unit-select {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 180px;
+}
+.panel-fields.locked input,
+.panel-fields.locked select {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.panel-fields.locked input[id$="Dmg"],
+.panel-fields.locked select[id$="Weapon"],
+.panel-fields.locked select[id$="Level"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.panel-fields select[id$="Weapon"].weapon-locked {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.panel-fields select[id$="Level"]:disabled {
+  opacity: 0.5;
+}
+.panel-fields {
+  display: grid;
+  grid-template-columns: auto 1fr 62px auto;
+  align-items: center;
+  row-gap: 0.65rem;
+  column-gap: 0.5rem;
+}
+.panel-fields label {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  grid-column: 1;
+}
+.panel-fields input, .panel-fields select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: center;
+}
+/* standalone input: skip col 2, land in col 3 */
+.panel-fields > input[type="number"] {
+  grid-column: 3;
+}
+/* standalone select: span cols 2-4 */
+.panel-fields > select {
+  grid-column: 2 / 5;
+  text-align: left;
+}
+/* dropdown + input combos */
+.panel-fields > select.mid {
+  grid-column: 2;
+  text-align: left;
+}
+/* "30 +" prefix text in col 2, right-aligned */
+.prefix {
+  grid-column: 2;
+  text-align: right;
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+/* "%" suffix overlaps after col 3 */
+.suffix {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-left: -0.3rem;
+}
+/* Modified stat value (col 4) */
+.mod-val {
+  grid-column: 4;
+  font-size: 0.9rem;
+  color: var(--accent);
+  white-space: nowrap;
+  min-width: 2.5em;
+  visibility: hidden;
+}
+.mod-val.visible {
+  visibility: visible;
+}
+/* --- Presets Sidebar --- */
+.page-layout {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  align-items: flex-start;
+}
+.presets {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-width: 180px;
+  max-width: 200px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 1.5rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+.presets h2 {
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.presets button {
+  display: block;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+  line-height: 1.3;
+}
+.presets button:hover {
+  background: var(--border);
+}
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+/* --- Common Fields --- */
+.common-fields {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.common-fields label {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  margin-left: 1rem;
+}
+.common-fields label:first-child {
+  margin-left: 0;
+}
+.common-fields input, .common-fields select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: center;
+}
+.common-fields input { width: 62px; }
+.common-fields select { text-align: left; }
+/* --- Combat Enchantments Box --- */
+.combat-enchantments {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  margin: 0 auto 1rem;
+  max-width: var(--two-panel-width);
+}
+.combat-enchantments .abil-check {
+  font-size: 0.9rem;
+}
+.field-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.enchant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin-top: 0.3rem;
+}
+.enchant-row select, .enchant-row-select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: left;
+}
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.check-label input[type="checkbox"] { margin: 0; cursor: pointer; }
+.disabled-field { opacity: 0.3; pointer-events: none; }
+/* --- Results --- */
+.results {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: var(--two-panel-width);
+  margin: 0 auto;
+}
+.results > .dist-panel {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.dist-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+.dist-header {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+.dist-header .avg {
+  color: var(--accent);
+}
+.dist-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.dist-table th {
+  color: var(--muted);
+  font-weight: normal;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.dist-table th:first-child { text-align: left; }
+.dist-table th:last-child { text-align: right; }
+.dist-table td {
+  padding: 0.2rem 0.5rem;
+  border: none;
+}
+.dist-table tr { border-bottom: 1px solid rgba(15, 52, 96, 0.4); }
+.dist-table .dmg-cell {
+  text-align: left;
+  font-weight: bold;
+  width: 50px;
+}
+.dist-table .chance-cell {
+  position: relative;
+  text-align: right;
+  padding-right: 0.5rem;
+}
+.chance-bar {
+  position: absolute;
+  left: 0;
+  top: 1px;
+  bottom: 1px;
+  border-radius: 2px;
+  opacity: 0.3;
+}
+.chance-text {
+  position: relative;
+  z-index: 1;
+}
+.dist-table .peak .chance-text {
+  font-weight: bold;
+  color: #fff;
+}
+.dist-scroll {
+  max-height: 460px;
+  overflow-y: auto;
+}
+/* --- Damage Breakdown Grid --- */
+.breakdown-section {
+  flex-basis: 100%;
+  margin-top: 0.25rem;
+}
+.breakdown-label {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--muted);
+  text-align: center;
+  padding: 0.4rem 0;
+}
+.breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.breakdown-grid .dist-scroll {
+  max-height: 300px;
+}
+.breakdown-phase-label {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.4rem 0 0.1rem 0.25rem;
+  border-top: 1px solid var(--border);
+}
+.breakdown-phase-label:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+/* --- Abilities Expandable Section --- */
+.abilities-section {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+.abilities-section summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--muted);
+  user-select: none;
+  padding: 0.25rem 0;
+}
+.abilities-section summary:hover {
+  color: var(--text);
+}
+.abilities-content {
+  padding-top: 0.5rem;
+}
+.abilities-content.locked .group-abilities input,
+.abilities-content.locked .group-abilities select,
+.abilities-content.locked .group-abilities label {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.abil-group-header {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0.5rem 0 0.25rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid rgba(15, 52, 96, 0.4);
+}
+.abil-group-header:first-child {
+  margin-top: 0;
+}
+.abil-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem 0.5rem;
+}
+.abil-check {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.abil-check input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+.abil-num-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.abil-num-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  margin: 0.15rem 0;
+}
+.abil-num-row label {
+  flex: 1;
+  white-space: nowrap;
+}
+.abil-num-row select {
+  flex: none;
+  padding: 0.2rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  text-align: left;
+}
+.abil-num-row:has(select) label {
+  flex: none;
+}
+.abil-num-row input[type="number"] {
+  width: 50px;
+  padding: 0.2rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+/* Realm colors for enchantments */
+.realm-life { color: grey; }
+.realm-death { color: violet; }
+.realm-nature { color: green; }
+.realm-sorcery { color: dodgerblue; }
+.realm-chaos { color: orange; }

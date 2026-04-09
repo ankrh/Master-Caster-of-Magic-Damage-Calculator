@@ -26,3 +26,7 @@ VERIFIED UNITS.DAT ACCURATE IN-GAME CoM2
 - **Any source for ammo of MoM units?**
 
 - **CoM2 hero caster stats?**
+
+- Test darkness effect on gaze attacks
+
+- Avoid negative stats after modifiers

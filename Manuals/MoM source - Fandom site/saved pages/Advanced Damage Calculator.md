@@ -1,0 +1,30 @@
+|  |  |  |  |  |
+| --- | --- | --- | --- | --- |
+| Ariel | |  | Rjak | |
+| Custom Hero Barbarian Gnoll Halfling High Elf High Men Klackon Lizardmen Nomad Orc Beastmen Dark Elf Draconian Dwarf Troll Life Death Chaos Nature Sorcery Arcane |  | v1.31 v1.40n | Custom Hero Barbarian Gnoll Halfling High Elf High Men Klackon Lizardmen Nomad Orc Beastmen Dark Elf Draconian Dwarf Troll Life Death Chaos Nature Sorcery Arcane |  |
+|  | |  |  | |
+| [Figures](https://masterofmagic.fandom.com/wiki/Figures "Figures") Figures: | 1 2 4 6 8 9 |  | [Figures](https://masterofmagic.fandom.com/wiki/Figures "Figures") Figures: | 1 2 4 6 8 9 |
+| Attack: | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 |  | Attack: | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 |
+| No range Magic (C) Magic (N) Magic (S) Missile Rock | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 |  | No range Magic (C) Magic (N) Magic (S) Missile Rock | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 |
+| [Defense](https://masterofmagic.fandom.com/wiki/Defense "Defense") Defense: | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 |  | [Defense](https://masterofmagic.fandom.com/wiki/Defense "Defense") Defense: | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 |
+| [Resistance](https://masterofmagic.fandom.com/wiki/Resistance "Resistance") Resistance: | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 |  | [Resistance](https://masterofmagic.fandom.com/wiki/Resistance "Resistance") Resistance: | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 |
+| [To Hit](https://masterofmagic.fandom.com/wiki/To_Hit "To Hit") Base to-hit: | 30  - 20 - 10 + 0 + 10 + 20 + 30 + 40 + 50 + 60 + 70 + 80 + 90 + 100 % |  | [To Hit](https://masterofmagic.fandom.com/wiki/To_Hit "To Hit") Base to-hit: | 30  - 20 - 10 + 0 + 10 + 20 + 30 + 40 + 50 + 60 + 70 + 80 + 90 + 100 % |
+| No th./br. Thrown Fire Lightning | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 |  | No th./br. Thrown Fire Lightning | none 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 |
+| [Defense](https://masterofmagic.fandom.com/wiki/Defense "Defense") To Block: | 30  + 0 + 10 + 20 % |  | [Defense](https://masterofmagic.fandom.com/wiki/Defense "Defense") To Block: | 30  + 0 + 10 + 20 % |
+| [Hit Points](https://masterofmagic.fandom.com/wiki/Hit_Points "Hit Points") Hit Points: | 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 |  | [Hit Points](https://masterofmagic.fandom.com/wiki/Hit_Points "Hit Points") Hit Points: | 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 |
+| **Damage taken:** | 0 |  | **Damage taken:** | 0 |
+| **Weapon type:** | Normal Magic Mithril Adamantium |  | **Weapon type:** | Normal Magic Mithril Adamantium |
+| [Experience](https://masterofmagic.fandom.com/wiki/Experience "Experience") Level: |  |  | [Experience](https://masterofmagic.fandom.com/wiki/Experience "Experience") Level: |  |
+|  | |  |  | |
+| **Rolls** (/ left): | (show)  (hide)    Super Agility  Super Agility  Super Blademaster  Super Blademaster  Super Constitution  Super Constitution  Super Leadership  Super Leadership  Super Might  Super Might   Charmed  Lucky   Caster  Super Arcane Power  Super Arcane Power  Super Prayermaster  Super Prayermaster |  | **Rolls** (/ left): | (show)  (hide)    Super Agility  Super Agility  Super Blademaster  Super Blademaster  Super Constitution  Super Constitution  Super Leadership  Super Leadership  Super Might  Super Might   Charmed  Lucky   Caster  Super Arcane Power  Super Arcane Power  Super Prayermaster  Super Prayermaster |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  | Crafted Amulet Amulet of Battle Amulet of Lesser Shielding Amulet of Resistance Band of Chivalry Bird of Paradise Bracer of Invulnerability Bracer of Mrad Cloak of Armor Cross of Blessed Death Devil's Eye of Fear Ehr Rhee Elven Ring of Health Gauntlet of Eastwood Gem of the Aerie Helm of Everlasting Helm of the Tides Helm of Trollish Might Jafar's Orb of Sight Magical Crystal of Power Orb of Fear Orb of Righteous Sight Orion's Belt Pin of Health Ring of Dasmiff Ring of Power Ring of the Mad Mage Trinket of Strength |  |  | Crafted Amulet |  |
+| **Enchantments:** | (show)  (hide)  Bless  Holy Weapon/Holy Arms  Holy Armor  True Sight  Heavenly Light  Invulnerability  Righteousness  Charm of Life  Wraith Form  Cloud of Shadow/E. Night  Eldritch Weapon |  | **Enchantments:** | (show)  (hide)  Bless  Holy Weapon/Holy Arms  Holy Armor  True Sight  Heavenly Light  Invulnerability  Righteousness  Charm of Life  Wraith Form  Cloud of Shadow/E. Night  Eldritch Weapon |
+| **Select attack:** | Melee Ranged |  | **Select attack:** | Melee Ranged |
+| **Ranged attack distance:**  1-2 3-5 6-8 9-11 12-14 15-17 18-20    **Node aura:**  None Chaos Nature Sorcery | | | | |
+
+|  |  |  |
+| --- | --- | --- |
+|  | | |
+|  |  |  |
