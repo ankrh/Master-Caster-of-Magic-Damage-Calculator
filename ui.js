@@ -55,6 +55,17 @@ function buildAbilitiesUI(prefix) {
       const opts = abil.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
       row.innerHTML = `<label for="${id}">${labelHtml}</label><select id="${id}">${opts}</select>`;
       numGridDiv.appendChild(row);
+    } else if (abil.type === 'numcheck') {
+      gridDiv = null;
+      if (!numGridDiv) {
+        numGridDiv = document.createElement('div');
+        numGridDiv.className = 'abil-num-grid ' + currentGroupClass;
+        container.appendChild(numGridDiv);
+      }
+      const row = document.createElement('div');
+      row.className = 'abil-num-row';
+      row.innerHTML = `<input type="checkbox" id="${id}_on"><label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
+      numGridDiv.appendChild(row);
     } else {
       gridDiv = null;
       if (!numGridDiv) {
@@ -73,14 +84,25 @@ function buildAbilitiesUI(prefix) {
 function parseAbilitiesFromUnit(unit) {
   const result = {};
   const abilities = unit.abilities || [];
+  // Normalize: strip spaces from ability strings for matching against camelCase match keys
+  const normalized = abilities.map(a => a.replace(/ /g, ''));
   for (const abil of ABILITY_DEFS) {
     if (abil.type === 'bool') {
-      result[abil.key] = abilities.some(a => a === abil.match || a.startsWith(abil.match + '='));
-    } else {
-      const found = abilities.find(a => a.startsWith(abil.match + '='));
+      result[abil.key] = normalized.some(a => a === abil.match || a.startsWith(abil.match + '='));
+    } else if (abil.type === 'numcheck') {
+      const found = normalized.find(a => a.startsWith(abil.match + '='));
       if (found) {
         result[abil.key] = parseInt(found.split('=')[1]) || 0;
-      } else if (abilities.includes(abil.match)) {
+      } else if (normalized.includes(abil.match)) {
+        result[abil.key] = 0;
+      } else {
+        result[abil.key] = null;
+      }
+    } else {
+      const found = normalized.find(a => a.startsWith(abil.match + '='));
+      if (found) {
+        result[abil.key] = parseInt(found.split('=')[1]) || 0;
+      } else if (normalized.includes(abil.match)) {
         result[abil.key] = 1;
       } else {
         result[abil.key] = 0;
@@ -98,6 +120,11 @@ function applyAbilities(prefix, abilValues) {
       el.checked = !!abilValues[abil.key];
     } else if (abil.type === 'select') {
       el.value = abilValues[abil.key] || abil.options[0][0];
+    } else if (abil.type === 'numcheck') {
+      const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
+      const val = abilValues[abil.key];
+      if (chk) chk.checked = val != null;
+      el.value = val != null ? val : 0;
     } else {
       el.value = abilValues[abil.key] || 0;
     }
@@ -112,6 +139,10 @@ function clearAbilities(prefix) {
       el.checked = false;
     } else if (abil.type === 'select') {
       el.value = abil.options[0][0];
+    } else if (abil.type === 'numcheck') {
+      const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
+      if (chk) chk.checked = false;
+      el.value = 0;
     } else {
       el.value = 0;
     }
@@ -197,6 +228,9 @@ function readAbilitiesFromDOM(prefix) {
       result[abil.key] = el.checked;
     } else if (abil.type === 'select') {
       result[abil.key] = el.value;
+    } else if (abil.type === 'numcheck') {
+      const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
+      result[abil.key] = chk && chk.checked ? (parseInt(el.value) || 0) : null;
     } else {
       result[abil.key] = parseInt(el.value) || 0;
     }
@@ -273,6 +307,14 @@ function readUnitStats(prefix) {
   }
   const rtb = baseRtb > 0 ? Math.max(0, baseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + nodeBonus + darkLightBonus) : 0;
 
+  // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
+  // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
+  // gaze attack does not fire.
+  const baseGazeRanged = (abilities && abilities.gazeRanged) || 0;
+  const effectiveGazeRanged = baseGazeRanged > 0
+    ? Math.max(0, baseGazeRanged + lvl.ranged + abilMods.rtbMod + nodeBonus + darkLightBonus)
+    : 0;
+
   // To Hit percentage bonuses
   const meleeToHitBonus = lvl.toHit + wpn.toHit + abilMods.toHitMod;
   const rtbToHitWpn = rangedGetsWpn ? wpn.toHit : 0;
@@ -308,7 +350,7 @@ function readUnitStats(prefix) {
     rtbDistPenalty,
     // Effective values (for calculation)
     figs: Math.max(1, parseInt(document.getElementById(prefix + 'Figs').value) || 1),
-    atk, def, res, hp, rtb,
+    atk, def, res, hp, rtb, effectiveGazeRanged,
     dmg: Math.max(0, parseInt(document.getElementById(prefix + 'Dmg').value) || 0),
     rangedType, thrownType,
     rangedGetsWpn, thrownGetsWpn,
@@ -677,6 +719,40 @@ function renderBreakdownGrid(phases) {
   }
 }
 
+// --- Life Steal Summary ---
+
+function renderLifeStealSummary(result) {
+  const el = document.getElementById('lifeStealSummary');
+  if (!el) return;
+
+  function expectedValue(dist) {
+    if (!dist) return 0;
+    let ev = 0;
+    for (let d = 0; d < dist.length; d++) ev += d * dist[d];
+    return ev;
+  }
+
+  const aLS = result.aLifeStealDist ? expectedValue(result.aLifeStealDist) : 0;
+  const bLS = result.bLifeStealDist ? expectedValue(result.bLifeStealDist) : 0;
+
+  if (aLS < 0.001 && bLS < 0.001) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  if (aLS >= 0.001) {
+    html += `<span>Attacker life steal damage: <strong>${aLS.toFixed(3)}</strong></span>`;
+  }
+  if (bLS >= 0.001) {
+    if (html) html += ' &nbsp;|&nbsp; ';
+    html += `<span>Defender life steal damage: <strong>${bLS.toFixed(3)}</strong></span>`;
+  }
+  el.style.display = '';
+  el.innerHTML = html;
+}
+
 // --- Main Calculate ---
 // Reads stats once, updates displays, resolves combat, renders results.
 
@@ -701,6 +777,7 @@ function recalculate() {
     { showSkulls: true, firstFigRem: aFirstFigRem });
   renderDistPanel(document.getElementById('distB'), 'Mean damage to defender', result.totalDmgToB, result.bHP, result.bAlive,
     { showSkulls: true, firstFigRem: bFirstFigRem });
+  renderLifeStealSummary(result);
 }
 
 // Backward-compatible alias

@@ -304,6 +304,13 @@ h1 {
   flex: 1 1 0;
   min-width: 0;
 }
+.life-steal-summary {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--text);
+  padding: 0.4rem 0;
+}
 .dist-panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -488,6 +495,10 @@ h1 {
 }
 .abil-num-row:has(select) label {
   flex: none;
+}
+.abil-num-row input[type="checkbox"] {
+  margin: 0 0.1rem 0 0;
+  cursor: pointer;
 }
 .abil-num-row input[type="number"] {
   width: 50px;

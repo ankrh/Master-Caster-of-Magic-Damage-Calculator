@@ -101,3 +101,52 @@ function calcResistDmgDist(numRolls, pFail, cap) {
   }
   return dist;
 }
+
+// Compute life-steal damage distribution.
+// Each attacking figure forces a single d10 roll on the target.
+// effective_res = defRes + modifier (modifier is typically negative).
+// If roll > effective_res: damage = roll - effective_res.
+// If roll ≤ effective_res: no damage.
+// Blocked by Death Immunity, Magic Immunity, effective_res ≥ 10 (checked by caller).
+// Returns damage distribution array where dist[d] = P(exactly d total damage).
+function calcLifeStealDmgDist(numFigs, defRes, modifier, cap) {
+  if (numFigs <= 0) return [1];
+  const effRes = defRes + modifier;
+  if (effRes >= 10) return [1];
+
+  // Single figure distribution: P(0) = max(0, effRes)/10, P(d) = 1/10 for d=1..(10-effRes)
+  const maxSingleDmg = 10 - effRes;  // could be >10 if effRes < 0
+  const single = new Array(maxSingleDmg + 1).fill(0);
+  single[0] = Math.max(0, effRes) / 10;
+  for (let d = 1; d <= maxSingleDmg; d++) {
+    single[d] = 1 / 10;
+  }
+
+  // Convolve across all attacking figures
+  let result = [1];
+  let base = single;
+  let n = numFigs;
+  while (n > 0) {
+    if (n & 1) result = convolveDists(result, base, cap);
+    n >>= 1;
+    if (n > 0) base = convolveDists(base, base, cap);
+  }
+  return result;
+}
+
+// Compute figure-kill damage distribution (for Stoning Touch, etc.).
+// Each roll is an independent Bernoulli trial: fail → one figure killed (= defHP damage).
+// numRolls: number of resistance rolls (one per attacking figure)
+// pFail: probability of failing each roll (0 to 1)
+// defHP: HP per defending figure (damage per kill)
+// cap: maximum possible damage (target's remaining HP)
+function calcFigureKillDmgDist(numRolls, pFail, defHP, cap) {
+  if (numRolls <= 0 || pFail <= 0) return [1];
+  const pmf = binomialPMF(numRolls, Math.min(pFail, 1));
+  const dist = new Array(cap + 1).fill(0);
+  for (let k = 0; k <= numRolls; k++) {
+    const dmg = Math.min(k * defHP, cap);
+    dist[dmg] += pmf[k];
+  }
+  return dist;
+}

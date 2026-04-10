@@ -215,10 +215,11 @@ def process_unit_file(input_file: Path) -> dict:
             # Parse ranged/breath type
             ranged_info = parse_ranged_type(row.get('RangedType', ''))
             gaze_token = None
+            gaze_ranged_val = 0
             if 'gaze_ability' in ranged_info:
-                # Gaze attacks are abilities, not ranged attacks; drop ranged stats
+                # Gaze attacks are abilities, not ranged attacks; save hidden ranged value
                 gaze_token = ranged_info['gaze_ability']
-                unit.pop('ranged', None)
+                gaze_ranged_val = unit.pop('ranged', 0)
             elif 'ranged_type' in ranged_info:
                 if ranged_info['ranged_type'] == 'thrown':
                     unit['thrown_breath_type'] = 'thrown'
@@ -249,6 +250,10 @@ def process_unit_file(input_file: Path) -> dict:
             attacks_raw = [x.strip() for x in row.get('Attacks', '').split(',') if x.strip()]
             if gaze_token:
                 attacks_raw = [gaze_token] + attacks_raw
+                # Hidden gaze ranged attack (physical damage component of the gaze)
+                # Not for Doom Gaze or Multiple Gaze (which includes Doom Gaze)
+                if gaze_ranged_val > 0 and gaze_token not in ('Doom Gaze', 'Multiple Gaze'):
+                    attacks_raw.append(f'Gaze Ranged={gaze_ranged_val}')
 
             # Read the raw Gaze/Poison value (used only when a numeric ability is found)
             gaze_poison_str = row.get('Gaze/Poison', '').strip()
