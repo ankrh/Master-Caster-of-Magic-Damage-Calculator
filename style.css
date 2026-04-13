@@ -1,8 +1,8 @@
 :root {
-  --bg: #1a1a2e;
-  --panel: #16213e;
-  --border: #0f3460;
-  --accent: #e94560;
+  --bg: #232946;
+  --panel: #2d3561;
+  --border: #3e4a7a;
+  --accent: #ff6b81;
   --text: #eee;
   --muted: #999;
   --two-panel-width: calc(480px * 2 + 1.5rem);
@@ -216,6 +216,37 @@ h1 {
 .presets button:hover {
   background: var(--border);
 }
+.preset-group {
+  margin-bottom: 0.5rem;
+}
+.preset-group > summary {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.35rem 0.25rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  list-style: revert;
+}
+.preset-subgroup {
+  margin: 0.25rem 0 0.25rem 0.5rem;
+}
+.preset-subgroup > summary {
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 0.25rem 0.25rem;
+  cursor: pointer;
+  color: var(--text);
+  opacity: 0.85;
+  list-style: revert;
+}
+.preset-subgroup > summary:hover,
+.preset-group > summary:hover {
+  background: var(--border);
+  border-radius: 3px;
+}
+.preset-subgroup button {
+  margin-top: 0.3rem;
+}
 .main-content {
   flex: 1;
   min-width: 0;
@@ -346,7 +377,7 @@ h1 {
   padding: 0.2rem 0.5rem;
   border: none;
 }
-.dist-table tr { border-bottom: 1px solid rgba(15, 52, 96, 0.4); }
+.dist-table tr { border-bottom: 1px solid rgba(62, 74, 122, 0.4); }
 .dist-table .dmg-cell {
   text-align: left;
   font-weight: bold;
@@ -363,7 +394,7 @@ h1 {
   top: 1px;
   bottom: 1px;
   border-radius: 2px;
-  opacity: 0.3;
+  opacity: 0.55;
 }
 .chance-text {
   position: relative;
@@ -400,9 +431,9 @@ h1 {
 }
 .breakdown-phase-label {
   grid-column: 1 / -1;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: bold;
-  color: var(--muted);
+  color: var(--text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.4rem 0 0.1rem 0.25rem;
@@ -412,30 +443,46 @@ h1 {
   border-top: none;
   padding-top: 0;
 }
-/* --- Abilities Expandable Section --- */
+/* --- Abilities Section --- */
 .abilities-section {
   margin-top: 0.75rem;
   border-top: 1px solid var(--border);
   padding-top: 0.5rem;
 }
-.abilities-section summary {
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--muted);
-  user-select: none;
-  padding: 0.25rem 0;
-}
-.abilities-section summary:hover {
-  color: var(--text);
-}
 .abilities-content {
   padding-top: 0.5rem;
+}
+/* Hidden ability items, group headers, and grid containers */
+.abil-item.abil-hidden,
+.abil-group-header.abil-hidden,
+.abil-grid.abil-hidden,
+.abil-num-grid.abil-hidden {
+  display: none;
+}
+/* Toggle button styling */
+.toggle-abil-btn {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toggle-abil-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
 }
 .abilities-content.locked .group-abilities input,
 .abilities-content.locked .group-abilities select,
 .abilities-content.locked .group-abilities label {
   opacity: 0.5;
   pointer-events: none;
+}
+/* Prevent double-opacity on checkboxes already inside a label with 0.5 opacity */
+.abilities-content.locked .group-abilities label input {
+  opacity: 1;
 }
 .abil-group-header {
   font-size: 0.7rem;

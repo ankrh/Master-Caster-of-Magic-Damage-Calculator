@@ -57,11 +57,39 @@ function distancePenalty(distance, rangedType) {
 // Apply ability/enchantment effects that modify base stats.
 // Called after level/weapon bonuses are computed.
 // `abilities` is a map of ability key -> value (bool true/false, or number).
+// `version` is the game version string (e.g. 'mom_1.31', 'com_6.08', 'com2_1.05.11').
 // Returns { atkMod, defMod, resMod, hpMod, toHitMod, toBlkMod, rtbMod } — additive modifiers.
-//
-// TODO: Implement each ability's stat effects. Currently returns zeros (no-op).
-function getAbilityStatModifiers(abilities) {
-  return { atkMod: 0, defMod: 0, resMod: 0, hpMod: 0, toHitMod: 0, toBlkMod: 0, rtbMod: 0 };
+function getAbilityStatModifiers(abilities, version) {
+  let atkMod = 0, defMod = 0, resMod = 0, hpMod = 0, toHitMod = 0, toBlkMod = 0, rtbMod = 0;
+
+  // Holy Bonus: +X to melee attack, defense, resistance.
+  // CoM v6.05+ and CoM2: also +X to ranged/thrown/breath attack.
+  const hb = (abilities && abilities.holyBonus) || 0;
+  if (hb > 0) {
+    atkMod += hb;
+    defMod += hb;
+    resMod += hb;
+    const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
+    if (isCoMPlus) {
+      rtbMod += hb;
+    }
+  }
+
+  // Resistance to All: +X to resistance.
+  const rta = (abilities && abilities.resistanceToAll) || 0;
+  if (rta > 0) {
+    resMod += rta;
+  }
+
+  // Lucky: +10% To Hit, +10% To Block, +1 Resistance.
+  // The v1.31 enemy melee penalty (-10% To Hit) is applied in resolveCombat.
+  if (abilities && abilities.lucky) {
+    toHitMod += 10;
+    toBlkMod += 10;
+    resMod += 1;
+  }
+
+  return { atkMod, defMod, resMod, hpMod, toHitMod, toBlkMod, rtbMod };
 }
 
 // --- Poison Touch ---
@@ -100,12 +128,19 @@ function deathGazeFailProb(defRes, defAbilities, modifier) {
 
 // Build the combined gaze damage distribution delivered by `atk` against `def`.
 // Includes (at most once) the hidden physical ranged component, followed by
-// stoning-kill rolls and death-kill rolls — one per target figure for each gaze type.
-function buildGazeDist(atk, def, defAlive, defRemHP, stoningFail, deathFail) {
+// doom gaze (exact damage), stoning-kill rolls and death-kill rolls.
+function buildGazeDist(atk, def, defAlive, defRemHP, stoningFail, deathFail, doomStr, defDefStat) {
   if (defAlive <= 0 || defRemHP <= 0) return [1];
   let dist = [1];
+  const defStat = (defDefStat != null) ? defDefStat : def.def;
   if (atk.effectiveGazeRanged > 0) {
-    dist = calcTotalDamageDist(1, atk.effectiveGazeRanged, atk.toHitRtb, def.def, def.toBlock, def.hp, defRemHP);
+    dist = calcTotalDamageDist(1, atk.effectiveGazeRanged, atk.toHitRtb, defStat, def.toBlock, def.hp, defRemHP);
+  }
+  // Doom Gaze: exact damage, no rolls, no immunities
+  if (doomStr > 0) {
+    const doomDist = new Array(Math.min(doomStr, defRemHP) + 1).fill(0);
+    doomDist[Math.min(doomStr, defRemHP)] = 1;
+    dist = convolveDists(dist, doomDist, defRemHP);
   }
   if (stoningFail > 0) {
     dist = convolveDists(dist, calcFigureKillDmgDist(defAlive, stoningFail, def.hp, defRemHP), defRemHP);
@@ -116,11 +151,22 @@ function buildGazeDist(atk, def, defAlive, defRemHP, stoningFail, deathFail) {
   return dist;
 }
 
+// Build a deterministic doom damage distribution.
+// Doom damage skips attack rolls and defense rolls: total = figs * str, capped at maxDmg.
+function calcDoomDist(figs, str, maxDmg) {
+  const totalDmg = Math.min(figs * str, maxDmg);
+  const dist = new Array(totalDmg + 1).fill(0);
+  dist[totalDmg] = 1;
+  return dist;
+}
+
 // Phase label for a gaze attack given which gaze types are active.
-function gazeLabel(stoning, death) {
-  if (stoning && death) return 'Gaze Attack';
+function gazeLabel(stoning, death, doom) {
+  const count = (stoning ? 1 : 0) + (death ? 1 : 0) + (doom ? 1 : 0);
+  if (count > 1) return 'Gaze Attack';
   if (stoning) return 'Stoning Gaze';
   if (death) return 'Death Gaze';
+  if (doom) return 'Doom Gaze';
   return 'Gaze';
 }
 
@@ -139,16 +185,45 @@ function lifeStealEffective(defRes, defAbilities, modifier) {
 // v1.31 bug: touch attacks don't fire if the effective attack value is 0.
 // Other versions: only skip if the base (pre-modifier) attack value is 0.
 function touchAttackFires(effectiveAtk, baseAtk, version) {
-  if (version === 'mom_1.03.01') return effectiveAtk > 0;
+  if (version === 'mom_1.31') return effectiveAtk > 0;
   return (baseAtk || 0) > 0;
 }
 
 // Check whether a gaze attack fires for a given unit.
-// v1.31 bug: gaze requires non-zero effective hidden ranged attack strength after modifiers.
+// Stoning/Death Gaze are attached to either the hidden gaze ranged component or a
+// Doom Gaze — the gaze fires if at least one of these is present.
+// v1.31 bug: requires non-zero effective strength after modifiers.
 // Patched versions (CP 1.60+): gaze always fires if the unit has the ability.
-function gazeAttackFires(effectiveGazeRanged, version) {
-  if (version === 'mom_1.03.01') return effectiveGazeRanged > 0;
+function gazeAttackFires(effectiveGazeRanged, effectiveDoomGaze, version) {
+  if (version === 'mom_1.31') return effectiveGazeRanged > 0 || effectiveDoomGaze > 0;
   return true;
+}
+
+// --- Weapon Immunity ---
+// Applies Weapon Immunity defense boost after armor piercing.
+// MoM: defense raised to minimum 10.  CoM2: +8 defense.
+// Triggers only against Normal units with normal (non-magical) weapons.
+// Phase applicability varies by version:
+//   Melee: always applies.
+//   Thrown: applies in all versions EXCEPT v1.31 (bug: thrown ignores WI).
+//   Ranged missile/boulder: MoM = never. CoM2 = applies.
+//   Magic ranged: never (already magical).
+function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, version) {
+  if (!defAbilities || !defAbilities.weaponImmunity) return baseDef;
+  if (atkWeapon !== 'normal') return baseDef;
+  if (atkUnitType !== 'normal') return baseDef;
+  if (version && version.startsWith('com')) {
+    return baseDef + 8;
+  }
+  return Math.max(baseDef, 10);
+}
+
+// --- Missile Immunity ---
+// Applies Missile Immunity defense boost. Only triggers against Ranged Missile Attacks.
+// MoM: defense set to 50. Applied after armor piercing and weapon immunity.
+function missileImmunityDef(baseDef, defAbilities) {
+  if (!defAbilities || !defAbilities.missileImmunity) return baseDef;
+  return 50;
 }
 
 // --- Combat Flow Modifiers ---
@@ -166,7 +241,7 @@ function gazeAttackFires(effectiveGazeRanged, version) {
 //                    Poison Immunity, Stoning Immunity, Cold Immunity, Death Immunity
 //   Special attacks: Poison Touch, Life Steal, Stoning Touch/Gaze, Death Gaze, Doom Gaze
 //   Defense bonus:   Large Shield (+2 def vs ranged), Invulnerability
-//   Hit bonus:       Lucky (minimum 10% To Hit after all penalties), Bless (vs Chaos/Death)
+//   Hit bonus:       Lucky (+10% To Hit, +10% To Block, +1 Res; v1.31: enemy melee -10% To Hit), Bless (vs Chaos/Death)
 //   Misc:           Haste (double melee attacks), Immolation (extra damage phase)
 
 // Resolve a full combat exchange between attacker and defender.
@@ -186,6 +261,24 @@ function gazeAttackFires(effectiveGazeRanged, version) {
 function resolveCombat(a, b, opts) {
   const isRanged = opts.isRanged;
 
+  // Lucky v1.31: defender's Lucky penalizes opponent's melee To Hit by -10%.
+  // Removed in v1.40n+ (Insecticide patch). Only affects melee, not ranged/thrown/breath.
+  // We reclamp via Math.max(0.1, ...) since toHitMelee is already a decimal (0.1-1.0).
+  if (opts.version === 'mom_1.31') {
+    if (b.abilities && b.abilities.lucky) {
+      a = Object.assign({}, a, { toHitMelee: Math.max(0.1, a.toHitMelee - 0.1) });
+    }
+    if (a.abilities && a.abilities.lucky) {
+      b = Object.assign({}, b, { toHitMelee: Math.max(0.1, b.toHitMelee - 0.1) });
+    }
+  }
+
+  // First Strike applies when A is voluntarily attacking in melee and B cannot negate it.
+  // Ranged attacks never trigger first strike (it only affects melee ordering).
+  const hasFirstStrike = !isRanged
+    && !!(a.abilities && a.abilities.firstStrike)
+    && !(b.abilities && b.abilities.negateFirstStrike);
+
   // Compute alive figures and remaining HP
   const aTotalHP = a.figs * a.hp;
   const aAlive   = Math.max(0, a.figs - Math.floor(a.dmg / a.hp));
@@ -195,16 +288,92 @@ function resolveCombat(a, b, opts) {
   const bAlive   = Math.max(0, b.figs - Math.floor(b.dmg / b.hp));
   const bRemHP   = Math.max(0, bTotalHP - b.dmg);
 
+  // Doom Damage: converts regular melee/ranged/thrown/breath attacks to exact damage (no to-hit, no defense).
+  const aDoom = !!(a.abilities && a.abilities.doom);
+  const bDoom = !!(b.abilities && b.abilities.doom);
+
   // Determine if attacker has thrown/breath (melee only)
   const hasThrown = !isRanged && a.thrownType !== 'none' && a.rtb > 0;
 
-  // Lightning breath is armor piercing: halve defense (round down)
-  const bDefForThrown = a.thrownType === 'lightning' ? Math.floor(b.def / 2) : b.def;
+  // Large Shield: +2 defense (MoM) or +3 defense (CoM/CoM2) against ranged, thrown,
+  // breath, and gaze attacks. Does NOT apply against melee. Added before armor piercing
+  // so that AP halves the combined defense total.
+  const ver = opts.version;
+  const bLargeShield = !!(b.abilities && b.abilities.largeShield);
+  const aLargeShield = !!(a.abilities && a.abilities.largeShield);
+  const isCoM = ver && ver.startsWith('com');
+  const largeShieldBonus = isCoM ? 3 : 2;
+  const bDefLS = bLargeShield ? b.def + largeShieldBonus : b.def;
+  const aDefLS = aLargeShield ? a.def + largeShieldBonus : a.def;
+
+  // Armor Piercing: halve defense (round down) before immunities. Applies to all of
+  // the attacker's attacks. Lightning Breath is intrinsically armor piercing but only
+  // for the thrown/breath phase. Halving is applied at most once regardless of source.
+  const aArmorPiercing = !!(a.abilities && a.abilities.armorPiercing);
+  const bArmorPiercing = !!(b.abilities && b.abilities.armorPiercing);
+  const bDefAP = aArmorPiercing ? Math.floor(b.def / 2) : b.def;
+  const aDefAP = bArmorPiercing ? Math.floor(a.def / 2) : a.def;
+  // Large Shield variants: applied to non-melee defense before AP
+  const bDefAPLS = aArmorPiercing ? Math.floor(bDefLS / 2) : bDefLS;
+  const aDefAPLS = bArmorPiercing ? Math.floor(aDefLS / 2) : aDefLS;
+  const bDefAPThrownLS = (aArmorPiercing || a.thrownType === 'lightning')
+    ? Math.floor(bDefLS / 2) : bDefLS;
+
+  // Weapon Immunity: applied after armor piercing. Phase-specific eligibility.
+  // MoM: defense → min 10. CoM2: defense + 8. Only vs normal units with normal weapons.
+  // Melee: always eligible
+  let bDefVsA = weaponImmunityDef(bDefAP, b.abilities, a.weapon, a.unitType, ver);
+  // Gaze: hidden ranged component — gaze attackers are always fantastic so WI never
+  // triggers, but Large Shield applies since it's a ranged attack.
+  let bDefForGaze = weaponImmunityDef(bDefAPLS, b.abilities, a.weapon, a.unitType, ver);
+  let aDefVsB = weaponImmunityDef(aDefAP, a.abilities, b.weapon, b.unitType, ver);
+  let aDefForGaze = weaponImmunityDef(aDefAPLS, a.abilities, b.weapon, b.unitType, ver);
+  // Ranged: WI applies to missile/boulder (physical ranged) in all versions.
+  // Does NOT apply to magic ranged (already magical damage).
+  // Large Shield bonus is included for all ranged types.
+  const isPhysRanged = a.rangedType === 'missile' || a.rangedType === 'boulder';
+  let bDefVsARanged = isPhysRanged
+    ? weaponImmunityDef(bDefAPLS, b.abilities, a.weapon, a.unitType, ver) : bDefAPLS;
+  // Thrown: WI eligible except v1.31 bug. Breath (fire/lightning) is magical, never triggers WI.
+  // Large Shield bonus is included for thrown/breath.
+  const thrownWI = a.thrownType === 'thrown' && ver !== 'mom_1.31';
+  let bDefForThrown = thrownWI
+    ? weaponImmunityDef(bDefAPThrownLS, b.abilities, a.weapon, a.unitType, ver) : bDefAPThrownLS;
+
+  // Missile Immunity: defense set to 50 against missile ranged attacks only (not boulder/magic).
+  // Applied after armor piercing and weapon immunity.
+  // v1.31 bug: when both WI and MI apply to the same missile attack, WI overwrites MI
+  // (defense stays at 10 instead of 50). Fixed in v1.51+ (CP 1.60).
+  const isMissile = a.rangedType === 'missile';
+  const wiTriggeredOnMissile = isMissile && b.abilities && b.abilities.weaponImmunity
+    && a.weapon === 'normal' && a.unitType === 'normal';
+  if (isMissile && !(ver === 'mom_1.31' && wiTriggeredOnMissile)) {
+    bDefVsARanged = missileImmunityDef(bDefVsARanged, b.abilities);
+  }
+
+  // Illusion: sets defender's defense to 0 (only city walls bonus survives).
+  // Applied after all other immunities. Negated by Illusion Immunity.
+  const aIllusion = !!(a.abilities && a.abilities.illusion);
+  const bIllusion = !!(b.abilities && b.abilities.illusion);
+  const aIllusionImmune = !!(a.abilities && a.abilities.illusionImmunity);
+  const bIllusionImmune = !!(b.abilities && b.abilities.illusionImmunity);
+  if (aIllusion && !bIllusionImmune) {
+    const bCW = b.cityWallBonus || 0;
+    bDefVsA = bCW;
+    bDefVsARanged = bCW;
+    bDefForThrown = bCW;
+    bDefForGaze = bCW;
+  }
+  if (bIllusion && !aIllusionImmune) {
+    aDefVsB = a.cityWallBonus || 0;
+    aDefForGaze = a.cityWallBonus || 0;
+  }
 
   if (isRanged) {
     // --- Ranged: attacker shoots, no counter-attack ---
     let dmgToB = aAlive > 0 && bRemHP > 0 && a.rtb > 0
-      ? calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, b.def, b.toBlock, b.hp, bRemHP)
+      ? (aDoom ? calcDoomDist(aAlive, a.rtb, bRemHP)
+               : calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, bDefVsARanged, b.toBlock, b.hp, bRemHP))
       : [1];
 
     // Poison Touch accompanies ranged attacks
@@ -282,16 +451,20 @@ function resolveCombat(a, b, opts) {
     const bLifeStealWithMelee  = bLifeStealMod !== null && touchAttackFires(b.atk, b.baseAtk, opts.version);
 
     // Gaze attack detection (resolved between thrown/breath and melee phases).
-    // Stoning Gaze and Death Gaze fire together when a unit has both (e.g. Chaos Spawn),
-    // and share a single hidden physical ranged component.
-    const gazeFires = gazeAttackFires(a.effectiveGazeRanged, opts.version);
-    const gazeFiresB = gazeAttackFires(b.effectiveGazeRanged, opts.version);
+    // Stoning Gaze, Death Gaze, and Doom Gaze fire together when a unit has multiple
+    // (e.g. Chaos Spawn), and share a single hidden physical ranged component.
+    const aDoomGazeStr = (a.effectiveDoomGaze || 0) > 0 ? a.effectiveDoomGaze : 0;
+    const bDoomGazeStr = (b.effectiveDoomGaze || 0) > 0 ? b.effectiveDoomGaze : 0;
+    const aDoomGazeActive = aDoomGazeStr > 0;
+    const bDoomGazeActive = bDoomGazeStr > 0;
+    const gazeFires = gazeAttackFires(a.effectiveGazeRanged, aDoomGazeStr, opts.version);
+    const gazeFiresB = gazeAttackFires(b.effectiveGazeRanged, bDoomGazeStr, opts.version);
     const aStoningGazeActive = !!(a.abilities && a.abilities.stoningGaze != null) && gazeFires;
     const bStoningGazeActive = !!(b.abilities && b.abilities.stoningGaze != null) && gazeFiresB;
     const aDeathGazeActive = !!(a.abilities && a.abilities.deathGaze != null) && gazeFires;
     const bDeathGazeActive = !!(b.abilities && b.abilities.deathGaze != null) && gazeFiresB;
-    const aGazeActive = aStoningGazeActive || aDeathGazeActive;
-    const bGazeActive = bStoningGazeActive || bDeathGazeActive;
+    const aGazeActive = aStoningGazeActive || aDeathGazeActive || aDoomGazeActive;
+    const bGazeActive = bStoningGazeActive || bDeathGazeActive || bDoomGazeActive;
     const aStoningGazeFail = aStoningGazeActive
       ? stoningFailProb(b.res, b.abilities, a.abilities.stoningGaze) : 0;
     const bStoningGazeFail = bStoningGazeActive
@@ -304,12 +477,13 @@ function resolveCombat(a, b, opts) {
 
     // Pre-compute B's gaze distribution (targets A; constant regardless of thrown)
     let bGazeDistBase = bGazeActive
-      ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail)
+      ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail, bDoomGazeStr, aDefForGaze)
       : [1];
 
     // Phase 1: Thrown/Breath damage
     let thrownDist = aAlive > 0 && bRemHP > 0
-      ? calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, bDefForThrown, b.toBlock, b.hp, bRemHP)
+      ? (aDoom ? calcDoomDist(aAlive, a.rtb, bRemHP)
+               : calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, bDefForThrown, b.toBlock, b.hp, bRemHP))
       : [1];
 
     // Convolve attacker's touch attacks into thrown phase (simultaneous with thrown)
@@ -347,9 +521,9 @@ function resolveCombat(a, b, opts) {
       const bRemHPAfterP1 = Math.max(0, bRemHP - p1Dmg);
 
       // Phase 2: Gaze attacks (attacker's gaze first, then defender's gaze)
-      // A's gaze: physical ranged + stoning + death effects on B's surviving figures
+      // A's gaze: physical ranged + doom + stoning + death effects on B's surviving figures
       const aGazeDist = aGazeActive
-        ? buildGazeDist(a, b, bAliveAfterP1, bRemHPAfterP1, aStoningGazeFail, aDeathGazeFail)
+        ? buildGazeDist(a, b, bAliveAfterP1, bRemHPAfterP1, aStoningGazeFail, aDeathGazeFail, aDoomGazeStr, bDefForGaze)
         : [1];
 
       for (let aGzDmg = 0; aGzDmg < aGazeDist.length; aGzDmg++) {
@@ -371,7 +545,8 @@ function resolveCombat(a, b, opts) {
 
           // Phase 3: Melee + Touch (post-gaze figure counts)
           let meleeDist = aAliveAfterGaze > 0 && bRemHPAfterGaze > 0 && a.atk > 0
-            ? calcTotalDamageDist(aAliveAfterGaze, a.atk, a.toHitMelee, b.def, b.toBlock, b.hp, bRemHPAfterGaze)
+            ? (aDoom ? calcDoomDist(aAliveAfterGaze, a.atk, bRemHPAfterGaze)
+                     : calcTotalDamageDist(aAliveAfterGaze, a.atk, a.toHitMelee, bDefVsA, b.toBlock, b.hp, bRemHPAfterGaze))
             : [1];
 
           if (aPoisonWithMelee && aAliveAfterGaze > 0 && bRemHPAfterGaze > 0) {
@@ -387,9 +562,46 @@ function resolveCombat(a, b, opts) {
             meleeDist = convolveDists(meleeDist, lsDist, bRemHPAfterGaze);
           }
 
-          // Counter-attack (surviving B figures after gaze)
+          if (hasFirstStrike) {
+            // A's melee resolves before B's counter-attack; counter uses post-melee survivors.
+            for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
+              if (meleeDist[mDmg] < 1e-15) continue;
+              const pM = pCombined * meleeDist[mDmg];
+              totalDmgToB[Math.min(p1Dmg + aGzDmg + mDmg, bRemHP)] += pM;
+              meleeOnlyToB[Math.min(mDmg, bRemHP)] += pM;
+
+              const bDmgAfterMelee = bDmgAfterAGaze + mDmg;
+              const bAliveAfterMelee = Math.max(0, b.figs - Math.floor(bDmgAfterMelee / b.hp));
+              let counterDist = bAliveAfterMelee > 0 && aRemHPAfterGaze > 0 && b.atk > 0
+                ? (bDoom ? calcDoomDist(bAliveAfterMelee, b.atk, aRemHPAfterGaze)
+                         : calcTotalDamageDist(bAliveAfterMelee, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze))
+                : [1];
+              if (bPoisonWithMelee && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
+                counterDist = convolveDists(counterDist,
+                  calcResistDmgDist(bAliveAfterMelee * bPoisonStr, bPoisonFail, aRemHPAfterGaze), aRemHPAfterGaze);
+              }
+              if (bStoningWithMelee && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
+                counterDist = convolveDists(counterDist,
+                  calcFigureKillDmgDist(bAliveAfterMelee, bStoningFail, a.hp, aRemHPAfterGaze), aRemHPAfterGaze);
+              }
+              if (bLifeStealWithMelee && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
+                counterDist = convolveDists(counterDist,
+                  calcLifeStealDmgDist(bAliveAfterMelee, a.res, bLifeStealMod, aRemHPAfterGaze), aRemHPAfterGaze);
+              }
+              for (let cDmg = 0; cDmg < counterDist.length; cDmg++) {
+                if (counterDist[cDmg] < 1e-15) continue;
+                const v = pM * counterDist[cDmg];
+                totalDmgToA[Math.min(bGzDmg + cDmg, aRemHP)] += v;
+                counterOnlyToA[Math.min(cDmg, aRemHP)] += v;
+              }
+            }
+            continue;
+          }
+
+          // Counter-attack (surviving B figures after gaze, simultaneous with A's melee)
           let counterDist = bAliveAfterGaze > 0 && aRemHPAfterGaze > 0 && b.atk > 0
-            ? calcTotalDamageDist(bAliveAfterGaze, b.atk, b.toHitMelee, a.def, a.toBlock, a.hp, aRemHPAfterGaze)
+            ? (bDoom ? calcDoomDist(bAliveAfterGaze, b.atk, aRemHPAfterGaze)
+                     : calcTotalDamageDist(bAliveAfterGaze, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze))
             : [1];
 
           if (bPoisonWithMelee && bAliveAfterGaze > 0 && aRemHPAfterGaze > 0) {
@@ -434,7 +646,7 @@ function resolveCombat(a, b, opts) {
     if (phase1HasStoning) thrownLabel += ' + Stoning Touch';
     if (phase1HasLifeSteal) thrownLabel += ' + Life Steal';
 
-    let meleePhaseLabel = 'Melee';
+    let meleePhaseLabel = hasFirstStrike ? 'First Strike' : 'Melee';
     if (aPoisonWithMelee || bPoisonWithMelee) meleePhaseLabel += ' + Poison Touch';
     if (aStoningWithMelee || bStoningWithMelee) meleePhaseLabel += ' + Stoning Touch';
     if (aLifeStealWithMelee || bLifeStealWithMelee) meleePhaseLabel += ' + Life Steal';
@@ -461,12 +673,12 @@ function resolveCombat(a, b, opts) {
         defDist: phase1Dist, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive },
     ];
     if (aGazeActive) {
-      phases.push({ label: 'Attacker ' + gazeLabel(aStoningGazeActive, aDeathGazeActive),
+      phases.push({ label: 'Attacker ' + gazeLabel(aStoningGazeActive, aDeathGazeActive, aDoomGazeActive),
         atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: gazeOnlyToB, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive });
     }
     if (bGazeActive) {
-      phases.push({ label: 'Defender ' + gazeLabel(bStoningGazeActive, bDeathGazeActive),
+      phases.push({ label: 'Defender ' + gazeLabel(bStoningGazeActive, bDeathGazeActive, bDoomGazeActive),
         atkDist: gazeOnlyToA, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive });
     }
@@ -510,14 +722,18 @@ function resolveCombat(a, b, opts) {
     const bLifeStealModM = bLifeStealOnM ? lifeStealEffective(a.res, a.abilities, b.abilities.lifeSteal) : null;
 
     // Gaze attack detection (resolved before melee exchange)
-    const gazeFiresA = gazeAttackFires(a.effectiveGazeRanged, opts.version);
-    const gazeFiresB = gazeAttackFires(b.effectiveGazeRanged, opts.version);
+    const aDoomGazeStr = (a.effectiveDoomGaze || 0) > 0 ? a.effectiveDoomGaze : 0;
+    const bDoomGazeStr = (b.effectiveDoomGaze || 0) > 0 ? b.effectiveDoomGaze : 0;
+    const aDoomGazeActive = aDoomGazeStr > 0;
+    const bDoomGazeActive = bDoomGazeStr > 0;
+    const gazeFiresA = gazeAttackFires(a.effectiveGazeRanged, aDoomGazeStr, opts.version);
+    const gazeFiresB = gazeAttackFires(b.effectiveGazeRanged, bDoomGazeStr, opts.version);
     const aStoningGazeActive = !!(a.abilities && a.abilities.stoningGaze != null) && gazeFiresA;
     const bStoningGazeActive = !!(b.abilities && b.abilities.stoningGaze != null) && gazeFiresB;
     const aDeathGazeActive = !!(a.abilities && a.abilities.deathGaze != null) && gazeFiresA;
     const bDeathGazeActive = !!(b.abilities && b.abilities.deathGaze != null) && gazeFiresB;
-    const aGazeActive = aStoningGazeActive || aDeathGazeActive;
-    const bGazeActive = bStoningGazeActive || bDeathGazeActive;
+    const aGazeActive = aStoningGazeActive || aDeathGazeActive || aDoomGazeActive;
+    const bGazeActive = bStoningGazeActive || bDeathGazeActive || bDoomGazeActive;
     const aStoningGazeFail = aStoningGazeActive
       ? stoningFailProb(b.res, b.abilities, a.abilities.stoningGaze) : 0;
     const bStoningGazeFail = bStoningGazeActive
@@ -532,7 +748,7 @@ function resolveCombat(a, b, opts) {
       // Multi-phase: Gaze (attacker first, then defender) → Melee + Counter
       // Pre-compute B's gaze distribution (targets A)
       const bGazeDistBase = bGazeActive
-        ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail)
+        ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail, bDoomGazeStr, aDefForGaze)
         : [1];
 
       const totalDmgToB = new Array(bRemHP + 1).fill(0);
@@ -542,9 +758,9 @@ function resolveCombat(a, b, opts) {
       const meleeOnlyToB = new Array(bRemHP + 1).fill(0);
       const meleeOnlyToA = new Array(aRemHP + 1).fill(0);
 
-      // A's gaze: physical ranged + stoning + death effects on B's figures
+      // A's gaze: physical ranged + doom + stoning + death effects on B's figures
       const aGazeDist = aGazeActive
-        ? buildGazeDist(a, b, bAlive, bRemHP, aStoningGazeFail, aDeathGazeFail)
+        ? buildGazeDist(a, b, bAlive, bRemHP, aStoningGazeFail, aDeathGazeFail, aDoomGazeStr, bDefForGaze)
         : [1];
 
       for (let aGzDmg = 0; aGzDmg < aGazeDist.length; aGzDmg++) {
@@ -566,7 +782,8 @@ function resolveCombat(a, b, opts) {
 
           // Melee: attacker → defender (post-gaze figures)
           let meleeDist = aAliveAfterGaze > 0 && bRemHPAfterGaze > 0 && a.atk > 0
-            ? calcTotalDamageDist(aAliveAfterGaze, a.atk, a.toHitMelee, b.def, b.toBlock, b.hp, bRemHPAfterGaze)
+            ? (aDoom ? calcDoomDist(aAliveAfterGaze, a.atk, bRemHPAfterGaze)
+                     : calcTotalDamageDist(aAliveAfterGaze, a.atk, a.toHitMelee, bDefVsA, b.toBlock, b.hp, bRemHPAfterGaze))
             : [1];
 
           if (aPoisonFail > 0 && aAliveAfterGaze > 0 && bRemHPAfterGaze > 0) {
@@ -582,9 +799,50 @@ function resolveCombat(a, b, opts) {
               calcLifeStealDmgDist(aAliveAfterGaze, b.res, aLifeStealModM, bRemHPAfterGaze), bRemHPAfterGaze);
           }
 
-          // Counter: defender → attacker (post-gaze figures)
+          // Accumulate gaze damage
+          gazeOnlyToB[Math.min(aGzDmg, bRemHP)] += pGaze;
+          gazeOnlyToA[Math.min(bGzDmg, aRemHP)] += pGaze;
+
+          if (hasFirstStrike) {
+            // A's melee resolves before B's counter; counter uses post-melee survivors.
+            for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
+              if (meleeDist[mDmg] < 1e-15) continue;
+              const pM = pGaze * meleeDist[mDmg];
+              totalDmgToB[Math.min(aGzDmg + mDmg, bRemHP)] += pM;
+              meleeOnlyToB[Math.min(mDmg, bRemHP)] += pM;
+
+              const bDmgAfterMelee = bDmgAfterAGaze + mDmg;
+              const bAliveAfterMelee = Math.max(0, b.figs - Math.floor(bDmgAfterMelee / b.hp));
+              let counterDist = bAliveAfterMelee > 0 && aRemHPAfterGaze > 0 && b.atk > 0
+                ? (bDoom ? calcDoomDist(bAliveAfterMelee, b.atk, aRemHPAfterGaze)
+                         : calcTotalDamageDist(bAliveAfterMelee, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze))
+                : [1];
+              if (bPoisonFail > 0 && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
+                counterDist = convolveDists(counterDist,
+                  calcResistDmgDist(bAliveAfterMelee * bPoisonStr, bPoisonFail, aRemHPAfterGaze), aRemHPAfterGaze);
+              }
+              if (bStoningFail > 0 && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
+                counterDist = convolveDists(counterDist,
+                  calcFigureKillDmgDist(bAliveAfterMelee, bStoningFail, a.hp, aRemHPAfterGaze), aRemHPAfterGaze);
+              }
+              if (bLifeStealModM !== null && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
+                counterDist = convolveDists(counterDist,
+                  calcLifeStealDmgDist(bAliveAfterMelee, a.res, bLifeStealModM, aRemHPAfterGaze), aRemHPAfterGaze);
+              }
+              for (let cDmg = 0; cDmg < counterDist.length; cDmg++) {
+                if (counterDist[cDmg] < 1e-15) continue;
+                const v = pM * counterDist[cDmg];
+                totalDmgToA[Math.min(bGzDmg + cDmg, aRemHP)] += v;
+                meleeOnlyToA[Math.min(cDmg, aRemHP)] += v;
+              }
+            }
+            continue;
+          }
+
+          // Simultaneous: counter uses post-gaze figures
           let counterDist = bAliveAfterGaze > 0 && aRemHPAfterGaze > 0 && b.atk > 0
-            ? calcTotalDamageDist(bAliveAfterGaze, b.atk, b.toHitMelee, a.def, a.toBlock, a.hp, aRemHPAfterGaze)
+            ? (bDoom ? calcDoomDist(bAliveAfterGaze, b.atk, aRemHPAfterGaze)
+                     : calcTotalDamageDist(bAliveAfterGaze, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze))
             : [1];
 
           if (bPoisonFail > 0 && bAliveAfterGaze > 0 && aRemHPAfterGaze > 0) {
@@ -600,10 +858,6 @@ function resolveCombat(a, b, opts) {
               calcLifeStealDmgDist(bAliveAfterGaze, a.res, bLifeStealModM, aRemHPAfterGaze), aRemHPAfterGaze);
           }
 
-          // Accumulate
-          gazeOnlyToB[Math.min(aGzDmg, bRemHP)] += pGaze;
-          gazeOnlyToA[Math.min(bGzDmg, aRemHP)] += pGaze;
-
           for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
             if (meleeDist[mDmg] < 1e-15) continue;
             totalDmgToB[Math.min(aGzDmg + mDmg, bRemHP)] += pGaze * meleeDist[mDmg];
@@ -618,7 +872,7 @@ function resolveCombat(a, b, opts) {
       }
 
       // Phase labels
-      let meleeLabel = 'Melee';
+      let meleeLabel = hasFirstStrike ? 'First Strike' : 'Melee';
       if (aPoisonFail > 0 || bPoisonFail > 0) meleeLabel += ' + Poison Touch';
       if (aStoningFail > 0 || bStoningFail > 0) meleeLabel += ' + Stoning Touch';
       if (aLifeStealModM !== null || bLifeStealModM !== null) meleeLabel += ' + Life Steal';
@@ -635,12 +889,12 @@ function resolveCombat(a, b, opts) {
 
       const gazePhases = [];
       if (aGazeActive) {
-        gazePhases.push({ label: 'Attacker ' + gazeLabel(aStoningGazeActive, aDeathGazeActive),
+        gazePhases.push({ label: 'Attacker ' + gazeLabel(aStoningGazeActive, aDeathGazeActive, aDoomGazeActive),
           atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
           defDist: gazeOnlyToB, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive });
       }
       if (bGazeActive) {
-        gazePhases.push({ label: 'Defender ' + gazeLabel(bStoningGazeActive, bDeathGazeActive),
+        gazePhases.push({ label: 'Defender ' + gazeLabel(bStoningGazeActive, bDeathGazeActive, bDoomGazeActive),
           atkDist: gazeOnlyToA, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
           defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive });
       }
@@ -661,9 +915,10 @@ function resolveCombat(a, b, opts) {
       };
 
     } else {
-      // --- No gaze: simultaneous melee exchange ---
+      // --- No gaze: melee exchange (simultaneous, or sequential under First Strike) ---
       let dmgToB = aAlive > 0 && bRemHP > 0 && a.atk > 0
-        ? calcTotalDamageDist(aAlive, a.atk, a.toHitMelee, b.def, b.toBlock, b.hp, bRemHP)
+        ? (aDoom ? calcDoomDist(aAlive, a.atk, bRemHP)
+                 : calcTotalDamageDist(aAlive, a.atk, a.toHitMelee, bDefVsA, b.toBlock, b.hp, bRemHP))
         : [1];
 
       if (aPoisonFail > 0 && aAlive > 0 && bRemHP > 0) {
@@ -678,8 +933,75 @@ function resolveCombat(a, b, opts) {
         dmgToB = convolveDists(dmgToB, aLifeStealDistM, bRemHP);
       }
 
+      let bLifeStealDistM = null;
+      if (bLifeStealModM !== null && bAlive > 0 && aRemHP > 0) {
+        bLifeStealDistM = calcLifeStealDmgDist(bAlive, a.res, bLifeStealModM, aRemHP);
+      }
+
+      if (hasFirstStrike) {
+        // A's melee resolves first; B's counter-attack uses survivors after A's damage.
+        const totalDmgToA = new Array(aRemHP + 1).fill(0);
+        const counterOnlyToA = new Array(aRemHP + 1).fill(0);
+        for (let mDmg = 0; mDmg < dmgToB.length; mDmg++) {
+          const pM = dmgToB[mDmg];
+          if (pM < 1e-15) continue;
+          const bDmgAfter = b.dmg + mDmg;
+          const bAliveAfter = Math.max(0, b.figs - Math.floor(bDmgAfter / b.hp));
+          let counterDist = bAliveAfter > 0 && aRemHP > 0 && b.atk > 0
+            ? (bDoom ? calcDoomDist(bAliveAfter, b.atk, aRemHP)
+                     : calcTotalDamageDist(bAliveAfter, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHP))
+            : [1];
+          if (bPoisonFail > 0 && bAliveAfter > 0 && aRemHP > 0) {
+            counterDist = convolveDists(counterDist,
+              calcResistDmgDist(bAliveAfter * bPoisonStr, bPoisonFail, aRemHP), aRemHP);
+          }
+          if (bStoningFail > 0 && bAliveAfter > 0 && aRemHP > 0) {
+            counterDist = convolveDists(counterDist,
+              calcFigureKillDmgDist(bAliveAfter, bStoningFail, a.hp, aRemHP), aRemHP);
+          }
+          if (bLifeStealModM !== null && bAliveAfter > 0 && aRemHP > 0) {
+            counterDist = convolveDists(counterDist,
+              calcLifeStealDmgDist(bAliveAfter, a.res, bLifeStealModM, aRemHP), aRemHP);
+          }
+          for (let cDmg = 0; cDmg < counterDist.length; cDmg++) {
+            if (counterDist[cDmg] < 1e-15) continue;
+            const v = pM * counterDist[cDmg];
+            totalDmgToA[Math.min(cDmg, aRemHP)] += v;
+            counterOnlyToA[Math.min(cDmg, aRemHP)] += v;
+          }
+        }
+
+        let firstStrikeLabel = 'First Strike';
+        if (aPoisonFail > 0) firstStrikeLabel += ' + Poison Touch';
+        if (aStoningFail > 0) firstStrikeLabel += ' + Stoning Touch';
+        if (aLifeStealModM !== null) firstStrikeLabel += ' + Life Steal';
+        let counterLabel = 'Counter-attack';
+        if (bPoisonFail > 0) counterLabel += ' + Poison Touch';
+        if (bStoningFail > 0) counterLabel += ' + Stoning Touch';
+        if (bLifeStealModM !== null) counterLabel += ' + Life Steal';
+
+        return {
+          phases: [
+            { label: firstStrikeLabel,
+              atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
+              defDist: dmgToB, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive },
+            { label: counterLabel,
+              atkDist: counterOnlyToA, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
+              defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive },
+          ],
+          totalDmgToA,
+          totalDmgToB: dmgToB,
+          aLifeStealDist: aLifeStealDistM,
+          bLifeStealDist: bLifeStealDistM,
+          aRemHP, aHP: a.hp, aAlive,
+          bRemHP, bHP: b.hp, bAlive,
+        };
+      }
+
+      // Simultaneous melee
       let dmgToA = bAlive > 0 && aRemHP > 0 && b.atk > 0
-        ? calcTotalDamageDist(bAlive, b.atk, b.toHitMelee, a.def, a.toBlock, a.hp, aRemHP)
+        ? (bDoom ? calcDoomDist(bAlive, b.atk, aRemHP)
+                 : calcTotalDamageDist(bAlive, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHP))
         : [1];
 
       if (bPoisonFail > 0 && bAlive > 0 && aRemHP > 0) {
@@ -688,9 +1010,7 @@ function resolveCombat(a, b, opts) {
       if (bStoningFail > 0 && bAlive > 0 && aRemHP > 0) {
         dmgToA = convolveDists(dmgToA, calcFigureKillDmgDist(bAlive, bStoningFail, a.hp, aRemHP), aRemHP);
       }
-      let bLifeStealDistM = null;
       if (bLifeStealModM !== null && bAlive > 0 && aRemHP > 0) {
-        bLifeStealDistM = calcLifeStealDmgDist(bAlive, a.res, bLifeStealModM, aRemHP);
         dmgToA = convolveDists(dmgToA, bLifeStealDistM, aRemHP);
       }
 

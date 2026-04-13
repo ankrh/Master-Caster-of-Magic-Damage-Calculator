@@ -23,10 +23,12 @@ VERIFIED UNITS.DAT ACCURATE IN-GAME CoM2
 
 - **Which races have access to catapults and ships?**
 
-- **Any source for ammo of MoM units?**
-
 - **CoM2 hero caster stats?**
 
 - Test darkness effect on gaze attacks
 
 - Test poison + gaze
+
+- No thrown or breath with attack 0
+
+- Generic units ignore weapon immunity?

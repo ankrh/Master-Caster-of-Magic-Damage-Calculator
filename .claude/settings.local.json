@@ -62,7 +62,16 @@
       "Bash(python -m http.server 8765)",
       "mcp__playwright__browser_console_messages",
       "Bash(echo \"Server PID: $!\")",
-      "mcp__playwright__browser_close"
+      "mcp__playwright__browser_close",
+      "Bash(ls c:/CoM2-damage-calculator/*.test.js)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const code=fs.readFileSync\\('combat.js','utf8'\\); try { new Function\\(code\\); console.log\\('OK'\\); } catch\\(e\\) { console.error\\(e.message\\); }\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const code=fs.readFileSync\\('data.js','utf8'\\); try { new Function\\(code\\); console.log\\('OK'\\); } catch\\(e\\) { console.error\\(e.message\\); }\")",
+      "Bash(echo \"Server started on port 8765, PID=$!\")",
+      "Bash(python nocache_server.py)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/)",
+      "mcp__playwright__browser_fill_form",
+      "Bash(node -c data.js)"
     ]
   }
 }

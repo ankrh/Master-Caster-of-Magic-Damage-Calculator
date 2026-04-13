@@ -17,6 +17,7 @@ function buildAbilitiesUI(prefix) {
       numGridDiv = null;
       const header = document.createElement('div');
       header.className = 'abil-group-header';
+      header.dataset.abilGroup = currentGroup;
       header.textContent = currentGroup;
       container.appendChild(header);
     }
@@ -37,10 +38,12 @@ function buildAbilitiesUI(prefix) {
       if (!gridDiv) {
         gridDiv = document.createElement('div');
         gridDiv.className = 'abil-grid ' + currentGroupClass;
+        gridDiv.dataset.abilGroup = currentGroup;
         container.appendChild(gridDiv);
       }
       const lbl = document.createElement('label');
-      lbl.className = 'abil-check';
+      lbl.className = 'abil-check abil-item';
+      lbl.dataset.abilKey = abil.key;
       lbl.innerHTML = `<input type="checkbox" id="${id}"> ${labelHtml}`;
       gridDiv.appendChild(lbl);
     } else if (abil.type === 'select') {
@@ -48,10 +51,13 @@ function buildAbilitiesUI(prefix) {
       if (!numGridDiv) {
         numGridDiv = document.createElement('div');
         numGridDiv.className = 'abil-num-grid ' + currentGroupClass;
+        numGridDiv.dataset.abilGroup = currentGroup;
         container.appendChild(numGridDiv);
       }
       const row = document.createElement('div');
-      row.className = 'abil-num-row';
+      row.className = 'abil-num-row abil-item';
+      row.dataset.abilKey = abil.key;
+      row.dataset.abilDefault = abil.options[0][0];
       const opts = abil.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
       row.innerHTML = `<label for="${id}">${labelHtml}</label><select id="${id}">${opts}</select>`;
       numGridDiv.appendChild(row);
@@ -60,10 +66,12 @@ function buildAbilitiesUI(prefix) {
       if (!numGridDiv) {
         numGridDiv = document.createElement('div');
         numGridDiv.className = 'abil-num-grid ' + currentGroupClass;
+        numGridDiv.dataset.abilGroup = currentGroup;
         container.appendChild(numGridDiv);
       }
       const row = document.createElement('div');
-      row.className = 'abil-num-row';
+      row.className = 'abil-num-row abil-item';
+      row.dataset.abilKey = abil.key;
       row.innerHTML = `<input type="checkbox" id="${id}_on"><label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
       numGridDiv.appendChild(row);
     } else {
@@ -71,10 +79,12 @@ function buildAbilitiesUI(prefix) {
       if (!numGridDiv) {
         numGridDiv = document.createElement('div');
         numGridDiv.className = 'abil-num-grid ' + currentGroupClass;
+        numGridDiv.dataset.abilGroup = currentGroup;
         container.appendChild(numGridDiv);
       }
       const row = document.createElement('div');
-      row.className = 'abil-num-row';
+      row.className = 'abil-num-row abil-item';
+      row.dataset.abilKey = abil.key;
       row.innerHTML = `<label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
       numGridDiv.appendChild(row);
     }
@@ -243,7 +253,8 @@ function readAbilitiesFromDOM(prefix) {
 function readUnitStats(prefix) {
   const version = document.getElementById('gameVersion').value;
   const lvl = getLevelBonuses(document.getElementById(prefix + 'Level').value, version);
-  const wpn = weaponBonus(document.getElementById(prefix + 'Weapon').value);
+  const weapon = document.getElementById(prefix + 'Weapon').value;
+  const wpn = weaponBonus(weapon);
 
   const rtbTypeRaw = document.getElementById(prefix + 'RtbType').value;
   const rangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
@@ -267,7 +278,7 @@ function readUnitStats(prefix) {
 
   // Read abilities from DOM
   const abilities = readAbilitiesFromDOM(prefix);
-  const abilMods = getAbilityStatModifiers(abilities);
+  const abilMods = getAbilityStatModifiers(abilities, version);
 
   // Node Aura bonus: +2 atk, +2 rtb, +2 def, +2 res for matching Fantastic units
   const unitTypeVal = document.getElementById(prefix + 'Abil_unitType').value;
@@ -315,6 +326,13 @@ function readUnitStats(prefix) {
     ? Math.max(0, baseGazeRanged + lvl.ranged + abilMods.rtbMod + nodeBonus + darkLightBonus)
     : 0;
 
+  // Doom Gaze: delivers exact doom damage. Affected by node aura, darkness/light,
+  // and ability modifiers (e.g. Black Prayer), but NOT level or weapon bonuses.
+  const baseDoomGaze = (abilities && abilities.doomGaze) || 0;
+  const effectiveDoomGaze = baseDoomGaze > 0
+    ? Math.max(0, baseDoomGaze + abilMods.rtbMod + nodeBonus + darkLightBonus)
+    : 0;
+
   // To Hit percentage bonuses
   const meleeToHitBonus = lvl.toHit + wpn.toHit + abilMods.toHitMod;
   const rtbToHitWpn = rangedGetsWpn ? wpn.toHit : 0;
@@ -350,10 +368,11 @@ function readUnitStats(prefix) {
     rtbDistPenalty,
     // Effective values (for calculation)
     figs: Math.max(1, parseInt(document.getElementById(prefix + 'Figs').value) || 1),
-    atk, def, res, hp, rtb, effectiveGazeRanged,
+    atk, def, res, hp, rtb, effectiveGazeRanged, effectiveDoomGaze, weapon, unitType: unitTypeVal,
     dmg: Math.max(0, parseInt(document.getElementById(prefix + 'Dmg').value) || 0),
     rangedType, thrownType,
     rangedGetsWpn, thrownGetsWpn,
+    cityWallBonus,
     wpn, lvl,
     // Pre-clamped combat values
     toHitMelee, toHitRtb, toBlock,
@@ -568,6 +587,7 @@ function swapAttackerDefender() {
   updateUnitLock('a');
   updateUnitLock('b');
   updateTypeVisibility();
+  updateAbilityVisibility();
   recalculate();
 }
 
@@ -664,7 +684,7 @@ function renderDistPanel(container, title, dist, hp, numFigs, opts) {
     destroyPct = ` &mdash; ${formatPct(pDestroy)} destroyed`;
   }
 
-  const barColor = (opts && opts.barColor) || '#e94560';
+  const barColor = (opts && opts.barColor) || '#ff4d6a';
 
   let html = `<div class="dist-header">${title}: <span class="avg">${expected.toFixed(3)}</span>${destroyPct}</div>`;
   html += '<div class="dist-scroll"><table class="dist-table">';
@@ -711,7 +731,7 @@ function renderBreakdownGrid(phases) {
 
   const panels = grid.querySelectorAll('.dist-panel');
   let idx = 0;
-  const breakdownOpts = { barColor: '#d4a017' };
+  const breakdownOpts = { barColor: '#f0c030' };
   for (const phase of phases) {
     renderDistPanel(panels[idx], 'Mean damage to attacker', phase.atkDist, phase.atkHPper, phase.atkFigs, breakdownOpts);
     renderDistPanel(panels[idx + 1], 'Mean damage to defender', phase.defDist, phase.defHPper, phase.defFigs, breakdownOpts);
@@ -805,9 +825,19 @@ function updateTypeVisibility() {
 
 // --- Presets ---
 
+const PRESET_VERSIONS = {};
+
 function applyPreset(name) {
   const preset = PRESETS[name];
   if (!preset) return;
+  const targetVersion = preset.version || PRESET_VERSIONS[name];
+  if (targetVersion) {
+    const versionSel = document.getElementById('gameVersion');
+    if (versionSel.value !== targetVersion) {
+      versionSel.value = targetVersion;
+      onVersionChange();
+    }
+  }
   function setUnit(prefix, u) {
     const s = { ...UNIT_DEFAULTS, ...u };
     document.getElementById(prefix + 'Figs').value = s.figs;
@@ -827,18 +857,43 @@ function applyPreset(name) {
     clearAbilities(prefix);
     applyAbilities(prefix, s.abilities);
   }
-  setUnit('a', preset.a || {});
-  setUnit('b', preset.b || {});
-  document.getElementById('aUnit').value = 'custom';
-  document.getElementById('bUnit').value = 'custom';
+  const activeVersion = document.getElementById('gameVersion').value;
+  const unitsDb = unitDatabases[activeVersion] || [];
+  function selectPredefined(prefix, unitName) {
+    const match = unitsDb.find(u => u.name === unitName);
+    if (!match) {
+      console.warn(`Preset "${name}": predefined unit "${unitName}" not found in ${activeVersion}`);
+      document.getElementById(prefix + 'Unit').value = 'custom';
+      return false;
+    }
+    document.getElementById(prefix + 'Unit').value = String(match.id);
+    return true;
+  }
+  if (preset.aUnitName) {
+    if (!selectPredefined('a', preset.aUnitName)) setUnit('a', preset.a || {});
+  } else {
+    setUnit('a', preset.a || {});
+    document.getElementById('aUnit').value = 'custom';
+  }
+  if (preset.bUnitName) {
+    if (!selectPredefined('b', preset.bUnitName)) setUnit('b', preset.b || {});
+  } else {
+    setUnit('b', preset.b || {});
+    document.getElementById('bUnit').value = 'custom';
+  }
   updateUnitLock('a');
   updateUnitLock('b');
+  if (preset.a && preset.a.level) document.getElementById('aLevel').value = preset.a.level;
+  if (preset.a && preset.a.weapon) document.getElementById('aWeapon').value = preset.a.weapon;
+  if (preset.b && preset.b.level) document.getElementById('bLevel').value = preset.b.level;
+  if (preset.b && preset.b.weapon) document.getElementById('bWeapon').value = preset.b.weapon;
   document.getElementById('rangedCheck').checked = preset.rangedCheck || false;
   document.getElementById('rangedDist').value = preset.rangedDist || 1;
   document.getElementById('cityWalls').value = preset.cityWalls || 'none';
   document.getElementById('nodeAura').value = preset.nodeAura || 'none';
   document.getElementById('enchLightDark').value = preset.enchLightDark || 'none';
   updateTypeVisibility();
+  updateAbilityVisibility();
   recalculate();
 }
 
@@ -872,6 +927,86 @@ function runTests(tolerance) {
     failures.forEach(f => console.error(`  ${f.name}: A=${f.dmgToA} (exp ${f.expectedA}, err ${f.errA}), B=${f.dmgToB} (exp ${f.expectedB}, err ${f.errB})`));
   }
   return { allPassed, total: results.length, failures };
+}
+
+// --- Ability Visibility ---
+
+// Check if a single ability item is "active" (non-default value)
+function isAbilityActive(item) {
+  const key = item.dataset.abilKey;
+  if (!key) return false;
+  const chk = item.querySelector('input[type="checkbox"]');
+  const numInput = item.querySelector('input[type="number"]');
+  const sel = item.querySelector('select');
+
+  // numcheck: has a _on checkbox and a number input
+  if (chk && numInput) return chk.checked;
+  // bool: just a checkbox
+  if (chk) return chk.checked;
+  // select: non-default value
+  if (sel) return sel.value !== (item.dataset.abilDefault || sel.options[0].value);
+  // num: non-zero
+  if (numInput) return parseInt(numInput.value) !== 0;
+  return false;
+}
+
+// Update which abilities are shown based on active state.
+// Hides inactive items, group headers, and empty grid containers when in hide-inactive mode.
+function updateAbilityVisibility() {
+  for (const prefix of ['a', 'b']) {
+    const section = document.getElementById(prefix + 'Abilities').closest('.abilities-section');
+    if (!section) continue;
+    const hiding = section.classList.contains('hide-inactive');
+    const items = section.querySelectorAll('.abil-item');
+
+    items.forEach(item => {
+      if (!hiding) {
+        item.classList.remove('abil-hidden');
+      } else {
+        const active = isAbilityActive(item);
+        const focused = item.contains(document.activeElement);
+        item.classList.toggle('abil-hidden', !active && !focused);
+      }
+    });
+
+    // Hide group headers and grid containers when all their children are hidden
+    section.querySelectorAll('.abil-group-header').forEach(header => {
+      const group = header.dataset.abilGroup;
+      const siblings = section.querySelectorAll(`.abil-item[data-abil-key]`);
+      // Find items in this group: they are in grid/num-grid containers with matching data-abil-group
+      const groupContainers = section.querySelectorAll(`[data-abil-group="${group}"]`);
+      let anyVisible = false;
+      groupContainers.forEach(c => {
+        if (c === header) return;
+        const groupItems = c.querySelectorAll('.abil-item');
+        groupItems.forEach(item => {
+          if (!item.classList.contains('abil-hidden')) anyVisible = true;
+        });
+      });
+      header.classList.toggle('abil-hidden', hiding && !anyVisible);
+    });
+
+    // Hide empty grid containers
+    section.querySelectorAll('.abil-grid, .abil-num-grid').forEach(grid => {
+      const items = grid.querySelectorAll('.abil-item');
+      let anyVisible = false;
+      items.forEach(item => {
+        if (!item.classList.contains('abil-hidden')) anyVisible = true;
+      });
+      grid.classList.toggle('abil-hidden', hiding && !anyVisible);
+    });
+  }
+}
+
+// Toggle show/hide all abilities for both panels
+function toggleAllAbilities() {
+  const sections = document.querySelectorAll('.abilities-section');
+  const btns = document.querySelectorAll('.toggle-abil-btn');
+  const isCurrentlyHiding = sections[0] && sections[0].classList.contains('hide-inactive');
+
+  sections.forEach(s => s.classList.toggle('hide-inactive', !isCurrentlyHiding));
+  btns.forEach(b => b.textContent = isCurrentlyHiding ? 'Hide inactive' : 'Show all abilities');
+  updateAbilityVisibility();
 }
 
 // --- Event Wiring ---
@@ -914,14 +1049,28 @@ document.getElementById('bLevel').addEventListener('change', () => {
 
 // Global input/change handler for all fields
 document.querySelectorAll('input, select').forEach(el => {
-  el.addEventListener('input', () => { updateTypeVisibility(); recalculate(); });
-  el.addEventListener('change', () => { updateTypeVisibility(); recalculate(); });
+  el.addEventListener('input', () => { updateTypeVisibility(); updateAbilityVisibility(); recalculate(); });
+  el.addEventListener('change', () => { updateTypeVisibility(); updateAbilityVisibility(); recalculate(); });
 });
 
-// Generate preset buttons
+// Focus/blur on ability items: keep focused items visible, re-hide on blur
+document.querySelectorAll('.abil-item').forEach(item => {
+  item.addEventListener('focusin', () => {
+    item.classList.remove('abil-hidden');
+  });
+  item.addEventListener('focusout', () => {
+    // Delay to allow click on another element within the same item
+    setTimeout(() => updateAbilityVisibility(), 100);
+  });
+});
+
+// Generate preset buttons as a collapsible tree
 (function buildPresetButtons() {
   const container = document.getElementById('presetButtons');
-  for (const [name, preset] of Object.entries(PRESETS)) {
+
+  function makeButton(name) {
+    const preset = PRESETS[name];
+    if (!preset) return null;
     const parts = preset.desc.split(/:\s*(.+)/);
     const title = parts[0];
     const sub = parts[1] || '';
@@ -931,9 +1080,36 @@ document.querySelectorAll('input, select').forEach(el => {
     btn.onclick = () => applyPreset(name);
     btn.innerHTML = `${title}<br><small>${sub}</small>` +
       (expLine ? `<br><small style="color:var(--accent)">${expLine}</small>` : '');
-    container.appendChild(btn);
+    return btn;
+  }
+
+  for (const group of TEST_TREE) {
+    const groupDetails = document.createElement('details');
+    groupDetails.className = 'preset-group';
+    groupDetails.open = true;
+    const groupSummary = document.createElement('summary');
+    groupSummary.textContent = group.name;
+    groupDetails.appendChild(groupSummary);
+
+    for (const sub of group.subs) {
+      const subDetails = document.createElement('details');
+      subDetails.className = 'preset-subgroup';
+      subDetails.open = false;
+      const subSummary = document.createElement('summary');
+      subSummary.textContent = sub.name;
+      subDetails.appendChild(subSummary);
+
+      for (const key of sub.keys) {
+        if (group.version) PRESET_VERSIONS[key] = group.version;
+        const btn = makeButton(key);
+        if (btn) subDetails.appendChild(btn);
+      }
+      groupDetails.appendChild(subDetails);
+    }
+    container.appendChild(groupDetails);
   }
 })();
 
 // Initial load
 onVersionChange();
+updateAbilityVisibility();

@@ -12,7 +12,7 @@
 <div class="version-bar">
   <label for="gameVersion">Game Version:</label>
   <select id="gameVersion">
-    <option value="mom_1.03.01" selected>MoM 1.31</option>
+    <option value="mom_1.31" selected>MoM 1.31</option>
     <option value="mom_cp_1.60.00">MoM CP 1.60</option>
     <option value="com_6.08">CoM 6.08</option>
     <option value="com2_1.05.11">CoM2 1.05.11</option>
@@ -116,10 +116,10 @@
         <option value="adamantium">Adamantium</option>
       </select>
     </div>
-    <details class="abilities-section">
-      <summary>Abilities/Enchantments</summary>
+    <button class="toggle-abil-btn" onclick="toggleAllAbilities()" title="Show/hide inactive abilities and enchantments">Show all abilities</button>
+    <div class="abilities-section hide-inactive">
       <div class="abilities-content" id="aAbilities"></div>
-    </details>
+    </div>
   </div>
 
   <div class="panel">
@@ -209,10 +209,10 @@
         <option value="adamantium">Adamantium</option>
       </select>
     </div>
-    <details class="abilities-section">
-      <summary>Abilities/Enchantments</summary>
+    <button class="toggle-abil-btn" onclick="toggleAllAbilities()" title="Show/hide inactive abilities and enchantments">Show all abilities</button>
+    <div class="abilities-section hide-inactive">
       <div class="abilities-content" id="bAbilities"></div>
-    </details>
+    </div>
   </div>
 </div>
 
@@ -261,7 +261,7 @@
     <div class="breakdown-grid" id="breakdownGrid"></div>
   </div>
 </div>
-
+  
 </div><!-- /main-content -->
 </div><!-- /page-layout -->
 
