@@ -45,12 +45,15 @@ function getLevelBonuses(level, version) {
 
 // Compute ranged distance penalty for missile/boulder attacks.
 // Returns a negative percentage modifier (e.g. -10, -20, -30) or 0.
-function distancePenalty(distance, rangedType) {
+// Long Range caps the penalty at -10%.
+function distancePenalty(distance, rangedType, longRange) {
   if (rangedType !== 'missile' && rangedType !== 'boulder') return 0;
-  if (distance >= 9) return -30;
-  if (distance >= 6) return -20;
-  if (distance >= 3) return -10;
-  return 0;
+  let penalty = 0;
+  if (distance >= 9) penalty = -30;
+  else if (distance >= 6) penalty = -20;
+  else if (distance >= 3) penalty = -10;
+  if (longRange && penalty < -10) penalty = -10;
+  return penalty;
 }
 
 // --- Ability Stat Modifiers ---
@@ -226,6 +229,124 @@ function missileImmunityDef(baseDef, defAbilities) {
   return 50;
 }
 
+// --- Fire Immunity ---
+// Raises defense to 50 against Fire Breath and Immolation damage.
+// Fire Damage is also a subtype of Magical Damage, so Magic Immunity also blocks it
+// (but that's handled separately). Applied after armor piercing and weapon immunity.
+function fireImmunityDef(baseDef, defAbilities) {
+  if (!defAbilities || !defAbilities.fireImmunity) return baseDef;
+  return 50;
+}
+
+// --- Cause Fear ---
+// Probability of a single figure failing its fear resistance roll.
+// Fear has no resistance modifier (0). Blocked by Death Immunity, Magic Immunity.
+function fearFailProb(defRes, defAbilities) {
+  if (defAbilities && (defAbilities.deathImmunity || defAbilities.magicImmunity)) return 0;
+  const effectiveRes = Math.min(Math.max(defRes, 0), 10);
+  if (effectiveRes >= 10) return 0;
+  return (10 - effectiveRes) / 10;
+}
+
+// Distribution of unfeared (active) figures under Cause Fear.
+// Returns array where dist[k] = P(k figures are unfeared).
+// Uses Binomial(numFigs, 1 - pFear).
+function calcFearDist(numFigs, pFear) {
+  if (numFigs <= 0) return [1];
+  if (pFear <= 0) {
+    const d = new Array(numFigs + 1).fill(0);
+    d[numFigs] = 1;
+    return d;
+  }
+  if (pFear >= 1) {
+    const d = new Array(numFigs + 1).fill(0);
+    d[0] = 1;
+    return d;
+  }
+  return binomialPMF(numFigs, 1 - pFear);
+}
+
+// v1.31 bug: attacker self-fears based on defender's resistance rolls.
+// Defender's figures each roll; each fail fears one attacker figure.
+// Returns dist[k] = P(k attacker figures are unfeared).
+function calcFearBugDist(atkFigs, defFigs, pFear) {
+  if (atkFigs <= 0) return [1];
+  if (pFear <= 0 || defFigs <= 0) {
+    const d = new Array(atkFigs + 1).fill(0);
+    d[atkFigs] = 1;
+    return d;
+  }
+  // Defender fails ~ Binomial(defFigs, pFear)
+  const failsPMF = binomialPMF(defFigs, pFear);
+  const d = new Array(atkFigs + 1).fill(0);
+  for (let f = 0; f <= defFigs; f++) {
+    if (failsPMF[f] < 1e-15) continue;
+    d[Math.max(atkFigs - f, 0)] += failsPMF[f];
+  }
+  return d;
+}
+
+// Compute melee + touch-attack damage distribution, weighted over possible
+// unfeared figure counts (Cause Fear).
+// fearDist: array where fearDist[k] = P(k figures attack), or null if no fear active.
+function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
+                            def, toBlock, targetHP, remHP,
+                            poisonStr, poisonFail,
+                            stoningFail,
+                            lifeStealMod, lifeStealRes) {
+  if (remHP <= 0 || maxFigs <= 0) return [1];
+  const result = new Array(remHP + 1).fill(0);
+  const lo = fearDist ? 0 : maxFigs;
+  for (let k = lo; k <= maxFigs; k++) {
+    const pK = fearDist ? fearDist[k] : 1;
+    if (pK < 1e-15) continue;
+    let dist;
+    if (k <= 0 || atk <= 0) {
+      dist = [1];
+    } else if (isDoom) {
+      dist = calcDoomDist(k, atk, remHP);
+    } else {
+      dist = calcTotalDamageDist(k, atk, toHit, def, toBlock, targetHP, remHP);
+    }
+    if (poisonStr > 0 && poisonFail > 0 && k > 0) {
+      dist = convolveDists(dist, calcResistDmgDist(k * poisonStr, poisonFail, remHP), remHP);
+    }
+    if (stoningFail > 0 && k > 0) {
+      dist = convolveDists(dist, calcFigureKillDmgDist(k, stoningFail, targetHP, remHP), remHP);
+    }
+    if (lifeStealMod !== null && k > 0) {
+      dist = convolveDists(dist, calcLifeStealDmgDist(k, lifeStealRes, lifeStealMod, remHP), remHP);
+    }
+    for (let d = 0; d < dist.length; d++) result[d] += pK * dist[d];
+  }
+  return result;
+}
+
+// Build feared-count display distributions for the phase breakdown.
+// Returns { atkFearedDist, defFearedDist } or null if no fear is active.
+function buildFearPhaseDists(aFigs, bFigs, bPFear, aPFear, aFearedByB, aFearBug, bFearedByA) {
+  if (!aFearedByB && !aFearBug && !bFearedByA) return null;
+  // B's feared dist (from A's fear)
+  const defFearedDist = bFearedByA && bFigs > 0
+    ? binomialPMF(bFigs, bPFear) : [1];
+  // A's feared dist (from B's fear or v1.31 self-fear bug)
+  let atkFearedDist;
+  if (aFearedByB && aFigs > 0) {
+    atkFearedDist = binomialPMF(aFigs, aPFear);
+  } else if (aFearBug && aFigs > 0 && bFigs > 0) {
+    // v1.31 bug: B's figures roll, each fail fears one of A's figures
+    const failsPMF = binomialPMF(bFigs, bPFear);
+    atkFearedDist = new Array(aFigs + 1).fill(0);
+    for (let f = 0; f <= bFigs; f++) {
+      if (failsPMF[f] < 1e-15) continue;
+      atkFearedDist[Math.min(f, aFigs)] += failsPMF[f];
+    }
+  } else {
+    atkFearedDist = [1];
+  }
+  return { atkFearedDist, defFearedDist };
+}
+
 // --- Combat Flow Modifiers ---
 // Abilities that change *how* combat resolves rather than just stat values.
 // These are checked during resolveCombat to alter phase ordering, defense
@@ -236,10 +357,10 @@ function missileImmunityDef(baseDef, defAbilities) {
 // Categories:
 //   Phase ordering:  First Strike, Negate First Strike
 //   Defense halving: Armor Piercing, Illusion (defender ignores defense if no Illusion Immunity)
-//   Damage immunity: Fire Immunity (vs fire breath/immolation), Magic Immunity (vs magic ranged),
+//   Damage immunity: Magic Immunity (vs magic ranged),
 //                    Missile Immunity (vs missile/boulder), Weapon Immunity (vs non-magic melee),
 //                    Poison Immunity, Stoning Immunity, Cold Immunity, Death Immunity
-//   Special attacks: Poison Touch, Life Steal, Stoning Touch/Gaze, Death Gaze, Doom Gaze
+//   Special attacks: Poison Touch, Life Steal, Stoning Touch/Gaze, Death Gaze, Doom Gaze, Cause Fear
 //   Defense bonus:   Large Shield (+2 def vs ranged), Invulnerability
 //   Hit bonus:       Lucky (+10% To Hit, +10% To Block, +1 Res; v1.31: enemy melee -10% To Hit), Bless (vs Chaos/Death)
 //   Misc:           Haste (double melee attacks), Immolation (extra damage phase)
@@ -291,6 +412,17 @@ function resolveCombat(a, b, opts) {
   // Doom Damage: converts regular melee/ranged/thrown/breath attacks to exact damage (no to-hit, no defense).
   const aDoom = !!(a.abilities && a.abilities.doom);
   const bDoom = !!(b.abilities && b.abilities.doom);
+
+  // Cause Fear: reduces opponent's effective melee + touch-attack figures.
+  // Fires before the melee exchange. No resistance modifier.
+  // v1.31 bugs: (1) defending Fear doesn't work; (2) attacker's Fear also self-fears attacker.
+  const aFear = !isRanged && !!(a.abilities && a.abilities.fear);
+  const bFear = !isRanged && !!(b.abilities && b.abilities.fear);
+  const bPFear = aFear ? fearFailProb(b.res, b.abilities) : 0; // A's fear on B
+  const aPFear = bFear ? fearFailProb(a.res, a.abilities) : 0; // B's fear on A
+  const bFearedByA = bPFear > 0; // A can fear B's counter (all versions)
+  const aFearedByB = aPFear > 0 && opts.version !== 'mom_1.31'; // B can fear A (not v1.31: bug #1)
+  const aFearBug = aFear && opts.version === 'mom_1.31' && bPFear > 0; // v1.31 self-fear bug #2
 
   // Determine if attacker has thrown/breath (melee only)
   const hasThrown = !isRanged && a.thrownType !== 'none' && a.rtb > 0;
@@ -349,6 +481,12 @@ function resolveCombat(a, b, opts) {
     && a.weapon === 'normal' && a.unitType === 'normal';
   if (isMissile && !(ver === 'mom_1.31' && wiTriggeredOnMissile)) {
     bDefVsARanged = missileImmunityDef(bDefVsARanged, b.abilities);
+  }
+
+  // Fire Immunity: defense set to 50 against fire breath (thrownType 'fire').
+  // Applied after armor piercing and weapon immunity (though breath is magical so WI never triggers).
+  if (a.thrownType === 'fire') {
+    bDefForThrown = fireImmunityDef(bDefForThrown, b.abilities);
   }
 
   // Illusion: sets defender's defense to 0 (only city walls bonus survives).
@@ -543,24 +681,15 @@ function resolveCombat(a, b, opts) {
           const aAliveAfterGaze = Math.max(0, a.figs - Math.floor((a.dmg + bGzDmg) / a.hp));
           const aRemHPAfterGaze = Math.max(0, aRemHP - bGzDmg);
 
-          // Phase 3: Melee + Touch (post-gaze figure counts)
-          let meleeDist = aAliveAfterGaze > 0 && bRemHPAfterGaze > 0 && a.atk > 0
-            ? (aDoom ? calcDoomDist(aAliveAfterGaze, a.atk, bRemHPAfterGaze)
-                     : calcTotalDamageDist(aAliveAfterGaze, a.atk, a.toHitMelee, bDefVsA, b.toBlock, b.hp, bRemHPAfterGaze))
-            : [1];
-
-          if (aPoisonWithMelee && aAliveAfterGaze > 0 && bRemHPAfterGaze > 0) {
-            const poisonDist = calcResistDmgDist(aAliveAfterGaze * aPoisonStr, aPoisonFail, bRemHPAfterGaze);
-            meleeDist = convolveDists(meleeDist, poisonDist, bRemHPAfterGaze);
-          }
-          if (aStoningWithMelee && aAliveAfterGaze > 0 && bRemHPAfterGaze > 0) {
-            const stoningDist = calcFigureKillDmgDist(aAliveAfterGaze, aStoningFail, b.hp, bRemHPAfterGaze);
-            meleeDist = convolveDists(meleeDist, stoningDist, bRemHPAfterGaze);
-          }
-          if (aLifeStealWithMelee && aAliveAfterGaze > 0 && bRemHPAfterGaze > 0) {
-            const lsDist = calcLifeStealDmgDist(aAliveAfterGaze, b.res, aLifeStealMod, bRemHPAfterGaze);
-            meleeDist = convolveDists(meleeDist, lsDist, bRemHPAfterGaze);
-          }
+          // Phase 3: Melee + Touch (post-gaze figure counts), with Cause Fear
+          const aUnfeared1 = aFearedByB ? calcFearDist(aAliveAfterGaze, aPFear)
+                           : aFearBug ? calcFearBugDist(aAliveAfterGaze, bAliveAfterGaze, bPFear)
+                           : null;
+          const meleeDist = calcMeleeTouchDmg(aUnfeared1, aAliveAfterGaze, aDoom, a.atk, a.toHitMelee,
+            bDefVsA, b.toBlock, b.hp, bRemHPAfterGaze,
+            aPoisonWithMelee ? aPoisonStr : 0, aPoisonFail,
+            aStoningWithMelee ? aStoningFail : 0,
+            aLifeStealWithMelee ? aLifeStealMod : null, b.res);
 
           if (hasFirstStrike) {
             // A's melee resolves before B's counter-attack; counter uses post-melee survivors.
@@ -572,22 +701,12 @@ function resolveCombat(a, b, opts) {
 
               const bDmgAfterMelee = bDmgAfterAGaze + mDmg;
               const bAliveAfterMelee = Math.max(0, b.figs - Math.floor(bDmgAfterMelee / b.hp));
-              let counterDist = bAliveAfterMelee > 0 && aRemHPAfterGaze > 0 && b.atk > 0
-                ? (bDoom ? calcDoomDist(bAliveAfterMelee, b.atk, aRemHPAfterGaze)
-                         : calcTotalDamageDist(bAliveAfterMelee, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze))
-                : [1];
-              if (bPoisonWithMelee && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
-                counterDist = convolveDists(counterDist,
-                  calcResistDmgDist(bAliveAfterMelee * bPoisonStr, bPoisonFail, aRemHPAfterGaze), aRemHPAfterGaze);
-              }
-              if (bStoningWithMelee && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
-                counterDist = convolveDists(counterDist,
-                  calcFigureKillDmgDist(bAliveAfterMelee, bStoningFail, a.hp, aRemHPAfterGaze), aRemHPAfterGaze);
-              }
-              if (bLifeStealWithMelee && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
-                counterDist = convolveDists(counterDist,
-                  calcLifeStealDmgDist(bAliveAfterMelee, a.res, bLifeStealMod, aRemHPAfterGaze), aRemHPAfterGaze);
-              }
+              const bUnfearedFS1 = bFearedByA ? calcFearDist(bAliveAfterMelee, bPFear) : null;
+              const counterDist = calcMeleeTouchDmg(bUnfearedFS1, bAliveAfterMelee, bDoom, b.atk, b.toHitMelee,
+                aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze,
+                bPoisonWithMelee ? bPoisonStr : 0, bPoisonFail,
+                bStoningWithMelee ? bStoningFail : 0,
+                bLifeStealWithMelee ? bLifeStealMod : null, a.res);
               for (let cDmg = 0; cDmg < counterDist.length; cDmg++) {
                 if (counterDist[cDmg] < 1e-15) continue;
                 const v = pM * counterDist[cDmg];
@@ -599,23 +718,12 @@ function resolveCombat(a, b, opts) {
           }
 
           // Counter-attack (surviving B figures after gaze, simultaneous with A's melee)
-          let counterDist = bAliveAfterGaze > 0 && aRemHPAfterGaze > 0 && b.atk > 0
-            ? (bDoom ? calcDoomDist(bAliveAfterGaze, b.atk, aRemHPAfterGaze)
-                     : calcTotalDamageDist(bAliveAfterGaze, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze))
-            : [1];
-
-          if (bPoisonWithMelee && bAliveAfterGaze > 0 && aRemHPAfterGaze > 0) {
-            const poisonDist = calcResistDmgDist(bAliveAfterGaze * bPoisonStr, bPoisonFail, aRemHPAfterGaze);
-            counterDist = convolveDists(counterDist, poisonDist, aRemHPAfterGaze);
-          }
-          if (bStoningWithMelee && bAliveAfterGaze > 0 && aRemHPAfterGaze > 0) {
-            const stoningDist = calcFigureKillDmgDist(bAliveAfterGaze, bStoningFail, a.hp, aRemHPAfterGaze);
-            counterDist = convolveDists(counterDist, stoningDist, aRemHPAfterGaze);
-          }
-          if (bLifeStealWithMelee && bAliveAfterGaze > 0 && aRemHPAfterGaze > 0) {
-            const lsDist = calcLifeStealDmgDist(bAliveAfterGaze, a.res, bLifeStealMod, aRemHPAfterGaze);
-            counterDist = convolveDists(counterDist, lsDist, aRemHPAfterGaze);
-          }
+          const bUnfeared1 = bFearedByA ? calcFearDist(bAliveAfterGaze, bPFear) : null;
+          const counterDist = calcMeleeTouchDmg(bUnfeared1, bAliveAfterGaze, bDoom, b.atk, b.toHitMelee,
+            aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze,
+            bPoisonWithMelee ? bPoisonStr : 0, bPoisonFail,
+            bStoningWithMelee ? bStoningFail : 0,
+            bLifeStealWithMelee ? bLifeStealMod : null, a.res);
 
           // Accumulate total damage (thrown + gaze + melee)
           for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
@@ -652,6 +760,8 @@ function resolveCombat(a, b, opts) {
     if (aLifeStealWithMelee || bLifeStealWithMelee) meleePhaseLabel += ' + Life Steal';
     meleePhaseLabel += ' + Counter-attack';
 
+    const fearPhaseDists1 = buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, aFearedByB, aFearBug, bFearedByA);
+
     // Compute standalone life steal distributions for E[damage] display
     let aLifeStealDistT = null, bLifeStealDistT = null;
     if (aLifeStealMod !== null && aAlive > 0 && bRemHP > 0) {
@@ -681,6 +791,10 @@ function resolveCombat(a, b, opts) {
       phases.push({ label: 'Defender ' + gazeLabel(bStoningGazeActive, bDeathGazeActive, bDoomGazeActive),
         atkDist: gazeOnlyToA, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
         defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive });
+    }
+    if (fearPhaseDists1) {
+      phases.push({ label: 'Cause Fear', mode: 'feared',
+        atkDist: fearPhaseDists1.atkFearedDist, defDist: fearPhaseDists1.defFearedDist });
     }
     phases.push({ label: meleePhaseLabel,
       atkDist: counterOnlyToA, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
@@ -780,24 +894,13 @@ function resolveCombat(a, b, opts) {
           const aAliveAfterGaze = Math.max(0, a.figs - Math.floor((a.dmg + bGzDmg) / a.hp));
           const aRemHPAfterGaze = Math.max(0, aRemHP - bGzDmg);
 
-          // Melee: attacker → defender (post-gaze figures)
-          let meleeDist = aAliveAfterGaze > 0 && bRemHPAfterGaze > 0 && a.atk > 0
-            ? (aDoom ? calcDoomDist(aAliveAfterGaze, a.atk, bRemHPAfterGaze)
-                     : calcTotalDamageDist(aAliveAfterGaze, a.atk, a.toHitMelee, bDefVsA, b.toBlock, b.hp, bRemHPAfterGaze))
-            : [1];
-
-          if (aPoisonFail > 0 && aAliveAfterGaze > 0 && bRemHPAfterGaze > 0) {
-            meleeDist = convolveDists(meleeDist,
-              calcResistDmgDist(aAliveAfterGaze * aPoisonStr, aPoisonFail, bRemHPAfterGaze), bRemHPAfterGaze);
-          }
-          if (aStoningFail > 0 && aAliveAfterGaze > 0 && bRemHPAfterGaze > 0) {
-            meleeDist = convolveDists(meleeDist,
-              calcFigureKillDmgDist(aAliveAfterGaze, aStoningFail, b.hp, bRemHPAfterGaze), bRemHPAfterGaze);
-          }
-          if (aLifeStealModM !== null && aAliveAfterGaze > 0 && bRemHPAfterGaze > 0) {
-            meleeDist = convolveDists(meleeDist,
-              calcLifeStealDmgDist(aAliveAfterGaze, b.res, aLifeStealModM, bRemHPAfterGaze), bRemHPAfterGaze);
-          }
+          // Melee: attacker → defender (post-gaze figures), with Cause Fear
+          const aUnfeared2 = aFearedByB ? calcFearDist(aAliveAfterGaze, aPFear)
+                           : aFearBug ? calcFearBugDist(aAliveAfterGaze, bAliveAfterGaze, bPFear)
+                           : null;
+          const meleeDist = calcMeleeTouchDmg(aUnfeared2, aAliveAfterGaze, aDoom, a.atk, a.toHitMelee,
+            bDefVsA, b.toBlock, b.hp, bRemHPAfterGaze,
+            aPoisonStr, aPoisonFail, aStoningFail, aLifeStealModM, b.res);
 
           // Accumulate gaze damage
           gazeOnlyToB[Math.min(aGzDmg, bRemHP)] += pGaze;
@@ -813,22 +916,10 @@ function resolveCombat(a, b, opts) {
 
               const bDmgAfterMelee = bDmgAfterAGaze + mDmg;
               const bAliveAfterMelee = Math.max(0, b.figs - Math.floor(bDmgAfterMelee / b.hp));
-              let counterDist = bAliveAfterMelee > 0 && aRemHPAfterGaze > 0 && b.atk > 0
-                ? (bDoom ? calcDoomDist(bAliveAfterMelee, b.atk, aRemHPAfterGaze)
-                         : calcTotalDamageDist(bAliveAfterMelee, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze))
-                : [1];
-              if (bPoisonFail > 0 && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
-                counterDist = convolveDists(counterDist,
-                  calcResistDmgDist(bAliveAfterMelee * bPoisonStr, bPoisonFail, aRemHPAfterGaze), aRemHPAfterGaze);
-              }
-              if (bStoningFail > 0 && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
-                counterDist = convolveDists(counterDist,
-                  calcFigureKillDmgDist(bAliveAfterMelee, bStoningFail, a.hp, aRemHPAfterGaze), aRemHPAfterGaze);
-              }
-              if (bLifeStealModM !== null && bAliveAfterMelee > 0 && aRemHPAfterGaze > 0) {
-                counterDist = convolveDists(counterDist,
-                  calcLifeStealDmgDist(bAliveAfterMelee, a.res, bLifeStealModM, aRemHPAfterGaze), aRemHPAfterGaze);
-              }
+              const bUnfearedFS2 = bFearedByA ? calcFearDist(bAliveAfterMelee, bPFear) : null;
+              const counterDist = calcMeleeTouchDmg(bUnfearedFS2, bAliveAfterMelee, bDoom, b.atk, b.toHitMelee,
+                aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze,
+                bPoisonStr, bPoisonFail, bStoningFail, bLifeStealModM, a.res);
               for (let cDmg = 0; cDmg < counterDist.length; cDmg++) {
                 if (counterDist[cDmg] < 1e-15) continue;
                 const v = pM * counterDist[cDmg];
@@ -840,23 +931,10 @@ function resolveCombat(a, b, opts) {
           }
 
           // Simultaneous: counter uses post-gaze figures
-          let counterDist = bAliveAfterGaze > 0 && aRemHPAfterGaze > 0 && b.atk > 0
-            ? (bDoom ? calcDoomDist(bAliveAfterGaze, b.atk, aRemHPAfterGaze)
-                     : calcTotalDamageDist(bAliveAfterGaze, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze))
-            : [1];
-
-          if (bPoisonFail > 0 && bAliveAfterGaze > 0 && aRemHPAfterGaze > 0) {
-            counterDist = convolveDists(counterDist,
-              calcResistDmgDist(bAliveAfterGaze * bPoisonStr, bPoisonFail, aRemHPAfterGaze), aRemHPAfterGaze);
-          }
-          if (bStoningFail > 0 && bAliveAfterGaze > 0 && aRemHPAfterGaze > 0) {
-            counterDist = convolveDists(counterDist,
-              calcFigureKillDmgDist(bAliveAfterGaze, bStoningFail, a.hp, aRemHPAfterGaze), aRemHPAfterGaze);
-          }
-          if (bLifeStealModM !== null && bAliveAfterGaze > 0 && aRemHPAfterGaze > 0) {
-            counterDist = convolveDists(counterDist,
-              calcLifeStealDmgDist(bAliveAfterGaze, a.res, bLifeStealModM, aRemHPAfterGaze), aRemHPAfterGaze);
-          }
+          const bUnfeared2 = bFearedByA ? calcFearDist(bAliveAfterGaze, bPFear) : null;
+          const counterDist = calcMeleeTouchDmg(bUnfeared2, bAliveAfterGaze, bDoom, b.atk, b.toHitMelee,
+            aDefVsB, a.toBlock, a.hp, aRemHPAfterGaze,
+            bPoisonStr, bPoisonFail, bStoningFail, bLifeStealModM, a.res);
 
           for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
             if (meleeDist[mDmg] < 1e-15) continue;
@@ -877,6 +955,8 @@ function resolveCombat(a, b, opts) {
       if (aStoningFail > 0 || bStoningFail > 0) meleeLabel += ' + Stoning Touch';
       if (aLifeStealModM !== null || bLifeStealModM !== null) meleeLabel += ' + Life Steal';
       meleeLabel += ' + Counter-attack';
+
+      const fearPhaseDists2 = buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, aFearedByB, aFearBug, bFearedByA);
 
       // Life steal display distributions (approximate using initial figure counts)
       let aLifeStealDistM = null, bLifeStealDistM = null;
@@ -899,9 +979,14 @@ function resolveCombat(a, b, opts) {
           defDist: [1], defHP: bRemHP, defHPper: b.hp, defFigs: bAlive });
       }
 
+      const fearPhase2 = fearPhaseDists2
+        ? [{ label: 'Cause Fear', mode: 'feared', atkDist: fearPhaseDists2.atkFearedDist, defDist: fearPhaseDists2.defFearedDist }]
+        : [];
+
       return {
         phases: [
           ...gazePhases,
+          ...fearPhase2,
           { label: meleeLabel,
             atkDist: meleeOnlyToA, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
             defDist: meleeOnlyToB, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive },
@@ -916,21 +1001,18 @@ function resolveCombat(a, b, opts) {
 
     } else {
       // --- No gaze: melee exchange (simultaneous, or sequential under First Strike) ---
-      let dmgToB = aAlive > 0 && bRemHP > 0 && a.atk > 0
-        ? (aDoom ? calcDoomDist(aAlive, a.atk, bRemHP)
-                 : calcTotalDamageDist(aAlive, a.atk, a.toHitMelee, bDefVsA, b.toBlock, b.hp, bRemHP))
-        : [1];
+      const fearPhaseDists3 = buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, aFearedByB, aFearBug, bFearedByA);
 
-      if (aPoisonFail > 0 && aAlive > 0 && bRemHP > 0) {
-        dmgToB = convolveDists(dmgToB, calcResistDmgDist(aAlive * aPoisonStr, aPoisonFail, bRemHP), bRemHP);
-      }
-      if (aStoningFail > 0 && aAlive > 0 && bRemHP > 0) {
-        dmgToB = convolveDists(dmgToB, calcFigureKillDmgDist(aAlive, aStoningFail, b.hp, bRemHP), bRemHP);
-      }
+      const aUnfeared3 = aFearedByB ? calcFearDist(aAlive, aPFear)
+                       : aFearBug ? calcFearBugDist(aAlive, bAlive, bPFear)
+                       : null;
+      const dmgToB = calcMeleeTouchDmg(aUnfeared3, aAlive, aDoom, a.atk, a.toHitMelee,
+        bDefVsA, b.toBlock, b.hp, bRemHP,
+        aPoisonStr, aPoisonFail, aStoningFail, aLifeStealModM, b.res);
+
       let aLifeStealDistM = null;
       if (aLifeStealModM !== null && aAlive > 0 && bRemHP > 0) {
         aLifeStealDistM = calcLifeStealDmgDist(aAlive, b.res, aLifeStealModM, bRemHP);
-        dmgToB = convolveDists(dmgToB, aLifeStealDistM, bRemHP);
       }
 
       let bLifeStealDistM = null;
@@ -947,22 +1029,10 @@ function resolveCombat(a, b, opts) {
           if (pM < 1e-15) continue;
           const bDmgAfter = b.dmg + mDmg;
           const bAliveAfter = Math.max(0, b.figs - Math.floor(bDmgAfter / b.hp));
-          let counterDist = bAliveAfter > 0 && aRemHP > 0 && b.atk > 0
-            ? (bDoom ? calcDoomDist(bAliveAfter, b.atk, aRemHP)
-                     : calcTotalDamageDist(bAliveAfter, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHP))
-            : [1];
-          if (bPoisonFail > 0 && bAliveAfter > 0 && aRemHP > 0) {
-            counterDist = convolveDists(counterDist,
-              calcResistDmgDist(bAliveAfter * bPoisonStr, bPoisonFail, aRemHP), aRemHP);
-          }
-          if (bStoningFail > 0 && bAliveAfter > 0 && aRemHP > 0) {
-            counterDist = convolveDists(counterDist,
-              calcFigureKillDmgDist(bAliveAfter, bStoningFail, a.hp, aRemHP), aRemHP);
-          }
-          if (bLifeStealModM !== null && bAliveAfter > 0 && aRemHP > 0) {
-            counterDist = convolveDists(counterDist,
-              calcLifeStealDmgDist(bAliveAfter, a.res, bLifeStealModM, aRemHP), aRemHP);
-          }
+          const bUnfearedFS3 = bFearedByA ? calcFearDist(bAliveAfter, bPFear) : null;
+          const counterDist = calcMeleeTouchDmg(bUnfearedFS3, bAliveAfter, bDoom, b.atk, b.toHitMelee,
+            aDefVsB, a.toBlock, a.hp, aRemHP,
+            bPoisonStr, bPoisonFail, bStoningFail, bLifeStealModM, a.res);
           for (let cDmg = 0; cDmg < counterDist.length; cDmg++) {
             if (counterDist[cDmg] < 1e-15) continue;
             const v = pM * counterDist[cDmg];
@@ -972,16 +1042,22 @@ function resolveCombat(a, b, opts) {
         }
 
         let firstStrikeLabel = 'First Strike';
+        if (aFearedByB || aFearBug) firstStrikeLabel += ' + Fear';
         if (aPoisonFail > 0) firstStrikeLabel += ' + Poison Touch';
         if (aStoningFail > 0) firstStrikeLabel += ' + Stoning Touch';
         if (aLifeStealModM !== null) firstStrikeLabel += ' + Life Steal';
         let counterLabel = 'Counter-attack';
+        if (bFearedByA) counterLabel += ' + Fear';
         if (bPoisonFail > 0) counterLabel += ' + Poison Touch';
         if (bStoningFail > 0) counterLabel += ' + Stoning Touch';
         if (bLifeStealModM !== null) counterLabel += ' + Life Steal';
 
+        const fearPhaseFS3 = fearPhaseDists3
+          ? [{ label: 'Cause Fear', mode: 'feared', atkDist: fearPhaseDists3.atkFearedDist, defDist: fearPhaseDists3.defFearedDist }]
+          : [];
         return {
           phases: [
+            ...fearPhaseFS3,
             { label: firstStrikeLabel,
               atkDist: [1], atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
               defDist: dmgToB, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive },
@@ -999,23 +1075,27 @@ function resolveCombat(a, b, opts) {
       }
 
       // Simultaneous melee
-      let dmgToA = bAlive > 0 && aRemHP > 0 && b.atk > 0
-        ? (bDoom ? calcDoomDist(bAlive, b.atk, aRemHP)
-                 : calcTotalDamageDist(bAlive, b.atk, b.toHitMelee, aDefVsB, a.toBlock, a.hp, aRemHP))
-        : [1];
+      const bUnfeared3 = bFearedByA ? calcFearDist(bAlive, bPFear) : null;
+      const dmgToA = calcMeleeTouchDmg(bUnfeared3, bAlive, bDoom, b.atk, b.toHitMelee,
+        aDefVsB, a.toBlock, a.hp, aRemHP,
+        bPoisonStr, bPoisonFail, bStoningFail, bLifeStealModM, a.res);
 
-      if (bPoisonFail > 0 && bAlive > 0 && aRemHP > 0) {
-        dmgToA = convolveDists(dmgToA, calcResistDmgDist(bAlive * bPoisonStr, bPoisonFail, aRemHP), aRemHP);
+      let fearPhaseSimul3 = null;
+      if (fearPhaseDists3) {
+        let meleeLabel3 = 'Melee';
+        if (aPoisonFail > 0 || bPoisonFail > 0) meleeLabel3 += ' + Poison Touch';
+        if (aStoningFail > 0 || bStoningFail > 0) meleeLabel3 += ' + Stoning Touch';
+        if (aLifeStealModM !== null || bLifeStealModM !== null) meleeLabel3 += ' + Life Steal';
+        meleeLabel3 += ' + Counter-attack';
+        fearPhaseSimul3 = [
+          { label: 'Cause Fear', mode: 'feared', atkDist: fearPhaseDists3.atkFearedDist, defDist: fearPhaseDists3.defFearedDist },
+          { label: meleeLabel3,
+            atkDist: dmgToA, atkHP: aRemHP, atkHPper: a.hp, atkFigs: aAlive,
+            defDist: dmgToB, defHP: bRemHP, defHPper: b.hp, defFigs: bAlive },
+        ];
       }
-      if (bStoningFail > 0 && bAlive > 0 && aRemHP > 0) {
-        dmgToA = convolveDists(dmgToA, calcFigureKillDmgDist(bAlive, bStoningFail, a.hp, aRemHP), aRemHP);
-      }
-      if (bLifeStealModM !== null && bAlive > 0 && aRemHP > 0) {
-        dmgToA = convolveDists(dmgToA, bLifeStealDistM, aRemHP);
-      }
-
       return {
-        phases: null,
+        phases: fearPhaseSimul3,
         totalDmgToA: dmgToA,
         totalDmgToB: dmgToB,
         aLifeStealDist: aLifeStealDistM,

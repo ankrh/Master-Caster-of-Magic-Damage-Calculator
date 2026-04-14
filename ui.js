@@ -343,7 +343,7 @@ function readUnitStats(prefix) {
     const rangedCheck = document.getElementById('rangedCheck');
     if (rangedCheck && rangedCheck.checked) {
       const dist = Math.max(1, parseInt(document.getElementById('rangedDist').value) || 1);
-      rtbDistPenalty = distancePenalty(dist, rangedType);
+      rtbDistPenalty = distancePenalty(dist, rangedType, !!(abilities && abilities.longRange));
     }
   }
 
@@ -652,6 +652,7 @@ function formatPct(p) {
 
 function renderDistPanel(container, title, dist, hp, numFigs, opts) {
   const showSkulls = opts && opts.showSkulls;
+  const colHeader = (opts && opts.colHeader) || 'Damage';
   // firstFigRem: HP remaining on the lead figure (accounts for pre-existing damage)
   const firstFigRem = (opts && opts.firstFigRem) || hp;
 
@@ -688,7 +689,7 @@ function renderDistPanel(container, title, dist, hp, numFigs, opts) {
 
   let html = `<div class="dist-header">${title}: <span class="avg">${expected.toFixed(3)}</span>${destroyPct}</div>`;
   html += '<div class="dist-scroll"><table class="dist-table">';
-  html += '<thead><tr><th>Damage</th><th style="text-align:right">Chance</th></tr></thead><tbody>';
+  html += `<thead><tr><th>${colHeader}</th><th style="text-align:right">Chance</th></tr></thead><tbody>`;
 
   for (let d = 0; d <= maxD; d++) {
     const p = dist[d] || 0;
@@ -733,8 +734,14 @@ function renderBreakdownGrid(phases) {
   let idx = 0;
   const breakdownOpts = { barColor: '#f0c030' };
   for (const phase of phases) {
-    renderDistPanel(panels[idx], 'Mean damage to attacker', phase.atkDist, phase.atkHPper, phase.atkFigs, breakdownOpts);
-    renderDistPanel(panels[idx + 1], 'Mean damage to defender', phase.defDist, phase.defHPper, phase.defFigs, breakdownOpts);
+    if (phase.mode === 'feared') {
+      const fearOpts = { barColor: '#c080ff', colHeader: 'Feared' };
+      renderDistPanel(panels[idx], 'Attacker figs feared', phase.atkDist, 0, 0, fearOpts);
+      renderDistPanel(panels[idx + 1], 'Defender figs feared', phase.defDist, 0, 0, fearOpts);
+    } else {
+      renderDistPanel(panels[idx], 'Mean damage to attacker', phase.atkDist, phase.atkHPper, phase.atkFigs, breakdownOpts);
+      renderDistPanel(panels[idx + 1], 'Mean damage to defender', phase.defDist, phase.defHPper, phase.defFigs, breakdownOpts);
+    }
     idx += 2;
   }
 }

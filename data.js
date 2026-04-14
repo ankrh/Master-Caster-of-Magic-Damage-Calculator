@@ -172,6 +172,34 @@ const PRESETS = {
     rangedCheck: true, rangedDist: 9,
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
+  longRangeMissile: {
+    desc: 'Long Range Missile: 100% base to hit, range 9 → penalty capped at −10% → 90% effective',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10, abilities: { longRange: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 9,
+    expected: { dmgToA: 0, dmgToB: 0.900 },
+  },
+  longRangeBoulder: {
+    desc: 'Long Range Boulder: 100% base to hit, range 6 → penalty capped at −10% → 90% effective',
+    a: { toHitRtbMod:70, rtbType:'boulder', rtb:1, hp:10, abilities: { longRange: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 6,
+    expected: { dmgToA: 0, dmgToB: 0.900 },
+  },
+  longRangeClose: {
+    desc: 'Long Range at range 2: no penalty anyway, Long Range has no effect',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10, abilities: { longRange: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 2,
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  longRangeMidRange: {
+    desc: 'Long Range at range 3-5: penalty is already −10%, Long Range has no further effect',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10, abilities: { longRange: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 5,
+    expected: { dmgToA: 0, dmgToB: 0.900 },
+  },
   thrownBasic: {
     desc: 'Thrown: 100% to hit thrown, B dies before melee/counter fires',
     a: { atk:1, rtbType:'thrown', rtb:1, toHitRtbMod:70, def:0, hp:1 },
@@ -600,6 +628,78 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0 },
   },
 
+  // --- Fire Immunity ---
+  fireImmunityFireBreath: {
+    desc: 'Fire Immunity vs Fire Breath: breath 5 at 100% vs FI def 50 → blocked; melee 5 at 100% vs def 2 → 3 dmg',
+    a: { atk:5, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10 },
+    b: { atk:0, def:2, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  fireImmunityNotMelee: {
+    desc: 'Fire Immunity does NOT apply to melee: def stays 0, 3 atk 100% hit → 3 dmg',
+    a: { atk:3, toHitMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  fireImmunityNotThrown: {
+    desc: 'Fire Immunity does NOT apply to thrown: def stays 0, 3 thrown 100% hit → 3 dmg',
+    a: { atk:0, rtbType:'thrown', rtb:3, toHitRtbMod:70, hp:10 },
+    b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  fireImmunityNotMissile: {
+    desc: 'Fire Immunity does NOT apply to missile ranged: def stays 0, 3 atk 100% hit → 3 dmg',
+    a: { rtbType:'missile', rtb:3, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  fireImmunityAfterArmorPiercing: {
+    desc: 'Fire Immunity after Armor Piercing: AP halves def 6→3, then FI raises to 50 → breath blocked',
+    a: { atk:0, rtbType:'fire', rtb:5, toHitRtbMod:70, hp:10, abilities: { armorPiercing: true } },
+    b: { atk:0, def:6, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  fireImmunityIllusionOverrides: {
+    desc: 'Illusion overrides Fire Immunity: FI sets def to 50, then Illusion sets to 0 → full breath damage',
+    a: { atk:1, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { illusion: true } },
+    b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { fireImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+
+  // --- Cause Fear (v1.31 buggy behavior) ---
+  fearBasic: {
+    desc: 'Cause Fear v1.31: A fears B (50%) + self-fear bug. E[A unfeared]=3.5 → E[dmgB]=10.5, E[B unfeared]=0.5 → E[dmgA]=1.5',
+    a: { figs:4, atk:3, toHitMod:70, hp:10, abilities: { fear: true } },
+    b: { atk:3, toHitMod:70, hp:20, def:0, res:5 },
+    expected: { dmgToA: 1.500, dmgToB: 10.500 },
+  },
+  fearDefenderNoop: {
+    desc: 'Cause Fear v1.31 bug: defending Fear has no effect. Both do 5 dmg normally',
+    a: { atk:5, toHitMod:70, hp:10, res:5 },
+    b: { atk:5, toHitMod:70, hp:10, def:0, res:5, abilities: { fear: true } },
+    expected: { dmgToA: 5.000, dmgToB: 5.000 },
+  },
+  fearDeathImmune: {
+    desc: 'Cause Fear vs Death Immunity: fear blocked, both do 5 dmg normally',
+    a: { atk:5, toHitMod:70, hp:10, abilities: { fear: true } },
+    b: { atk:5, toHitMod:70, hp:10, def:0, abilities: { deathImmunity: true } },
+    expected: { dmgToA: 5.000, dmgToB: 5.000 },
+  },
+  fearMagicImmune: {
+    desc: 'Cause Fear vs Magic Immunity: fear blocked, both do 5 dmg normally',
+    a: { atk:5, toHitMod:70, hp:10, abilities: { fear: true } },
+    b: { atk:5, toHitMod:70, hp:10, def:0, abilities: { magicImmunity: true } },
+    expected: { dmgToA: 5.000, dmgToB: 5.000 },
+  },
+  fearNotRanged: {
+    desc: 'Cause Fear does not apply to ranged attacks: 5 missile 100% hit → 5 dmg',
+    a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { fear: true } },
+    b: { def:0, hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+
   // --- Illusion ---
   illusionMelee: {
     desc: 'Illusion Melee: 5 atk 30% hit vs def 6 → def becomes 0, E[dmg] = 5×0.3 = 1.5',
@@ -827,6 +927,22 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0 },
   },
 
+  // --- Cause Fear (v1.60 fixed behavior) ---
+  fearAttackerFixed: {
+    desc: 'Cause Fear v1.60: A fears B normally, no self-fear bug. E[dmgB]=12 (all 4 figs), E[dmgA]=1.5',
+    version: 'mom_cp_1.60.00',
+    a: { figs:4, atk:3, toHitMod:70, hp:10, abilities: { fear: true } },
+    b: { atk:3, toHitMod:70, hp:20, def:0, res:5 },
+    expected: { dmgToA: 1.500, dmgToB: 12.000 },
+  },
+  fearDefenderFixed: {
+    desc: 'Cause Fear v1.60: B defending Fear now works, fears A (50%). E[dmgB]=2.5, E[dmgA]=5',
+    version: 'mom_cp_1.60.00',
+    a: { atk:5, toHitMod:70, hp:10, res:5 },
+    b: { atk:5, toHitMod:70, hp:10, def:0, res:5, abilities: { fear: true } },
+    expected: { dmgToA: 5.000, dmgToB: 2.500 },
+  },
+
   // --- Predefined-unit Tests ---
   predefBarbSwordsVsSpears: {
     desc: 'Barbarian Swordsmen vs Barbarian Spearmen: basic normal-vs-normal melee',
@@ -865,7 +981,7 @@ const TEST_TREE = [
     subs: [
       { name: 'Core / Binomial', keys: ['attackRolls', 'defenseRolls'] },
       { name: 'Multi-figure', keys: ['multiFigDefense', 'multiFigOverflow', 'multiFigAttack', 'complexMelee'] },
-      { name: 'Ranged', keys: ['rangedMissileBasic', 'rangedBoulderBasic', 'rangedMagicBasic'] },
+      { name: 'Ranged', keys: ['rangedMissileBasic', 'rangedBoulderBasic', 'rangedMagicBasic', 'longRangeMissile', 'longRangeBoulder', 'longRangeClose', 'longRangeMidRange'] },
       { name: 'Thrown', keys: ['thrownBasic'] },
       { name: 'Breath', keys: ['fireBreathBasic', 'lightningBreathBasic'] },
       { name: 'Level & Weapon bonuses', keys: ['levelWeaponBonus'] },
@@ -883,6 +999,8 @@ const TEST_TREE = [
       { name: 'Armor Piercing', keys: ['armorPiercingMelee', 'armorPiercingRanged', 'armorPiercingThrown', 'armorPiercingLightningNoDoubleHalve', 'armorPiercingDefenderCounter'] },
       { name: 'Weapon Immunity', keys: ['weaponImmunityMelee', 'weaponImmunityMagicWeapon', 'weaponImmunityFantastic', 'weaponImmunityHero', 'weaponImmunityCounter', 'weaponImmunityThrown131', 'weaponImmunityRangedMissile', 'weaponImmunityRangedMagic'] },
       { name: 'Missile Immunity', keys: ['missileImmunityMissile', 'missileImmunityBoulder', 'missileImmunityMagic', 'missileImmunityMelee', 'missileImmunityArmorPiercing', 'missileImmunityWIOverwrite131', 'missileImmunityWIMagicWeapon'] },
+      { name: 'Fire Immunity', keys: ['fireImmunityFireBreath', 'fireImmunityNotMelee', 'fireImmunityNotThrown', 'fireImmunityNotMissile', 'fireImmunityAfterArmorPiercing', 'fireImmunityIllusionOverrides'] },
+      { name: 'Cause Fear', keys: ['fearBasic', 'fearDefenderNoop', 'fearDeathImmune', 'fearMagicImmune', 'fearNotRanged'] },
       { name: 'Illusion', keys: ['illusionMelee', 'illusionRanged', 'illusionThrown', 'illusionCounter', 'illusionImmunityNegates', 'illusionCityWalls', 'illusionOverridesWeaponImmunity'] },
       { name: 'Holy Bonus', keys: ['holyBonusMeleeAtk', 'holyBonusDef', 'holyBonusRes', 'holyBonusRangedMoM'] },
       { name: 'Resistance to All', keys: ['resistanceToAllBasic', 'resistanceToAllCap', 'holyBonusPlusResistanceToAll'] },
@@ -912,6 +1030,7 @@ const TEST_TREE = [
       { name: 'Holy Bonus Ranged (CoM2)', keys: ['holyBonusRangedCoM2'] },
       { name: 'Lucky (patched)', keys: ['luckyToBlock', 'luckyEnemyPenaltyRemovedPatched'] },
       { name: 'Large Shield (CoM2: +3)', keys: ['largeShieldCom2Ranged'] },
+      { name: 'Cause Fear (fixed)', keys: ['fearAttackerFixed', 'fearDefenderFixed'] },
     ],
   },
 ];
