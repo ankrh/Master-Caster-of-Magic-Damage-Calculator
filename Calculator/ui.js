@@ -165,30 +165,18 @@ function loadUnitDatabase(version) {
   return unitDatabases[version];
 }
 
-function populateUnitDropdown(selectId, units) {
-  const sel = document.getElementById(selectId);
-  const oldVal = sel.value;
+const unitComboboxData = {};
 
-  while (sel.children.length > 1) sel.removeChild(sel.children[1]);
-  if (units.length === 0) return;
+function populateUnitDropdown(selectId, units) {
+  const prefix = selectId[0];
+  const hiddenEl = document.getElementById(selectId);
+  const oldVal = hiddenEl.value;
 
   const CAT_NORMALIZE = {
     'General': 'Generic', 'Dwarf': 'Dwarven',
     'Life Creatures': 'Life', 'Death Creatures': 'Death', 'Chaos Creatures': 'Chaos',
     'Nature Creatures': 'Nature', 'Sorcery Creatures': 'Sorcery', 'Arcane Creatures': 'Arcane',
   };
-
-  const groups = {};
-  for (const u of units) {
-    if (u.abilities && u.abilities.includes('CreateOutpost')) continue;
-    if (u.name === 'Floating Island') continue;
-    const rawCat = u.category;
-    if (rawCat === 'Heroes') continue;
-    const cat = CAT_NORMALIZE[rawCat] || rawCat;
-    if (!groups[cat]) groups[cat] = [];
-    groups[cat].push(u);
-  }
-
   const raceOrder = [
     'Barbarian', 'Gnoll', 'Halfling', 'High Elf', 'High Men', 'Klackon',
     'Lizardman', 'Nomad', 'Orc',
@@ -202,27 +190,123 @@ function populateUnitDropdown(selectId, units) {
     'Nature', 'Sorcery', 'Arcane',
   ];
 
+  const groups = {};
+  for (const u of units) {
+    if (u.abilities && u.abilities.includes('CreateOutpost')) continue;
+    if (u.name === 'Floating Island') continue;
+    if (u.category === 'Heroes') continue;
+    const cat = CAT_NORMALIZE[u.category] || u.category;
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(u);
+  }
+
+  const flatList = [];
   for (const cat of categoryOrder) {
     if (!groups[cat]) continue;
-    const optgroup = document.createElement('optgroup');
-    optgroup.label = cat;
     for (const u of groups[cat].slice().sort((a, b) => {
       const k = a.sort_order !== undefined ? 'sort_order' : 'cost';
       return (a[k] || 0) - (b[k] || 0);
     })) {
-      const opt = document.createElement('option');
-      opt.value = String(u.id);
-      opt.textContent = u.name;
-      optgroup.appendChild(opt);
+      flatList.push({ id: String(u.id), name: u.name, cat });
     }
-    sel.appendChild(optgroup);
+  }
+  unitComboboxData[prefix] = flatList;
+
+  hiddenEl.value = flatList.some(u => u.id === oldVal) ? oldVal : 'custom';
+  syncUnitDisplay(prefix);
+}
+
+function syncUnitDisplay(prefix) {
+  const hiddenEl = document.getElementById(prefix + 'Unit');
+  const searchEl = document.getElementById(prefix + 'UnitSearch');
+  if (!searchEl) return;
+  if (hiddenEl.value === 'custom') {
+    searchEl.value = '';
+  } else {
+    const u = (unitComboboxData[prefix] || []).find(u => u.id === hiddenEl.value);
+    searchEl.value = u ? u.name : '';
+  }
+}
+
+function initUnitCombobox(prefix) {
+  const searchEl = document.getElementById(prefix + 'UnitSearch');
+  const listEl = document.getElementById(prefix + 'UnitList');
+  const hiddenEl = document.getElementById(prefix + 'Unit');
+  let activeIndex = -1;
+
+  function renderDropdown(query) {
+    const allUnits = unitComboboxData[prefix] || [];
+    const q = query.trim().toLowerCase();
+    const matches = q === '' ? allUnits : allUnits.filter(u => u.name.toLowerCase().includes(q) || u.cat.toLowerCase().includes(q));
+
+    listEl.innerHTML = '';
+    activeIndex = -1;
+
+    if (matches.length === 0) { listEl.style.display = 'none'; return; }
+
+    let lastCat = null;
+    for (const u of matches) {
+      if (u.cat !== lastCat) {
+        const header = document.createElement('div');
+        header.className = 'unit-dropdown-cat';
+        header.textContent = u.cat;
+        listEl.appendChild(header);
+        lastCat = u.cat;
+      }
+      const item = document.createElement('div');
+      item.className = 'unit-dropdown-item';
+      item.textContent = u.name;
+      item.dataset.id = u.id;
+      item.addEventListener('mousedown', e => { e.preventDefault(); commitUnit(u.id); });
+      listEl.appendChild(item);
+    }
+    listEl.style.display = 'block';
   }
 
-  if ([...sel.options].some(o => o.value === oldVal)) {
-    sel.value = oldVal;
-  } else {
-    sel.value = 'custom';
+  function commitUnit(id) {
+    hiddenEl.value = id;
+    listEl.style.display = 'none';
+    activeIndex = -1;
+    syncUnitDisplay(prefix);
+    hiddenEl.dispatchEvent(new Event('change'));
   }
+
+  function updateActiveItem() {
+    const items = [...listEl.querySelectorAll('.unit-dropdown-item')];
+    items.forEach((item, i) => item.classList.toggle('unit-dropdown-active', i === activeIndex));
+    if (activeIndex >= 0 && items[activeIndex]) items[activeIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  searchEl.addEventListener('focus', () => renderDropdown(searchEl.value));
+  searchEl.addEventListener('input', () => renderDropdown(searchEl.value));
+  searchEl.addEventListener('blur', () => {
+    setTimeout(() => {
+      listEl.style.display = 'none';
+      activeIndex = -1;
+      syncUnitDisplay(prefix);
+    }, 150);
+  });
+  searchEl.addEventListener('keydown', e => {
+    const items = [...listEl.querySelectorAll('.unit-dropdown-item')];
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+      updateActiveItem();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, -1);
+      updateActiveItem();
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && items[activeIndex]) {
+        commitUnit(items[activeIndex].dataset.id);
+        searchEl.blur();
+      }
+    } else if (e.key === 'Escape') {
+      listEl.style.display = 'none';
+      syncUnitDisplay(prefix);
+      searchEl.blur();
+    }
+  });
 }
 
 // --- Stat Reading ---
@@ -399,7 +483,7 @@ function readUnitStats(prefix) {
     const rangedCheck = document.getElementById('rangedCheck');
     if (rangedCheck && rangedCheck.checked) {
       const dist = Math.max(1, parseInt(document.getElementById('rangedDist').value) || 1);
-      rtbDistPenalty = distancePenalty(dist, rangedType, !!(abilities && abilities.longRange));
+      rtbDistPenalty = distancePenalty(dist, rangedType, !!(abilities && abilities.longRange), version);
     }
   }
 
@@ -442,7 +526,7 @@ function readUnitStats(prefix) {
     rtbDistPenalty,
     // Effective values (for calculation)
     figs: baseFigs,
-    atk: finalAtk, def: finalDef, res, hp, rtb, effectiveGazeRanged, effectiveDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal,
+    atk: finalAtk, def: finalDef, res, hp, rtb, effectiveGazeRanged, effectiveDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
     dmg: Math.max(0, parseInt(document.getElementById(prefix + 'Dmg').value) || 0),
     rangedType, thrownType,
     rangedGetsWpn, thrownGetsWpn,
@@ -529,6 +613,7 @@ function applyUnit(prefix, unitIndex) {
     atk: unit.melee, def: unit.defense, res: unit.resist, hp: unit.hp,
     rtb: unitRtb,
     toHitMod: unit.to_hit || 0,
+    generic: unit.category === 'Generic',
   };
 
   document.getElementById(prefix + 'Figs').value = unit.figures || 1;
@@ -659,6 +744,8 @@ function swapAttackerDefender() {
   unitBaseStats['a'] = unitBaseStats['b'];
   unitBaseStats['b'] = tmp;
 
+  syncUnitDisplay('a');
+  syncUnitDisplay('b');
   updateUnitLock('a');
   updateUnitLock('b');
   updateTypeVisibility();
@@ -700,6 +787,7 @@ function onVersionChange() {
     if (!oldUnit) continue;
     const matched = findMatchingUnit(units, oldUnit);
     sel.value = matched ? String(matched.id) : 'custom';
+    syncUnitDisplay(prefix);
   }
 
   _activeVersion = version;
@@ -1004,9 +1092,11 @@ function applyPreset(name) {
     if (!match) {
       console.warn(`Preset "${name}": predefined unit "${unitName}" not found in ${activeVersion}`);
       document.getElementById(prefix + 'Unit').value = 'custom';
+      syncUnitDisplay(prefix);
       return false;
     }
     document.getElementById(prefix + 'Unit').value = String(match.id);
+    syncUnitDisplay(prefix);
     return true;
   }
   if (preset.aUnitName) {
@@ -1014,12 +1104,14 @@ function applyPreset(name) {
   } else {
     setUnit('a', preset.a || {});
     document.getElementById('aUnit').value = 'custom';
+    syncUnitDisplay('a');
   }
   if (preset.bUnitName) {
     if (!selectPredefined('b', preset.bUnitName)) setUnit('b', preset.b || {});
   } else {
     setUnit('b', preset.b || {});
     document.getElementById('bUnit').value = 'custom';
+    syncUnitDisplay('b');
   }
   updateUnitLock('a');
   updateUnitLock('b');
@@ -1198,6 +1290,8 @@ document.getElementById('bUnit').addEventListener('change', () => {
   updateTypeVisibility();
   recalculate();
 });
+initUnitCombobox('a');
+initUnitCombobox('b');
 
 document.getElementById('aLevel').addEventListener('change', () => {
   applyLevelBonuses('a');

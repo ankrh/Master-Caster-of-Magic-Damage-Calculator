@@ -85,14 +85,59 @@ h1 {
   justify-content: space-between;
   gap: 0.5rem;
 }
-.unit-select {
+.unit-combobox {
+  position: relative;
+  max-width: 180px;
+}
+.unit-search {
   font-size: 0.8rem;
   padding: 0.25rem 0.4rem;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--bg);
   color: var(--text);
-  max-width: 180px;
+  width: 100%;
+  text-align: left;
+}
+.unit-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.unit-dropdown-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  min-width: 200px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.unit-dropdown-cat {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding: 0.3rem 0.5rem 0.1rem;
+  border-top: 1px solid var(--border);
+}
+.unit-dropdown-cat:first-child {
+  border-top: none;
+}
+.unit-dropdown-item {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.unit-dropdown-item:hover,
+.unit-dropdown-item.unit-dropdown-active {
+  background: var(--border);
 }
 .panel-fields.locked input,
 .panel-fields.locked select {

@@ -96,6 +96,13 @@ slashes between words are interchangeable.
 - Survival Instinct (+1 defense, +1 To Hit, +2 resistance to fantastic creatures)
 - Mystic Surge (+2 defense, −2 resistance, −1 To Defend, becomes fantastic)
 - Blazing March (+3 melee/missile attack, bypasses Weapon Immunity)
+- Shatter (reduces defender armor)
+- Black Sleep (prevents retaliation)
+- Dispel Evil (bonus vs undead/chaos fantastic)
+- Discipline, Destiny (CoM2 life enchantments affecting combat stats)
+- Ruler of Underworld, Mislead (CoM2 death enchantments affecting combat stats)
+- Inner Power (CoM2 chaos enchantment affecting combat stats)
+- Reinforce Magic (CoM2 sorcery enchantment affecting combat stats)
 
 ### Global / combat enchantments and map effects
 - True Light, Darkness

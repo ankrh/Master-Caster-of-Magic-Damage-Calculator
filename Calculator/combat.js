@@ -6,6 +6,12 @@ function clampPct(base, mod) {
   return Math.min(1.0, Math.max(0.1, (base + mod) / 100));
 }
 
+// CoM2: remaining HP of the wounded top figure in a stack.
+// If remHP is an exact multiple of hpPerFig, all figures are at full HP → return hpPerFig.
+function woundedTopFigHP(remHP, hpPerFig) {
+  return remHP % hpPerFig || hpPerFig;
+}
+
 // Weapon type bonuses: { atk, def, toHit }
 // Magical/Mithril/Adamantium: +10% To Hit (melee, missile, boulder only)
 // Mithril: +1 atk (melee, missile, boulder, thrown), +1 def
@@ -44,14 +50,25 @@ function getLevelBonuses(level, version) {
 }
 
 // Compute ranged distance penalty for missile/boulder attacks.
-// Returns a negative percentage modifier (e.g. -10, -20, -30) or 0.
-// Long Range caps the penalty at -10%.
-function distancePenalty(distance, rangedType, longRange) {
+// Returns a negative percentage modifier or 0.
+// MoM: tiered at 3/6/9 tiles (-10/-20/-30%).
+// CoM: tiered at 4/8/12 tiles (-10/-20/-30%).
+// CoM2: -10% at 4 tiles, then -3% per additional tile.
+// Long Range caps the penalty at -10% in all versions.
+function distancePenalty(distance, rangedType, longRange, version) {
   if (rangedType !== 'missile' && rangedType !== 'boulder') return 0;
   let penalty = 0;
-  if (distance >= 9) penalty = -30;
-  else if (distance >= 6) penalty = -20;
-  else if (distance >= 3) penalty = -10;
+  if (version && version.startsWith('com2')) {
+    if (distance >= 4) penalty = -10 - 3 * (distance - 4);
+  } else if (version && version.startsWith('com')) {
+    if (distance >= 12) penalty = -30;
+    else if (distance >= 8) penalty = -20;
+    else if (distance >= 4) penalty = -10;
+  } else {
+    if (distance >= 9) penalty = -30;
+    else if (distance >= 6) penalty = -20;
+    else if (distance >= 3) penalty = -10;
+  }
   if (longRange && penalty < -10) penalty = -10;
   return penalty;
 }
@@ -174,11 +191,12 @@ function getAbilityStatModifiers(abilities, version) {
 // Compute probability of failing a single poison resistance roll.
 // MoM: d10, success if roll ≤ Resistance. pFail = max(0, (10 - res) / 10).
 // CoM2: universal -1 save modifier → pFail = max(0, (11 - res) / 10).
-// Returns 0 if target is immune (Poison Immunity or effective resistance ≥ 10).
+// Returns 0 if target is immune (Poison Immunity or Magic Immunity grants +50/+100 resistance, effective resistance ≥ 10).
 function poisonFailProb(defRes, defAbilities, version) {
-  if (defAbilities && defAbilities.poisonImmunity) return 0;
-  const penalty = version && version.startsWith('com') ? 1 : 0;
-  const effectiveRes = defRes - penalty;
+  const isCoM = version && version.startsWith('com');
+  const immuneBonus = (defAbilities && (defAbilities.poisonImmunity || defAbilities.magicImmunity)) ? (isCoM ? 100 : 50) : 0;
+  const penalty = isCoM ? 1 : 0;
+  const effectiveRes = defRes - penalty + immuneBonus;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
 }
@@ -187,10 +205,11 @@ function poisonFailProb(defRes, defAbilities, version) {
 // Compute probability of failing a stoning resistance roll.
 // MoM: d10, success if roll ≤ (Resistance + modifier). The stoningTouch value is negative
 // (e.g. -3 means a -3 penalty to the target's resistance roll).
-// Returns 0 if target is immune (Stoning Immunity or Magic Immunity).
-function stoningFailProb(defRes, defAbilities, modifier) {
-  if (defAbilities && (defAbilities.stoningImmunity || defAbilities.magicImmunity)) return 0;
-  const effectiveRes = defRes + modifier;
+// Returns 0 if target is immune (Stoning/Magic Immunity grants +50/+100 resistance, effective resistance ≥ 10).
+function stoningFailProb(defRes, defAbilities, modifier, version) {
+  const isCoM = version && version.startsWith('com');
+  const immuneBonus = (defAbilities && (defAbilities.stoningImmunity || defAbilities.magicImmunity)) ? (isCoM ? 100 : 50) : 0;
+  const effectiveRes = defRes + modifier + immuneBonus;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
 }
@@ -198,9 +217,8 @@ function stoningFailProb(defRes, defAbilities, modifier) {
 // --- Dispel Evil ---
 // Touch attack that kills one figure per attacking figure on a failed resist roll.
 // Only affects: undead (penalty -9), fantastic_death / fantastic_chaos / Chaos Channeled (penalty -4).
-// Blocked by Magic Immunity. Other unit types are completely immune.
-function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
-  if (defAbilities && defAbilities.magicImmunity) return 0;
+// Magic Immunity grants +50/+100 resistance. Other unit types are completely immune.
+function dispelEvilFailProb(defRes, defAbilities, defUnitType, version) {
   let penalty;
   if (defAbilities && defAbilities.undead) {
     penalty = 9;
@@ -211,17 +229,24 @@ function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
   } else {
     return 0;
   }
-  const effectiveRes = defRes - penalty;
+  const isCoM = version && version.startsWith('com');
+  const immuneBonus = (defAbilities && defAbilities.magicImmunity) ? (isCoM ? 100 : 50) : 0;
+  const effectiveRes = defRes - penalty + immuneBonus;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
 }
 
 // --- Death Gaze ---
-// Same roll mechanics as Stoning Gaze, but blocked by Death Immunity / Magic Immunity /
-// Righteousness (Righteousness grants +30 Res, effectively immune).
-function deathGazeFailProb(defRes, defAbilities, modifier) {
-  if (defAbilities && (defAbilities.deathImmunity || defAbilities.magicImmunity || defAbilities.righteousness)) return 0;
-  const effectiveRes = defRes + modifier;
+// Same roll mechanics as Stoning Gaze. Death/Magic Immunity grants +50/+100 resistance.
+// Righteousness grants +30 resistance (always pushes effective Res ≥ 10).
+function deathGazeFailProb(defRes, defAbilities, modifier, version) {
+  const isCoM = version && version.startsWith('com');
+  let bonus = 0;
+  if (defAbilities) {
+    if (defAbilities.deathImmunity || defAbilities.magicImmunity) bonus = isCoM ? 100 : 50;
+    else if (defAbilities.righteousness) bonus = 30;
+  }
+  const effectiveRes = defRes + modifier + bonus;
   if (effectiveRes >= 10) return 0;
   return Math.max(0, (10 - effectiveRes) / 10);
 }
@@ -230,12 +255,12 @@ function deathGazeFailProb(defRes, defAbilities, modifier) {
 // Includes (at most once) the hidden physical ranged component, followed by
 // doom gaze (exact damage), stoning-kill rolls and death-kill rolls.
 // Blur applies only to the hidden physical ranged component, not doom gaze.
-function buildGazeDist(atk, def, defAlive, defRemHP, stoningFail, deathFail, doomStr, defDefStat, defInvulnBonus, blurChance, blurBuggy) {
+function buildGazeDist(atk, def, defAlive, defRemHP, stoningFail, deathFail, doomStr, defDefStat, defInvulnBonus, blurChance, blurBuggy, defTopFigHP) {
   if (defAlive <= 0 || defRemHP <= 0) return [1];
   let dist = [1];
   const defStat = (defDefStat != null) ? defDefStat : def.def;
   if (atk.effectiveGazeRanged > 0) {
-    dist = calcTotalDamageDist(1, atk.effectiveGazeRanged, atk.toHitRtb, defStat, def.toBlock, def.hp, defRemHP, defInvulnBonus, blurChance, blurBuggy);
+    dist = calcTotalDamageDist(1, atk.effectiveGazeRanged, atk.toHitRtb, defStat, def.toBlock, def.hp, defRemHP, defInvulnBonus, blurChance, blurBuggy, defTopFigHP);
   }
   // Doom Gaze: exact damage, no rolls, no immunities
   if (doomStr > 0) {
@@ -273,11 +298,16 @@ function gazeLabel(stoning, death, doom) {
 
 // --- Life Steal ---
 // Compute whether life steal can affect the target, and return the modifier.
-// Returns null if immune (Death Immunity, Magic Immunity, or effective Resistance ≥ 10).
+// Returns null if immune (Death/Magic Immunity +50/+100 res, or Righteousness +30 res, or effective Res ≥ 10).
 // The lifeSteal value is the resistance penalty (e.g. -3 means target's res is penalized by 3).
-function lifeStealEffective(defRes, defAbilities, modifier) {
-  if (defAbilities && (defAbilities.deathImmunity || defAbilities.magicImmunity || defAbilities.righteousness)) return null;
-  const effRes = defRes + modifier;
+function lifeStealEffective(defRes, defAbilities, modifier, version) {
+  const isCoM = version && version.startsWith('com');
+  let bonus = 0;
+  if (defAbilities) {
+    if (defAbilities.deathImmunity || defAbilities.magicImmunity) bonus = isCoM ? 100 : 50;
+    else if (defAbilities.righteousness) bonus = 30;
+  }
+  const effRes = defRes + modifier + bonus;
   if (effRes >= 10) return null;
   return modifier;
 }
@@ -309,10 +339,12 @@ function gazeAttackFires(effectiveGazeRanged, effectiveDoomGaze, version) {
 //   Thrown: applies in all versions EXCEPT v1.31 (bug: thrown ignores WI).
 //   Ranged missile/boulder: MoM = never. CoM2 = applies.
 //   Magic ranged: never (already magical).
-function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, version) {
+// v1.31 bug: Generic units (Trireme, Galley, Warship, Catapult) bypass WI regardless of attack type.
+function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, version, atkGeneric) {
   if (!defAbilities || !(defAbilities.weaponImmunity || defAbilities.invulnerability)) return baseDef;
   if (atkWeapon !== 'normal') return baseDef;
   if (atkUnitType !== 'normal') return baseDef;
+  if (version === 'mom_1.31' && atkGeneric) return baseDef;
   if (version && version.startsWith('com')) {
     return baseDef + 8;
   }
@@ -321,32 +353,38 @@ function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, versio
 
 // --- Missile Immunity ---
 // Applies Missile Immunity defense boost. Only triggers against Ranged Missile Attacks.
-// MoM: defense set to 50. Applied after armor piercing and weapon immunity.
-function missileImmunityDef(baseDef, defAbilities) {
+// MoM: defense set to 50. CoM/CoM2: defense set to 100. Applied after armor piercing and weapon immunity.
+function missileImmunityDef(baseDef, defAbilities, version) {
   if (!defAbilities || !defAbilities.missileImmunity) return baseDef;
-  return 50;
+  return (version && version.startsWith('com')) ? 100 : 50;
 }
 
 // --- Fire Immunity ---
-// Raises defense to 50 against Fire Breath and Immolation damage.
-// Fire Damage is also a subtype of Magical Damage, so Magic Immunity also blocks it
-// (but that's handled separately). Applied after armor piercing and weapon immunity.
-function fireImmunityDef(baseDef, defAbilities) {
+// Raises defense against Fire Breath and Immolation damage. MoM: 50. CoM/CoM2: 100.
+// Applied after armor piercing and weapon immunity.
+function fireImmunityDef(baseDef, defAbilities, version) {
   if (!defAbilities || !defAbilities.fireImmunity) return baseDef;
-  return 50;
+  return (version && version.startsWith('com')) ? 100 : 50;
 }
 
 // --- Righteousness ---
 // Life-realm unit enchantment. Protects against Chaos/Death magic.
 // In combat, applies:
-//   Defense 50 vs Chaos-realm Ranged Magical Attack (magic_c), Fire Breath, Lightning Breath
-//   Fully blocks Immolation and Wall of Fire (via immolationBlocked)
-//   +30 Resistance vs Cause Fear, Life Steal, Death Gaze — modelled as immunity
-//     in fearFailProb / lifeStealEffective / deathGazeFailProb, since +30 always
-//     pushes effective Res ≥ 10.
-function righteousnessDef(baseDef, defAbilities) {
+//   Defense 50 (MoM) / 100 (CoM/CoM2) vs Chaos-realm Ranged Magical Attack (magic_c), Fire Breath, Lightning Breath
+//   Defense 50/100 vs Immolation and Wall of Fire (via magicImmunityDef chain)
+//   +30 Resistance vs Cause Fear, Life Steal, Death Gaze (always pushes effective Res ≥ 10).
+function righteousnessDef(baseDef, defAbilities, version) {
   if (!defAbilities || !defAbilities.righteousness) return baseDef;
-  return 50;
+  return (version && version.startsWith('com')) ? 100 : 50;
+}
+
+// --- Magic Immunity (defense) ---
+// Raises defense against magic ranged attacks, Immolation, and Wall of Fire.
+// MoM: defense set to 50. CoM/CoM2: defense set to 100.
+// Applied after other defense modifiers; overrides Fire Immunity and Righteousness if higher.
+function magicImmunityDef(baseDef, defAbilities, version) {
+  if (!defAbilities || !defAbilities.magicImmunity) return baseDef;
+  return (version && version.startsWith('com')) ? 100 : 50;
 }
 
 // --- Immolation ---
@@ -354,13 +392,6 @@ function righteousnessDef(baseDef, defAbilities) {
 function immolationStr(version) {
   if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;
   return 4;
-}
-
-// Immolation is completely blocked by Magic Immunity (MoM wiki: "no harm whatsoever"
-// for Immolation/Lightning Breath/etc). Righteousness grants Def 50, not full block —
-// handled via righteousnessDef in the immolation defense chain below.
-function immolationBlocked(defAbilities) {
-  return !!(defAbilities && defAbilities.magicImmunity);
 }
 
 // After 1.50 patch (and CoM/CoM2), immolation no longer accompanies ranged attacks.
@@ -377,8 +408,8 @@ function immolationBlocksRanged(version) {
 // and gaze phases, BEFORE the melee damage + counter-attack.
 // Targets only the attacker (A) - the unit passing through the wall.
 // Does not fire in ranged combat (attacker shoots from outside the wall).
-// Blocked completely by Magic Immunity (like all Immolation). Fire Immunity and
-// Righteousness raise defense to 50. Large Shield and AP apply.
+// Magic Immunity raises defense to 50 (MoM) / 100 (CoM/CoM2). Fire Immunity and
+// Righteousness also raise defense to 50/100. Large Shield and AP apply.
 function wallOfFireStr(version) {
   if (version && (version.startsWith('com_') || version.startsWith('com2_'))) return 10;
   return 5;
@@ -386,11 +417,16 @@ function wallOfFireStr(version) {
 
 // --- Cause Fear ---
 // Probability of a single figure failing its fear resistance roll.
-// Fear has no resistance modifier (0). Blocked by Death Immunity, Magic Immunity,
-// or Righteousness (+30 Res, effectively immune).
-function fearFailProb(defRes, defAbilities) {
-  if (defAbilities && (defAbilities.deathImmunity || defAbilities.magicImmunity || defAbilities.righteousness)) return 0;
-  const effectiveRes = Math.min(Math.max(defRes, 0), 10);
+// Fear has no resistance modifier (0). Death/Magic Immunity grants +50/+100 resistance.
+// Righteousness grants +30 resistance (always pushes effective Res ≥ 10).
+function fearFailProb(defRes, defAbilities, version) {
+  const isCoM = version && version.startsWith('com');
+  let bonus = 0;
+  if (defAbilities) {
+    if (defAbilities.deathImmunity || defAbilities.magicImmunity) bonus = isCoM ? 100 : 50;
+    else if (defAbilities.righteousness) bonus = 30;
+  }
+  const effectiveRes = Math.max(defRes, 0) + bonus;
   if (effectiveRes >= 10) return 0;
   return (10 - effectiveRes) / 10;
 }
@@ -468,7 +504,7 @@ function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
                             lifeStealMod, lifeStealRes,
                             immolationDist, defInvulnBonus,
                             blurChance, blurBuggy,
-                            doubleStrike) {
+                            doubleStrike, defTopFigHP) {
   if (remHP <= 0 || maxFigs <= 0) return [1];
   const result = new Array(remHP + 1).fill(0);
   const lo = fearDist ? 0 : maxFigs;
@@ -481,7 +517,7 @@ function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
     } else if (isDoom) {
       dist = calcDoomDist(k, atk, remHP);
     } else {
-      dist = calcTotalDamageDist(k, atk, toHit, def, toBlock, targetHP, remHP, defInvulnBonus, blurChance, blurBuggy);
+      dist = calcTotalDamageDist(k, atk, toHit, def, toBlock, targetHP, remHP, defInvulnBonus, blurChance, blurBuggy, defTopFigHP);
     }
     if (poisonStr > 0 && poisonFail > 0 && k > 0) {
       dist = convolveDists(dist, calcResistDmgDist(k * poisonStr, poisonFail, remHP), remHP);
@@ -720,6 +756,8 @@ function resolveCombat(a, b, opts) {
   const aCounterHaste = aHaste && !isCoMVer;
   const bCounterHaste = bHaste && !isCoMVer;
 
+  const isCoM2 = opts.version && opts.version.startsWith('com2');
+
   // Compute alive figures and remaining HP
   const aTotalHP = a.figs * a.hp;
   const aAlive   = Math.max(0, a.figs - Math.floor(a.dmg / a.hp));
@@ -772,19 +810,15 @@ function resolveCombat(a, b, opts) {
   // v1.31 bugs: (1) defending Fear doesn't work; (2) attacker's Fear also self-fears attacker.
   const aFear = !isRanged && !!(a.abilities && a.abilities.fear);
   const bFear = !isRanged && !!(b.abilities && b.abilities.fear);
-  const bPFear = aFear ? fearFailProb(bResDeath, b.abilities) : 0; // A's fear on B
-  const aPFear = bFear ? fearFailProb(aResDeath, a.abilities) : 0; // B's fear on A
-  // Phase presence is based on ability, not probability — a high-resistance or
-  // Righteousness-buffered defender still gets a "Cause Fear" phase (with 0 figs
-  // feared) so the UI shows the attempt. Hard immunity (Death/Magic Immunity)
-  // suppresses the attack entirely.
-  const aImmuneToFear = !!(a.abilities && (a.abilities.deathImmunity || a.abilities.magicImmunity));
-  const bImmuneToFear = !!(b.abilities && (b.abilities.deathImmunity || b.abilities.magicImmunity));
-  const bFearedByA = aFear && !bImmuneToFear; // A can fear B's counter (all versions)
-  const aFearedByB = bFear && opts.version !== 'mom_1.31' && !aImmuneToFear; // B can fear A (not v1.31: bug #1)
-  const aFearBug = aFear && opts.version === 'mom_1.31' && bPFear > 0 && !aImmuneToFear; // v1.31 self-fear bug #2
-  // B has Cause Fear but v1.31 bug silences it (not blocked by immunity) — still show the phase.
-  const showFearNoop = bFear && !aFearedByB && !aImmuneToFear;
+  const bPFear = aFear ? fearFailProb(bResDeath, b.abilities, opts.version) : 0; // A's fear on B
+  const aPFear = bFear ? fearFailProb(aResDeath, a.abilities, opts.version) : 0; // B's fear on A
+  // Phase always shows when either unit has Cause Fear; immunity (Death/Magic Immunity)
+  // results in 0 feared figures via the +50/+100 resistance bonus in fearFailProb.
+  const bFearedByA = aFear; // A can fear B (all versions; immune B shows phase with 0 feared)
+  const aFearedByB = bFear && opts.version !== 'mom_1.31'; // B can fear A (not v1.31: bug #1)
+  const aFearBug = aFear && opts.version === 'mom_1.31' && bPFear > 0; // v1.31 self-fear bug #2: bypasses immunity
+  // B has Cause Fear but v1.31 bug silences it — still show the phase.
+  const showFearNoop = bFear && !aFearedByB;
   // Label for simultaneous (non-FS) fear phases: mutual = "Cause Fear", else directional.
   const hasDefenderFear = aFearedByB || aFearBug || showFearNoop;
   const simultaneousFearLabel = hasDefenderFear && bFearedByA ? 'Cause Fear'
@@ -865,23 +899,23 @@ function resolveCombat(a, b, opts) {
   // Weapon Immunity: applied after armor piercing. Phase-specific eligibility.
   // MoM: defense → min 10. CoM2: defense + 8. Only vs normal units with normal weapons.
   // Melee: always eligible
-  let bDefVsA = weaponImmunityDef(bDefAP, b.abilities, a.weapon, a.unitType, ver);
+  let bDefVsA = weaponImmunityDef(bDefAP, b.abilities, a.weapon, a.unitType, ver, a.generic);
   // Gaze: hidden ranged component — gaze attackers are always fantastic so WI never
-  // triggers, but Large Shield applies since it's a ranged attack.
-  let bDefForGaze = weaponImmunityDef(bDefAPLSGaze, b.abilities, a.weapon, a.unitType, ver);
-  let aDefVsB = weaponImmunityDef(aDefAP, a.abilities, b.weapon, b.unitType, ver);
-  let aDefForGaze = weaponImmunityDef(aDefAPLSGaze, a.abilities, b.weapon, b.unitType, ver);
+  // triggers, but Large Shield and Magic Immunity apply since it's a magical ranged attack.
+  let bDefForGaze = magicImmunityDef(weaponImmunityDef(bDefAPLSGaze, b.abilities, a.weapon, a.unitType, ver, a.generic), b.abilities, ver);
+  let aDefVsB = weaponImmunityDef(aDefAP, a.abilities, b.weapon, b.unitType, ver, b.generic);
+  let aDefForGaze = magicImmunityDef(weaponImmunityDef(aDefAPLSGaze, a.abilities, b.weapon, b.unitType, ver, b.generic), a.abilities, ver);
   // Ranged: WI applies to missile/boulder (physical ranged) in all versions.
   // Does NOT apply to magic ranged (already magical damage).
   // Large Shield bonus is included for all ranged types.
   const isPhysRanged = a.rangedType === 'missile' || a.rangedType === 'boulder';
   let bDefVsARanged = isPhysRanged
-    ? weaponImmunityDef(bDefAPLSRanged, b.abilities, a.weapon, a.unitType, ver) : bDefAPLSRanged;
+    ? weaponImmunityDef(bDefAPLSRanged, b.abilities, a.weapon, a.unitType, ver, a.generic) : bDefAPLSRanged;
   // Thrown: WI eligible except v1.31 bug. Breath (fire/lightning) is magical, never triggers WI.
   // Large Shield bonus is included for thrown/breath.
   const thrownWI = a.thrownType === 'thrown' && ver !== 'mom_1.31';
   let bDefForThrown = thrownWI
-    ? weaponImmunityDef(bDefAPThrownLS, b.abilities, a.weapon, a.unitType, ver) : bDefAPThrownLS;
+    ? weaponImmunityDef(bDefAPThrownLS, b.abilities, a.weapon, a.unitType, ver, a.generic) : bDefAPThrownLS;
 
   // Eldritch Weapon: -10pp to defender's toBlock on melee, thrown, and missile ranged attacks.
   // Does not apply to breath, ranged boulder, or ranged magical attacks.
@@ -892,7 +926,7 @@ function resolveCombat(a, b, opts) {
   const bToBlockVsARangedEW = (aEW && a.rangedType === 'missile') ? Math.max(0, b.toBlock - 0.10) : b.toBlock;
   const aToBlockVsBMelee   = bEW ? Math.max(0, a.toBlock - 0.10) : a.toBlock;
 
-  // Missile Immunity: defense set to 50 against missile ranged attacks only (not boulder/magic).
+  // Missile Immunity: defense set to 50/100 against missile ranged attacks only (not boulder/magic).
   // Applied after armor piercing and weapon immunity.
   // v1.31 bug: when both WI and MI apply to the same missile attack, WI overwrites MI
   // (defense stays at 10 instead of 50). Fixed in v1.51+ (CP 1.60).
@@ -900,25 +934,36 @@ function resolveCombat(a, b, opts) {
   const wiTriggeredOnMissile = isMissile && b.abilities && b.abilities.weaponImmunity
     && a.weapon === 'normal' && a.unitType === 'normal';
   if (isMissile && !(ver === 'mom_1.31' && wiTriggeredOnMissile)) {
-    bDefVsARanged = missileImmunityDef(bDefVsARanged, b.abilities);
+    bDefVsARanged = missileImmunityDef(bDefVsARanged, b.abilities, ver);
   }
 
-  // Righteousness: defense set to 50 against Chaos-realm Ranged Magical Attack (magic_c).
+  // Righteousness: defense set to 50/100 against Chaos-realm Ranged Magical Attack (magic_c).
   // Nature/Sorcery magic ranged are unaffected.
   if (a.rangedType === 'magic_c') {
-    bDefVsARanged = righteousnessDef(bDefVsARanged, b.abilities);
+    bDefVsARanged = righteousnessDef(bDefVsARanged, b.abilities, ver);
   }
 
-  // Fire Immunity: defense set to 50 against fire breath (thrownType 'fire').
+  // Magic Immunity: defense set to 50/100 against all magic ranged attacks.
+  if (a.rangedType === 'magic_c' || a.rangedType === 'magic_n' || a.rangedType === 'magic_s') {
+    bDefVsARanged = magicImmunityDef(bDefVsARanged, b.abilities, ver);
+  }
+
+  // Fire Immunity: defense set to 50/100 against fire breath (thrownType 'fire').
   // Applied after armor piercing and weapon immunity (though breath is magical so WI never triggers).
   if (a.thrownType === 'fire') {
-    bDefForThrown = fireImmunityDef(bDefForThrown, b.abilities);
+    bDefForThrown = fireImmunityDef(bDefForThrown, b.abilities, ver);
   }
 
-  // Righteousness: defense set to 50 against Fire Breath and Lightning Breath
+  // Righteousness: defense set to 50/100 against Fire Breath and Lightning Breath
   // (both are Chaos-realm special attacks).
   if (a.thrownType === 'fire' || a.thrownType === 'lightning') {
-    bDefForThrown = righteousnessDef(bDefForThrown, b.abilities);
+    bDefForThrown = righteousnessDef(bDefForThrown, b.abilities, ver);
+  }
+
+  // Magic Immunity: defense set to 50 against Fire Breath and Lightning Breath in MoM.
+  // CoM v2.3 removed this — breath attacks now bypass Magic Immunity in CoM/CoM2.
+  if ((a.thrownType === 'fire' || a.thrownType === 'lightning') && !(ver && ver.startsWith('com'))) {
+    bDefForThrown = magicImmunityDef(bDefForThrown, b.abilities, ver);
   }
 
   // Illusion: sets defender's defense to 0 (only city walls bonus survives).
@@ -942,23 +987,21 @@ function resolveCombat(a, b, opts) {
   // --- Immolation ---
   // Area fire damage: targets each defender figure independently (like fire breath).
   // Strength 4 (MoM) / 10 (CoM/CoM2). Fires like a touch attack with each attack phase.
-  // Blocked completely by Magic Immunity. Fire Immunity and Righteousness raise
-  // defense to 50. Large Shield and AP apply.
+  // Magic Immunity raises defense to 50/100. Fire Immunity and Righteousness also raise
+  // defense to 50/100. Large Shield and AP apply.
   const aHasImm = !!(a.abilities && a.abilities.immolation);
   const bHasImm = !!(b.abilities && b.abilities.immolation);
   const immStr = (aHasImm || bHasImm) ? immolationStr(ver) : 0;
-  const bImmBlocked = immolationBlocked(b.abilities);
-  const aImmBlocked = immolationBlocked(a.abilities);
-  // Defense for immolation: base + Large Shield + Bless + AP → Fire Immunity → Righteousness → Illusion
-  let bDefForImm = righteousnessDef(fireImmunityDef(bDefAPLSImm, b.abilities), b.abilities);
-  let aDefForImm = righteousnessDef(fireImmunityDef(aDefAPLSImm, a.abilities), a.abilities);
+  // Defense for immolation: base + Large Shield + Bless + AP → Magic Immunity → Fire Immunity → Righteousness → Illusion
+  let bDefForImm = righteousnessDef(fireImmunityDef(magicImmunityDef(bDefAPLSImm, b.abilities, ver), b.abilities, ver), b.abilities, ver);
+  let aDefForImm = righteousnessDef(fireImmunityDef(magicImmunityDef(aDefAPLSImm, a.abilities, ver), a.abilities, ver), a.abilities, ver);
   if (aIllusion && !bIllusionImmune) bDefForImm = b.cityWallBonus || 0;
   if (bIllusion && !aIllusionImmune) aDefForImm = a.cityWallBonus || 0;
 
   // --- Wall of Fire ---
   // Area Immolation damage to attacker A between gaze and melee. Not in ranged combat.
   // Uses the same defense chain as immolation against A, and the same immunities.
-  const wallOfFireActive = !!opts.wallOfFire && !isRanged && !immolationBlocked(a.abilities);
+  const wallOfFireActive = !!opts.wallOfFire && !isRanged;
   const wofStr = wallOfFireActive ? wallOfFireStr(ver) : 0;
   // Wall of Fire is cast at 30% base To Hit (standard spell To Hit, like immolation).
   const wofToHit = 0.3;
@@ -976,7 +1019,8 @@ function resolveCombat(a, b, opts) {
     }
     let dmgToB = aAlive > 0 && bRemHP > 0 && a.rtb > 0 && !aBlackSleep
       ? (aDoomsB ? calcDoomDist(aAlive, a.rtb, bRemHP)
-                 : calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, bDefVsARanged, bToBlockVsARangedEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy))
+                 : calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, bDefVsARanged, bToBlockVsARangedEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
+                     isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined))
       : [1];
 
     // Poison Touch accompanies ranged attacks
@@ -994,7 +1038,7 @@ function resolveCombat(a, b, opts) {
     const aStoningActive = a.abilities && a.abilities.stoningTouch != null
       && touchAttackFires(a.rtb, a.baseRtb, opts.version);
     if (aStoningActive && aAlive > 0 && bRemHP > 0) {
-      const pFail = stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch);
+      const pFail = stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch, opts.version);
       if (pFail > 0) {
         const stoningDist = calcFigureKillDmgDist(aAlive, pFail, b.hp, bRemHP);
         dmgToB = convolveDists(dmgToB, stoningDist, bRemHP);
@@ -1006,7 +1050,7 @@ function resolveCombat(a, b, opts) {
     const aLifeStealActive = a.abilities && a.abilities.lifeSteal != null
       && touchAttackFires(a.rtb, a.baseRtb, opts.version);
     if (aLifeStealActive && aAlive > 0 && bRemHP > 0) {
-      const lsMod = lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal);
+      const lsMod = lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version);
       if (lsMod !== null) {
         aLifeStealDistR = calcLifeStealDmgDist(aAlive, bResDeath, lsMod, bRemHP);
         dmgToB = convolveDists(dmgToB, aLifeStealDistR, bRemHP);
@@ -1014,7 +1058,7 @@ function resolveCombat(a, b, opts) {
     }
 
     // Immolation accompanies ranged attacks (MoM only; CoM/CoM2 removed this)
-    const aImmWithRanged = aHasImm && !bImmBlocked && !immolationBlocksRanged(ver)
+    const aImmWithRanged = aHasImm && !immolationBlocksRanged(ver)
       && touchAttackFires(a.rtb, a.baseRtb, opts.version);
     if (aImmWithRanged && aAlive > 0 && bAlive > 0 && bRemHP > 0) {
       const immDist = calcAreaDamageDist(bAlive, immStr, a.toHitImmolation, bDefForImm, b.toBlock, b.hp, bRemHP, bInvulnBonus);
@@ -1055,13 +1099,13 @@ function resolveCombat(a, b, opts) {
 
     const aStoningOn = a.abilities && a.abilities.stoningTouch != null;
     const bStoningOn = b.abilities && b.abilities.stoningTouch != null;
-    const aStoningFail = aStoningOn ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch) : 0;
-    const bStoningFail = bStoningOn ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningTouch) : 0;
+    const aStoningFail = aStoningOn ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch, opts.version) : 0;
+    const bStoningFail = bStoningOn ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningTouch, opts.version) : 0;
 
     const aLifeStealOn = a.abilities && a.abilities.lifeSteal != null;
     const bLifeStealOn = b.abilities && b.abilities.lifeSteal != null;
-    const aLifeStealMod = aLifeStealOn ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal) : null;
-    const bLifeStealMod = bLifeStealOn ? lifeStealEffective(aResDeath, a.abilities, b.abilities.lifeSteal) : null;
+    const aLifeStealMod = aLifeStealOn ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
+    const bLifeStealMod = bLifeStealOn ? lifeStealEffective(aResDeath, a.abilities, b.abilities.lifeSteal, opts.version) : null;
 
     // Per-phase activation: touch attacks require the associated attack to be non-zero.
     // Black Sleep prevents all outgoing attacks including touch effects.
@@ -1073,9 +1117,9 @@ function resolveCombat(a, b, opts) {
     const bStoningWithMelee  = bStoningFail > 0 && !bBlackSleep && touchAttackFires(b.atk, b.baseAtk, opts.version);
 
     const aDispelEvilFail = (a.abilities && a.abilities.dispelEvil)
-      ? dispelEvilFailProb(bResM, b.abilities, b.unitType) : 0;
+      ? dispelEvilFailProb(bResM, b.abilities, b.unitType, opts.version) : 0;
     const bDispelEvilFail = (b.abilities && b.abilities.dispelEvil)
-      ? dispelEvilFailProb(aResM, a.abilities, a.unitType) : 0;
+      ? dispelEvilFailProb(aResM, a.abilities, a.unitType, opts.version) : 0;
     const aDispelEvilWithMelee = aDispelEvilFail > 0 && !aBlackSleep && touchAttackFires(a.atk, a.baseAtk, opts.version);
     const bDispelEvilWithMelee = bDispelEvilFail > 0 && !bBlackSleep && touchAttackFires(b.atk, b.baseAtk, opts.version);
 
@@ -1084,9 +1128,9 @@ function resolveCombat(a, b, opts) {
     const bLifeStealWithMelee  = bLifeStealMod !== null && !bBlackSleep && touchAttackFires(b.atk, b.baseAtk, opts.version);
 
     // Immolation per-phase activation
-    const aImmWithThrown = aHasImm && !bImmBlocked && !aBlackSleep && touchAttackFires(a.rtb, a.baseRtb, opts.version);
-    const aImmWithMeleeT = aHasImm && !bImmBlocked && !aBlackSleep && touchAttackFires(a.atk, a.baseAtk, opts.version);
-    const bImmWithMeleeT = bHasImm && !aImmBlocked && !bBlackSleep && touchAttackFires(b.atk, b.baseAtk, opts.version);
+    const aImmWithThrown = aHasImm && !aBlackSleep && touchAttackFires(a.rtb, a.baseRtb, opts.version);
+    const aImmWithMeleeT = aHasImm && !aBlackSleep && touchAttackFires(a.atk, a.baseAtk, opts.version);
+    const bImmWithMeleeT = bHasImm && !bBlackSleep && touchAttackFires(b.atk, b.baseAtk, opts.version);
 
     // Gaze attack detection (resolved between thrown/breath and melee phases).
     // Stoning Gaze, Death Gaze, and Doom Gaze fire together when a unit has multiple
@@ -1106,18 +1150,18 @@ function resolveCombat(a, b, opts) {
     const aGazeActive = !aBlackSleep && (aStoningGazeActive || aDeathGazeActive || aDoomGazeActive || aGazeRangedActive);
     const bGazeActive = !bBlackSleep && (bStoningGazeActive || bDeathGazeActive || bDoomGazeActive || bGazeRangedActive);
     const aStoningGazeFail = aStoningGazeActive
-      ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningGaze) : 0;
+      ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningGaze, opts.version) : 0;
     const bStoningGazeFail = bStoningGazeActive
-      ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningGaze) : 0;
+      ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningGaze, opts.version) : 0;
     const aDeathGazeFail = aDeathGazeActive
-      ? deathGazeFailProb(bResDeath, b.abilities, a.abilities.deathGaze) : 0;
+      ? deathGazeFailProb(bResDeath, b.abilities, a.abilities.deathGaze, opts.version) : 0;
     const bDeathGazeFail = bDeathGazeActive
-      ? deathGazeFailProb(aResDeath, a.abilities, b.abilities.deathGaze) : 0;
+      ? deathGazeFailProb(aResDeath, a.abilities, b.abilities.deathGaze, opts.version) : 0;
     const hasGaze = aGazeActive || bGazeActive;
 
     // Touch attacks (immolation, poison, stoning, life steal) fire with gaze (all versions)
-    const aImmWithGaze       = aHasImm && !bImmBlocked && aGazeActive;
-    const bImmWithGaze       = bHasImm && !aImmBlocked && bGazeActive;
+    const aImmWithGaze       = aHasImm && aGazeActive;
+    const bImmWithGaze       = bHasImm && bGazeActive;
     const aPoisonWithGaze    = aPoisonFail > 0  && !aBlackSleep && aGazeActive;
     const bPoisonWithGaze    = bPoisonFail > 0  && !bBlackSleep && bGazeActive;
     const aStoningWithGaze   = aStoningFail > 0 && !aBlackSleep && aGazeActive;
@@ -1128,7 +1172,8 @@ function resolveCombat(a, b, opts) {
     // Pre-compute B's gaze distribution (count-independent portion; targets A)
     // Touch attacks scale with B's surviving count and are added per-iteration below.
     let bGazeDistNoTouch = bGazeActive
-      ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail, bDoomGazeStr, aDefForGaze, aInvulnBonus, aBlurChance, blurBuggy)
+      ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail, bDoomGazeStr, aDefForGaze, aInvulnBonus, aBlurChance, blurBuggy,
+          isCoM2 ? woundedTopFigHP(aRemHP, a.hp) : undefined)
       : [1];
     if (aAlive > 0 && aRemHP > 0 && bImmWithGaze) {
       bGazeDistNoTouch = convolveDists(bGazeDistNoTouch,
@@ -1140,7 +1185,8 @@ function resolveCombat(a, b, opts) {
     // Phase 1: Thrown/Breath damage
     let thrownDist = aAlive > 0 && bRemHP > 0
       ? (aDoomsB ? calcDoomDist(aAlive, a.rtb, bRemHP)
-                 : calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, bDefForThrown, bToBlockVsAThrEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy))
+                 : calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, bDefForThrown, bToBlockVsAThrEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
+                     isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined))
       : [1];
 
     // Convolve attacker's touch attacks into thrown phase (simultaneous with thrown)
@@ -1199,7 +1245,8 @@ function resolveCombat(a, b, opts) {
       // Phase 2: Gaze attacks (attacker's gaze first, then defender's gaze)
       // A's gaze: physical ranged + doom + stoning + death effects on B's surviving figures
       let aGazeDist = aGazeActive
-        ? buildGazeDist(a, b, bAliveAfterP1, bRemHPAfterP1, aStoningGazeFail, aDeathGazeFail, aDoomGazeStr, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy)
+        ? buildGazeDist(a, b, bAliveAfterP1, bRemHPAfterP1, aStoningGazeFail, aDeathGazeFail, aDoomGazeStr, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy,
+            isCoM2 ? woundedTopFigHP(bRemHPAfterP1, b.hp) : undefined)
         : [1];
       // A's touch attacks fire simultaneously with A's gaze
       if (aAlive > 0 && bAliveAfterP1 > 0 && bRemHPAfterP1 > 0) {
@@ -1302,7 +1349,8 @@ function resolveCombat(a, b, opts) {
               aDispelEvilWithMelee ? aDispelEvilFail : 0,
               aLifeStealWithMelee ? aLifeStealMod : null, bResDeath,
               aImmMeleeDist1, bInvulnBonus, bBlurChance, blurBuggy,
-              hasFirstStrike ? false : aHaste);
+              hasFirstStrike ? false : aHaste,
+              isCoM2 ? woundedTopFigHP(bRemHPAfterGaze, b.hp) : undefined);
 
             if (hasFirstStrike) {
               // A's melee resolves before B's counter-attack; counter uses post-melee survivors.
@@ -1328,7 +1376,8 @@ function resolveCombat(a, b, opts) {
                   bDispelEvilWithMelee ? bDispelEvilFail : 0,
                   bLifeStealWithMelee ? bLifeStealMod : null, aResDeath,
                   bImmFSDist1, aInvulnBonus, aBlurChance, blurBuggy,
-                  bCounterHaste);
+                  bCounterHaste,
+                  isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
 
                 // A's hasted 2nd strike (simultaneous with counter), targeting post-FS B.
                 let secondDmgToB;
@@ -1342,7 +1391,8 @@ function resolveCombat(a, b, opts) {
                     aDispelEvilWithMelee ? aDispelEvilFail : 0,
                     aLifeStealWithMelee ? aLifeStealMod : null, bResDeath,
                     aImm2nd, bInvulnBonus, bBlurChance, blurBuggy,
-                    false);
+                    false,
+                    isCoM2 ? woundedTopFigHP(bRemHPAfterMelee, b.hp) : undefined);
                 } else {
                   secondDmgToB = [1];
                 }
@@ -1372,7 +1422,8 @@ function resolveCombat(a, b, opts) {
               bDispelEvilWithMelee ? bDispelEvilFail : 0,
               bLifeStealWithMelee ? bLifeStealMod : null, aResDeath,
               bImmMeleeDist1, aInvulnBonus, aBlurChance, blurBuggy,
-              bCounterHaste);
+              bCounterHaste,
+              isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
 
             // Accumulate total damage (thrown + gaze + WoF + melee)
             for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
@@ -1568,23 +1619,23 @@ function resolveCombat(a, b, opts) {
       && touchAttackFires(a.atk, a.baseAtk, opts.version);
     const bStoningOn = b.abilities && b.abilities.stoningTouch != null
       && touchAttackFires(b.atk, b.baseAtk, opts.version);
-    const aStoningFail = aStoningOn ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch) : 0;
-    const bStoningFail = bStoningOn ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningTouch) : 0;
+    const aStoningFail = aStoningOn ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch, opts.version) : 0;
+    const bStoningFail = bStoningOn ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningTouch, opts.version) : 0;
 
     const aDispelEvilFail = (a.abilities && a.abilities.dispelEvil
       && touchAttackFires(a.atk, a.baseAtk, opts.version))
-      ? dispelEvilFailProb(bResM, b.abilities, b.unitType) : 0;
+      ? dispelEvilFailProb(bResM, b.abilities, b.unitType, opts.version) : 0;
     const bDispelEvilFail = (b.abilities && b.abilities.dispelEvil
       && touchAttackFires(b.atk, b.baseAtk, opts.version))
-      ? dispelEvilFailProb(aResM, a.abilities, a.unitType) : 0;
+      ? dispelEvilFailProb(aResM, a.abilities, a.unitType, opts.version) : 0;
 
     // Life steal setup
     const aLifeStealOnM = a.abilities && a.abilities.lifeSteal != null
       && touchAttackFires(a.atk, a.baseAtk, opts.version);
-    const aLifeStealModM = aLifeStealOnM ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal) : null;
+    const aLifeStealModM = aLifeStealOnM ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
     const bLifeStealOnM = b.abilities && b.abilities.lifeSteal != null
       && touchAttackFires(b.atk, b.baseAtk, opts.version);
-    const bLifeStealModM = bLifeStealOnM ? lifeStealEffective(aResDeath, a.abilities, b.abilities.lifeSteal) : null;
+    const bLifeStealModM = bLifeStealOnM ? lifeStealEffective(aResDeath, a.abilities, b.abilities.lifeSteal, opts.version) : null;
 
     // Gaze attack detection (resolved before melee exchange)
     const aDoomGazeStr = (a.effectiveDoomGaze || 0) > 0 ? a.effectiveDoomGaze : 0;
@@ -1602,20 +1653,20 @@ function resolveCombat(a, b, opts) {
     const aGazeActive = !aBlackSleep && (aStoningGazeActive || aDeathGazeActive || aDoomGazeActive || aGazeRangedActive);
     const bGazeActive = !bBlackSleep && (bStoningGazeActive || bDeathGazeActive || bDoomGazeActive || bGazeRangedActive);
     const aStoningGazeFail = aStoningGazeActive
-      ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningGaze) : 0;
+      ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningGaze, opts.version) : 0;
     const bStoningGazeFail = bStoningGazeActive
-      ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningGaze) : 0;
+      ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningGaze, opts.version) : 0;
     const aDeathGazeFail = aDeathGazeActive
-      ? deathGazeFailProb(bResDeath, b.abilities, a.abilities.deathGaze) : 0;
+      ? deathGazeFailProb(bResDeath, b.abilities, a.abilities.deathGaze, opts.version) : 0;
     const bDeathGazeFail = bDeathGazeActive
-      ? deathGazeFailProb(aResDeath, a.abilities, b.abilities.deathGaze) : 0;
+      ? deathGazeFailProb(aResDeath, a.abilities, b.abilities.deathGaze, opts.version) : 0;
     const hasGaze = aGazeActive || bGazeActive;
 
     // Touch attack activation for pure melee path
-    const aImmWithGazeM = aHasImm && !bImmBlocked && aGazeActive;
-    const bImmWithGazeM = bHasImm && !aImmBlocked && bGazeActive;
-    const aImmWithMeleeM = aHasImm && !bImmBlocked && touchAttackFires(a.atk, a.baseAtk, opts.version);
-    const bImmWithMeleeM = bHasImm && !aImmBlocked && touchAttackFires(b.atk, b.baseAtk, opts.version);
+    const aImmWithGazeM = aHasImm && aGazeActive;
+    const bImmWithGazeM = bHasImm && bGazeActive;
+    const aImmWithMeleeM = aHasImm && touchAttackFires(a.atk, a.baseAtk, opts.version);
+    const bImmWithMeleeM = bHasImm && touchAttackFires(b.atk, b.baseAtk, opts.version);
     // Gaze touch: use raw ability values (not gated by melee atk) so pure-gaze units still trigger
     const aPoisonStrG    = (a.abilities && a.abilities.poison) || 0;
     const bPoisonStrG    = (b.abilities && b.abilities.poison) || 0;
@@ -1623,10 +1674,10 @@ function resolveCombat(a, b, opts) {
     const bPoisonFailG   = bPoisonStrG  > 0 ? poisonFailProb(a.res, a.abilities, opts.version) : 0;
     const aStoningOnG    = a.abilities && a.abilities.stoningTouch != null;
     const bStoningOnG    = b.abilities && b.abilities.stoningTouch != null;
-    const aStoningFailG  = aStoningOnG ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch) : 0;
-    const bStoningFailG  = bStoningOnG ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningTouch) : 0;
-    const aLifeStealModG = (a.abilities && a.abilities.lifeSteal != null) ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal) : null;
-    const bLifeStealModG = (b.abilities && b.abilities.lifeSteal != null) ? lifeStealEffective(aResDeath, a.abilities, b.abilities.lifeSteal) : null;
+    const aStoningFailG  = aStoningOnG ? stoningFailProb(bResStoning, b.abilities, a.abilities.stoningTouch, opts.version) : 0;
+    const bStoningFailG  = bStoningOnG ? stoningFailProb(aResStoning, a.abilities, b.abilities.stoningTouch, opts.version) : 0;
+    const aLifeStealModG = (a.abilities && a.abilities.lifeSteal != null) ? lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version) : null;
+    const bLifeStealModG = (b.abilities && b.abilities.lifeSteal != null) ? lifeStealEffective(aResDeath, a.abilities, b.abilities.lifeSteal, opts.version) : null;
     const aPoisonWithGazeM    = aPoisonFailG  > 0 && !aBlackSleep && aGazeActive;
     const bPoisonWithGazeM    = bPoisonFailG  > 0 && !bBlackSleep && bGazeActive;
     const aStoningWithGazeM   = aStoningFailG > 0 && !aBlackSleep && aGazeActive;
@@ -1639,7 +1690,8 @@ function resolveCombat(a, b, opts) {
       // Pre-compute B's gaze distribution (count-independent portion; targets A).
       // Touch attacks scale with B's surviving count and are added per-iteration below.
       let bGazeDistNoTouch2 = bGazeActive
-        ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail, bDoomGazeStr, aDefForGaze, aInvulnBonus, aBlurChance, blurBuggy)
+        ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail, bDoomGazeStr, aDefForGaze, aInvulnBonus, aBlurChance, blurBuggy,
+            isCoM2 ? woundedTopFigHP(aRemHP, a.hp) : undefined)
         : [1];
       if (aAlive > 0 && aRemHP > 0 && bImmWithGazeM) {
         bGazeDistNoTouch2 = convolveDists(bGazeDistNoTouch2,
@@ -1664,7 +1716,8 @@ function resolveCombat(a, b, opts) {
 
       // A's gaze: physical ranged + doom + stoning + death effects on B's figures
       let aGazeDist = aGazeActive
-        ? buildGazeDist(a, b, bAlive, bRemHP, aStoningGazeFail, aDeathGazeFail, aDoomGazeStr, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy)
+        ? buildGazeDist(a, b, bAlive, bRemHP, aStoningGazeFail, aDeathGazeFail, aDoomGazeStr, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy,
+            isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined)
         : [1];
       if (aAlive > 0 && bAlive > 0 && bRemHP > 0) {
         if (aImmWithGazeM) {
@@ -1762,7 +1815,8 @@ function resolveCombat(a, b, opts) {
               bDefVsA, bToBlockVsAMelee, b.hp, bRemHPAfterGaze,
               aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
               aImmMDist2, bInvulnBonus, bBlurChance, blurBuggy,
-              hasFirstStrike ? false : aHaste);
+              hasFirstStrike ? false : aHaste,
+              isCoM2 ? woundedTopFigHP(bRemHPAfterGaze, b.hp) : undefined);
 
             if (hasFirstStrike) {
               // A's melee resolves before B's counter; counter uses post-melee survivors.
@@ -1784,7 +1838,8 @@ function resolveCombat(a, b, opts) {
                   aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
                   bPoisonStr, bPoisonFail, bStoningFail, bDispelEvilFail, bLifeStealModM, aResDeath,
                   bImmFSDist2, aInvulnBonus, aBlurChance, blurBuggy,
-                  bCounterHaste);
+                  bCounterHaste,
+                  isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
 
                 // A's hasted 2nd strike (simultaneous with counter), targeting post-FS B.
                 let secondDmgToB;
@@ -1795,7 +1850,8 @@ function resolveCombat(a, b, opts) {
                     bDefVsA, bToBlockVsAMelee, b.hp, bRemHPAfterMelee,
                     aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
                     aImm2nd, bInvulnBonus, bBlurChance, blurBuggy,
-                    false);
+                    false,
+                    isCoM2 ? woundedTopFigHP(bRemHPAfterMelee, b.hp) : undefined);
                 } else {
                   secondDmgToB = [1];
                 }
@@ -1822,7 +1878,8 @@ function resolveCombat(a, b, opts) {
               aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
               bPoisonStr, bPoisonFail, bStoningFail, bDispelEvilFail, bLifeStealModM, aResDeath,
               bImmMDist2, aInvulnBonus, aBlurChance, blurBuggy,
-              bCounterHaste);
+              bCounterHaste,
+              isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
 
             for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
               if (meleeDist[mDmg] < 1e-15) continue;
@@ -2053,7 +2110,8 @@ function resolveCombat(a, b, opts) {
             bDefVsA, bToBlockVsAMelee, b.hp, bRemHP,
             aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
             aImmMDist3, bInvulnBonus, bBlurChance, blurBuggy,
-            false);
+            false,
+            isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined);
 
           for (let mDmg = 0; mDmg < dmgToB.length; mDmg++) {
             const pM = dmgToB[mDmg];
@@ -2071,7 +2129,8 @@ function resolveCombat(a, b, opts) {
               aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
               bPoisonStr, bPoisonFail, bStoningFail, bDispelEvilFail, bLifeStealModM, aResDeath,
               bImmMDist3, aInvulnBonus, aBlurChance, blurBuggy,
-              bCounterHaste);
+              bCounterHaste,
+              isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
 
             // A's hasted 2nd strike: targets post-FS B figures, simultaneous with B's counter.
             // A's figure count is unchanged (A has not been hit yet by WoF-excluded damage).
@@ -2083,7 +2142,8 @@ function resolveCombat(a, b, opts) {
                 bDefVsA, bToBlockVsAMelee, b.hp, bRemHPAfter,
                 aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
                 aImm2nd, bInvulnBonus, bBlurChance, blurBuggy,
-                false);
+                false,
+                isCoM2 ? woundedTopFigHP(bRemHPAfter, b.hp) : undefined);
             } else {
               secondDmgToB = [1];
             }
@@ -2217,7 +2277,8 @@ function resolveCombat(a, b, opts) {
           bDefVsA, bToBlockVsAMelee, b.hp, bRemHP,
           aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
           aImmMDist3, bInvulnBonus, bBlurChance, blurBuggy,
-          false);
+          false,
+          isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined);
         const dmgToB = aHaste ? convolveDists(dmgToBSingle, dmgToBSingle, bRemHP) : dmgToBSingle;
 
         const bUnfeared3 = bFearedByA ? calcFearDist(bAlive, bPFear) : null;
@@ -2225,7 +2286,8 @@ function resolveCombat(a, b, opts) {
           aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
           bPoisonStr, bPoisonFail, bStoningFail, bDispelEvilFail, bLifeStealModM, aResDeath,
           bImmMDist3, aInvulnBonus, aBlurChance, blurBuggy,
-          bCounterHaste);
+          bCounterHaste,
+          isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
 
         for (let mDmg = 0; mDmg < dmgToB.length; mDmg++) {
           if (dmgToB[mDmg] < 1e-15) continue;

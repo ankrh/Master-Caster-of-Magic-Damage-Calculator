@@ -83,7 +83,7 @@ const ABILITY_DEFS = [
   // Left  (pos 1,3,5,7,9,11,13): bless, invulnerability, holyWeapon, lionheart, holyArmor, charmOfLife, blackSleep
   // Right (pos 2,4,6,8,10,12,14): blackPrayer, flameBlade, shatter, ironSkin, blur, resistMagic, haste
   { key: 'bless', label: 'Bless', type: 'bool', match: 'Bless', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
-  { key: 'blackPrayer', label: 'Debuffed by Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
+  { key: 'blackPrayer', label: 'Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
   { key: 'invulnerability', label: 'Invulnerability', type: 'bool', match: 'Invulnerability', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
   { key: 'flameBlade', label: 'Flame Blade', type: 'bool', match: 'FlameBlade', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos' },
   { key: 'holyWeapon', label: 'Holy Weapon/Holy Arms', type: 'bool', match: 'HolyWeapon', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
@@ -171,6 +171,13 @@ const PRESETS = {
     rangedCheck: true, rangedDist: 9,
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
+  magicImmunityMagicRanged: {
+    desc: 'Magic Immunity vs sorcery magic ranged: def raised to 50 → rtb 3 fully blocked → 0 dmg',
+    a: { rtbType:'magic_s', rtb:3, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { magicImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
   longRangeMissile: {
     desc: 'Long Range Missile: 100% base to hit, range 9 → penalty capped at −10% → 90% effective',
     a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10, abilities: { longRange: true } },
@@ -199,6 +206,40 @@ const PRESETS = {
     rangedCheck: true, rangedDist: 5,
     expected: { dmgToA: 0, dmgToB: 0.900 },
   },
+  // --- Ranged distance penalty version differences ---
+  distPenaltyMoM3: {
+    desc: 'MoM 1.60: range 3 → −10% penalty → 90% effective (penalty kicks in at 3 tiles)',
+    version: 'mom_cp_1.60.00',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 3,
+    expected: { dmgToA: 0, dmgToB: 0.900 },
+  },
+  distPenaltyCoM3: {
+    desc: 'CoM 6.08: range 3 → no penalty (threshold is 4 tiles) → 100% effective',
+    version: 'com_6.08',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 3,
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  distPenaltyCoM6: {
+    desc: 'CoM 6.08: range 6 → −10% (4–7 tile tier) → 90% effective',
+    version: 'com_6.08',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 6,
+    expected: { dmgToA: 0, dmgToB: 0.900 },
+  },
+  distPenaltyCoM2_6: {
+    desc: 'CoM2 1.05.11: range 6 → −10% − 3%×(6−4) = −16% → 84% effective',
+    version: 'com2_1.05.11',
+    a: { toHitRtbMod:70, rtbType:'missile', rtb:1, hp:10 },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 6,
+    expected: { dmgToA: 0, dmgToB: 0.840 },
+  },
+
   thrownBasic: {
     desc: 'Thrown: 100% to hit thrown, B dies before melee/counter fires',
     a: { atk:1, rtbType:'thrown', rtb:1, toHitRtbMod:70, def:0, hp:1 },
@@ -251,6 +292,12 @@ const PRESETS = {
     desc: 'Poison Immunity: 1 atk (100% blocked) + Poison 4 vs Poison Immune — no damage',
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { poisonImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  magicImmunityPoisonTouch: {
+    desc: 'Magic Immunity blocks poison touch: MI +50 res → effective res 55 ≥ 10 → 0% fail; melee blocked by def 1',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { magicImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   poisonHighRes: {
@@ -326,6 +373,12 @@ const PRESETS = {
     b: { res:5, hp:10, abilities: { stoningImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
+  stoningGazeMagicImmunity: {
+    desc: 'Magic Immunity vs stoning gaze: MI blocks physical gaze (def 50) AND stoning effect (+50 res) → 0 dmg',
+    a: { hp:10, abilities: { stoningGaze: -3, gazeRanged: 1 } },
+    b: { res:5, hp:10, abilities: { magicImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
   deathGazeBasic: {
     desc: 'Death Gaze: Gaze -3 + 1 ranged vs 1 fig Res 5, 10 hp — death 8.0 + physical 0.06 = 8.06',
     a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
@@ -345,10 +398,10 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
   deathGazeMagicImmunity: {
-    desc: 'Magic Immunity blocks Death Gaze kill, but physical 1 ranged still hits (0.3)',
+    desc: 'Magic Immunity blocks Death Gaze kill AND physical gaze ranged (def set to 50) — 0 dmg',
     a: { hp:10, abilities: { deathGaze: -3, gazeRanged: 1 } },
     b: { res:5, hp:10, abilities: { magicImmunity: true } },
-    expected: { dmgToA: 0, dmgToB: 0.300 },
+    expected: { dmgToA: 0, dmgToB: 0 },
   },
   deathGazeStoningImmunityNotBlocked: {
     desc: 'Stoning Immunity does NOT block Death Gaze — full effect (8.0 + 0.06)',
@@ -765,6 +818,36 @@ const PRESETS = {
     a: { atk:10, toHitMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     expected: { dmgToA: 0, dmgToB: 2 },
+  },
+  weaponImmunityGeneric131: {
+    desc: 'Weapon Immunity vs Generic unit (MoM 1.31): bug — WI bypassed, def stays 0, 6 atk 30% hit → 1.8 dmg',
+    version: 'mom_1.31',
+    aUnitName: 'Trireme',
+    b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 1.800 },
+  },
+  weaponImmunityGenericPatched: {
+    desc: 'Weapon Immunity vs Generic unit (MoM CP 1.60): fix — WI applies, def 0→10, 100% block → 0 dmg',
+    version: 'mom_cp_1.60.00',
+    aUnitName: 'Trireme',
+    b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
+  weaponImmunityGenericCatapult131: {
+    desc: 'Weapon Immunity vs Generic Catapult boulder (MoM 1.31): bug — WI bypassed, def stays 0, 10 boulder 30% hit → 3.0 dmg',
+    version: 'mom_1.31',
+    aUnitName: 'Catapult',
+    b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  weaponImmunityGenericCatapultPatched: {
+    desc: 'Weapon Immunity vs Generic Catapult boulder (MoM CP 1.60): fix — WI applies, def 0→10, 100% block → 0 dmg',
+    version: 'mom_cp_1.60.00',
+    aUnitName: 'Catapult',
+    b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0 },
   },
 
   // --- Missile Immunity ---
@@ -1388,6 +1471,22 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
 
+  // --- Defense Rollover (wounded top figure) ---
+  defRolloverWoundedCoM: {
+    desc: 'MoM/CoM: top fig wounded (1/2 HP); rollover at fullHP=2, net 2 hits fullHP threshold → no fresh roll → E=2.000',
+    version: 'com_6.08',
+    a: { figs: 1, atk: 3, toHitMod: 70, def: 0, hp: 20 },
+    b: { figs: 2, hp: 2, dmg: 1, def: 1, toBlkMod: 70, atk: 0 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  defRolloverWoundedCoM2: {
+    desc: 'CoM2: top fig wounded (1/2 HP); rollover at topFigHP=1, excess hits fresh defense roll → blocked → E=1.000',
+    version: 'com2_1.05.11',
+    a: { figs: 1, atk: 3, toHitMod: 70, def: 0, hp: 20 },
+    b: { figs: 2, hp: 2, dmg: 1, def: 1, toBlkMod: 70, atk: 0 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+
   // --- Predefined unit matchups (MoM 1.31) ---
   // --- Large Shield ---
   largeShieldRangedMissile: {
@@ -1424,13 +1523,13 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
 
-  // --- Large Shield (CoM2: +3) ---
+  // --- Large Shield (CoM/CoM2: +3) ---
   largeShieldCom2Ranged: {
-    desc: 'Large Shield Ranged (CoM2): missile 4 (100% hit) vs def 1+3=4 (100% block) → 0',
+    desc: 'Large Shield Ranged (CoM): missile 4 (100% hit) vs def 1+3=4 (100% block) → 0',
     a: { rtbType:'missile', rtb:4, toHitRtbMod:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:10, abilities: { largeShield: true } },
     rangedCheck: true, rangedDist: 1,
-    version: 'com2_1.05.11',
+    version: 'com_6.08',
     expected: { dmgToA: 0, dmgToB: 0 },
   },
 
@@ -1783,6 +1882,22 @@ const PRESETS = {
     wallOfFire: true,
     expected: { dmgToA: 3.000, dmgToB: 1.000 },
   },
+  // --- Magic Immunity vs Breath (version difference) ---
+  magicImmunityFireBreathMoM: {
+    desc: 'Magic Immunity vs Fire Breath (MoM): MI sets def to 50 — fire breath 4 blocked; melee atk 1 vs def 0 = 1 dmg',
+    version: 'mom_1.31',
+    a: { atk:1, toHitMod:70, rtbType:'fire', rtb:4, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { magicImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  magicImmunityFireBreathCoM: {
+    desc: 'Magic Immunity vs Fire Breath (CoM): MI no longer blocks breath (CoM v2.3) — fire breath 4 + melee 1 = 5 dmg',
+    version: 'com_6.08',
+    a: { atk:1, toHitMod:70, rtbType:'fire', rtb:4, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { magicImmunity: true } },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+
   wallOfFireAfterThrown: {
     desc: 'WoF sequence: thrown fires at full A count (4×1=4), then WoF kills ~3.33 A figs, melee uses survivors (~0.67) → 4.672',
     a: { figs:4, atk:1, toHitMod:70, rtbType:'thrown', rtb:1, toHitRtbMod:70, def:0, hp:1 },
@@ -1916,13 +2031,13 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   blessCauseFear: {
-    desc: 'Bless +3 res vs Cause Fear (A Death Immune → no self-fear bug): B res 5+3=8, pFear=0.2, E[B unfeared]=0.8 → E[dmgToA]=0.8×3=2.4',
+    desc: 'Bless +3 res vs Cause Fear (v1.31 self-fear bug fires even for immune A): B res 5+3=8, pFear=0.2; bug: E[A self-feared]=0.2 → E[A figs]=3.8 → dmgToB=11.4; E[B unfeared]=0.8 → dmgToA=2.4',
     a: { figs:4, atk:3, toHitMod:70, hp:10, abilities: { fear: true, deathImmunity: true } },
     b: { atk:3, toHitMod:70, hp:100, def:0, res:5, abilities: { bless: true } },
-    expected: { dmgToA: 2.400, dmgToB: 12.000 },
+    expected: { dmgToA: 2.400, dmgToB: 11.400 },
   },
   blessCauseFearImmune: {
-    desc: 'Bless +3 res → effective res 10 immune to Fear (A Death Immune → no self-fear bug): B res 7+3=10, not feared, full counter 1×3=3',
+    desc: 'Bless +3 res → effective res 10 immune to Fear (no self-fear bug: bPFear=0): B res 7+3=10, not feared, full counter 1×3=3',
     a: { figs:4, atk:3, toHitMod:70, hp:10, abilities: { fear: true, deathImmunity: true } },
     b: { atk:3, toHitMod:70, hp:100, def:0, res:7, abilities: { bless: true } },
     expected: { dmgToA: 3.000, dmgToB: 12.000 },
@@ -2486,14 +2601,14 @@ const TEST_TREE = [
       { name: 'Metal Fires / Flame Blade', keys: ['metalFiresMelee', 'metalFiresMissile', 'metalFiresNotBoulder', 'metalFiresThrown', 'metalFiresWeaponUpgrade', 'flameBladeMelee', 'flameBladeMissile', 'flameBladeThrown', 'flameBladeMetalFiresNoStack'] },
       { name: 'Missile Immunity', keys: ['missileImmunityMissile', 'missileImmunityBoulder', 'missileImmunityMagic', 'missileImmunityMelee', 'missileImmunityArmorPiercing', 'missileImmunityWIOverwrite131', 'missileImmunityWIMagicWeapon'] },
       { name: 'Node aura', keys: ['nodeAuraChaos', 'nodeAuraNoMatch'] },
-      { name: 'Poison touch', keys: ['poisonTouchBasic', 'poisonPlusMelee', 'poisonImmunity', 'poisonHighRes', 'poisonRanged', 'poisonThrown'] },
+      { name: 'Poison touch', keys: ['poisonTouchBasic', 'poisonPlusMelee', 'poisonImmunity', 'magicImmunityPoisonTouch', 'poisonHighRes', 'poisonRanged', 'poisonThrown'] },
       { name: 'Prayer', keys: ['prayerToHit', 'prayerToHitRanged', 'prayerToBlock', 'prayerResistance', 'prayerEnemyMeleePenalty131', 'prayerEnemyPenaltyNotRanged131'] },
-      { name: 'Ranged', keys: ['rangedMissileBasic', 'rangedBoulderBasic', 'rangedMagicBasic', 'longRangeMissile', 'longRangeBoulder', 'longRangeClose', 'longRangeMidRange'] },
+      { name: 'Ranged', keys: ['rangedMissileBasic', 'rangedBoulderBasic', 'rangedMagicBasic', 'magicImmunityMagicRanged', 'longRangeMissile', 'longRangeBoulder', 'longRangeClose', 'longRangeMidRange'] },
       { name: 'Resist Magic', keys: ['resistMagicBlocks', 'resistMagicNotPoison'] },
       { name: 'Resistance to All', keys: ['resistanceToAllBasic', 'resistanceToAllCap', 'holyBonusPlusResistanceToAll'] },
       { name: 'Righteousness', keys: ['righteousnessMagicChaos', 'righteousnessMagicNatureNotBlocked', 'righteousnessFireBreath', 'righteousnessLightningBreath', 'righteousnessPhysicalThrownNotBlocked', 'righteousnessMissileNotBlocked', 'righteousnessCauseFear', 'righteousnessLifeSteal', 'righteousnessDeathGaze', 'righteousnessStoningGazeNotBlocked', 'immolationRighteousness', 'wallOfFireRighteousness'] },
       { name: 'Stone Skin / Iron Skin', keys: ['stoneSkinDef', 'ironSkinDef', 'ironSkinStoneSkinNoStack'] },
-      { name: 'Stoning gaze', keys: ['stoningGazeBasic', 'stoningGazeMultiFig', 'stoningGazeBilateral', 'stoningGazeImmunity'] },
+      { name: 'Stoning gaze', keys: ['stoningGazeBasic', 'stoningGazeMultiFig', 'stoningGazeBilateral', 'stoningGazeImmunity', 'stoningGazeMagicImmunity'] },
       { name: 'Stoning touch', keys: ['stoningTouchBasic', 'stoningImmunity', 'stoningMagicImmunity', 'stoningHighRes', 'stoningMultiFig'] },
       { name: 'Thrown', keys: ['thrownBasic'] },
       { name: 'Undead', keys: ['undeadDeathImmunity131', 'undeadBypassesWeaponImmunity', 'undeadTriggersBless'] },
@@ -2523,6 +2638,7 @@ const TEST_TREE = [
       { name: 'Blur', keys: ['blurBasicMoM131', 'blurFixedMoM160', 'blurCoM2', 'blurIllImmBugV131', 'blurIllImmDefenderFixed', 'blurIllImmAtkBugV131', 'blurIllImmFixed', 'blurPlusInvisCoM2'] },
       { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderFixedFirstStrike'] },
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed'] },
+      { name: 'Defense Rollover', keys: ['defRolloverWoundedCoM', 'defRolloverWoundedCoM2'] },
       { name: 'Haste', keys: ['hasteCounterDoublesMoM', 'hasteCounterNotDoubledCoM2', 'hasteMagicRangedNotDoubledForCaster', 'hasteMagicRangedCasterCoM2'] },
       { name: 'Haste (complex)', keys: ['hasteComplexThrownDefenderGaze', 'hasteComplexThrownDefenderGaze160', 'hasteComplexBilateralGaze', 'hasteComplexBilateralGaze160'] },
       { name: 'Holy Bonus', keys: ['holyBonusRangedMoM', 'holyBonusRangedCoM2'] },
@@ -2530,13 +2646,15 @@ const TEST_TREE = [
       { name: 'Immolation', keys: ['immolationRangedMoM', 'immolationNotRangedPatched', 'immolationMoMStrength', 'immolationCoMStrength10'] },
       { name: 'Invisibility', keys: ['invisToHitMoM', 'blurInvisCoM2'] },
       { name: 'Large Shield', keys: ['largeShieldRangedMissile', 'largeShieldCom2Ranged'] },
+      { name: 'Magic Immunity', keys: ['magicImmunityFireBreathMoM', 'magicImmunityFireBreathCoM'] },
       { name: 'Lionheart', keys: ['lionheartHpMoM', 'lionheartHpCoM2'] },
       { name: 'Lucky', keys: ['luckyEnemyMeleePenalty131', 'luckyEnemyPenaltyRemovedPatched'] },
       { name: 'Missile Immunity', keys: ['missileImmunityWIOverwrite131', 'missileImmunityWIOverwriteFixed'] },
       { name: 'Prayer', keys: ['prayerEnemyMeleePenalty131', 'prayerEnemyPenaltyRemovedPatched'] },
+      { name: 'Ranged Distance Penalty', keys: ['distPenaltyMoM3', 'distPenaltyCoM3', 'distPenaltyCoM6', 'distPenaltyCoM2_6'] },
       { name: 'Undead', keys: ['undeadBypassesWeaponImmunity', 'undeadTriggersBless', 'undeadDeathImmunity131', 'undeadPoisonImmunityPatched', 'undeadIllusionImmunityPatched', 'undeadPoisonNotImmune131', 'undeadIllusionNotImmune131'] },
       { name: 'Wall of Fire', keys: ['wallOfFireBasic', 'wallOfFireCoM2Strength', 'wallOfFireCoMStrength'] },
-      { name: 'Weapon Immunity', keys: ['weaponImmunityThrown131', 'weaponImmunityThrownPatched', 'weaponImmunityMelee', 'weaponImmunityCom2Melee'] },
+      { name: 'Weapon Immunity', keys: ['weaponImmunityThrown131', 'weaponImmunityThrownPatched', 'weaponImmunityMelee', 'weaponImmunityCom2Melee', 'weaponImmunityGeneric131', 'weaponImmunityGenericPatched', 'weaponImmunityGenericCatapult131', 'weaponImmunityGenericCatapultPatched'] },
     ],
   },
 ];

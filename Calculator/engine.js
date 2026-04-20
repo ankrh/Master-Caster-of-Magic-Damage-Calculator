@@ -62,7 +62,10 @@ function blurSurvivingDist(h, blurChance, buggy) {
 // invulnBonus: Invulnerability reduces incoming damage by this amount per defense roll,
 // triggering again on every chained figure's fresh defense roll (default 0).
 // blurChance/blurBuggy: Blur pre-defense hit negation (0 = no blur).
-function singleAttackDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, blurChance, blurBuggy) {
+// topFigHP: CoM2 only — remaining HP of the wounded top figure. When set and < hp,
+// the rollover triggers at topFigHP instead of hp for the first figure only;
+// subsequent overflow figures still use full hp.
+function singleAttackDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, blurChance, blurBuggy, topFigHP) {
   const hitsPMF = binomialPMF(atkStr, toHit);
   const blocksPMF = binomialPMF(defStr, toBlock);
   const inv = invulnBonus || 0;
@@ -87,11 +90,35 @@ function singleAttackDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, bl
     }
   }
 
+  // CoM2: if the top figure is wounded (topFigHP < hp), build a first-figure array
+  // that uses topFigHP as the rollover threshold; overflow chains into full-HP figures.
+  let topDmg = chainDmg;
+  if (topFigHP != null && topFigHP < hp) {
+    topDmg = new Array(atkStr + 1);
+    topDmg[0] = [1];
+    for (let e = 1; e <= atkStr; e++) {
+      topDmg[e] = new Array(e + 1).fill(0);
+      for (let b = 0; b <= defStr; b++) {
+        const net = Math.max(e - b - inv, 0);
+        if (net < topFigHP) {
+          topDmg[e][net] += blocksPMF[b];
+        } else {
+          const excess = net - topFigHP;
+          const sub = chainDmg[excess];
+          for (let d = 0; d < sub.length; d++) {
+            if (sub[d] < 1e-15) continue;
+            topDmg[e][topFigHP + d] += blocksPMF[b] * sub[d];
+          }
+        }
+      }
+    }
+  }
+
   const dist = new Array(atkStr + 1).fill(0);
   if (!blurChance) {
     for (let h = 0; h <= atkStr; h++) {
       if (hitsPMF[h] < 1e-15) continue;
-      const sub = chainDmg[h];
+      const sub = topDmg[h];
       for (let d = 0; d < sub.length; d++) {
         if (sub[d] < 1e-15) continue;
         dist[d] += hitsPMF[h] * sub[d];
@@ -103,7 +130,7 @@ function singleAttackDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, bl
       const bFilter = blurSurvivingDist(h, blurChance, blurBuggy);
       for (let s = 0; s < bFilter.length; s++) {
         if (bFilter[s] < 1e-15) continue;
-        const sub = chainDmg[s];
+        const sub = topDmg[s];
         for (let d = 0; d < sub.length; d++) {
           if (sub[d] < 1e-15) continue;
           dist[d] += hitsPMF[h] * bFilter[s] * sub[d];
@@ -130,8 +157,9 @@ function convolveDists(a, b, cap) {
 // Compute total damage distribution for `atkFigs` figures each attacking with
 // `atkStr` strength. Uses exponentiation-by-squaring for efficiency.
 // blurChance/blurBuggy: Blur pre-defense hit negation passed to singleAttackDmgDist.
-function calcTotalDamageDist(atkFigs, atkStr, toHit, defStr, toBlock, hp, cap, invulnBonus, blurChance, blurBuggy) {
-  const single = singleAttackDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, blurChance, blurBuggy);
+// topFigHP: CoM2 wounded-top-figure rollover threshold (see singleAttackDmgDist).
+function calcTotalDamageDist(atkFigs, atkStr, toHit, defStr, toBlock, hp, cap, invulnBonus, blurChance, blurBuggy, topFigHP) {
+  const single = singleAttackDmgDist(atkStr, toHit, defStr, toBlock, hp, invulnBonus, blurChance, blurBuggy, topFigHP);
 
   let result = [1];
   let base = single;

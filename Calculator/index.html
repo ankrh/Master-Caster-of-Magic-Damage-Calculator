@@ -30,7 +30,7 @@
 <div class="main-content">
 <div class="panels">
   <div class="panel">
-    <h2><span>Attacker</span><select id="aUnit" class="unit-select"><option value="custom">Custom</option></select></h2>
+    <h2><span>Attacker</span><div class="unit-combobox"><input type="text" id="aUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="aUnitList"></div><input type="hidden" id="aUnit" value="custom"></div></h2>
     <div class="panel-fields">
       <label>Unit Type</label>
       <select id="aAbil_unitType">
@@ -123,7 +123,7 @@
   </div>
 
   <div class="panel">
-    <h2><span>Defender</span><select id="bUnit" class="unit-select"><option value="custom">Custom</option></select></h2>
+    <h2><span>Defender</span><div class="unit-combobox"><input type="text" id="bUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="bUnitList"></div><input type="hidden" id="bUnit" value="custom"></div></h2>
     <div class="panel-fields">
       <label>Unit Type</label>
       <select id="bAbil_unitType">
