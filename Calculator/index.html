@@ -17,7 +17,7 @@
     <option value="com_6.08">CoM 6.08</option>
     <option value="com2_1.05.11">CoM2 1.05.11</option>
   </select>
-  <button class="swap-btn" onclick="swapAttackerDefender()" title="Swap attacker and defender">&#8644; Swap</button>
+  <button id="swapBtn" class="swap-btn" title="Swap attacker and defender">&#8644; Swap</button>
 </div>
 
 <div class="page-layout">
@@ -30,9 +30,12 @@
 <div class="main-content">
 <div class="panels">
   <div class="panel">
-    <h2><span>Attacker</span><div class="unit-combobox"><input type="text" id="aUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="aUnitList"></div><input type="hidden" id="aUnit" value="custom"></div></h2>
+    <div class="panel-header">
+      <h2>Attacker</h2>
+      <div class="unit-combobox"><input type="text" id="aUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="aUnitList"></div><input type="hidden" id="aUnit" value="custom"></div>
+    </div>
     <div class="panel-fields">
-      <label>Unit Type</label>
+      <label for="aAbil_unitType">Unit Type</label>
       <select id="aAbil_unitType">
         <option value="normal">Normal</option>
         <option value="hero">Hero</option>
@@ -44,15 +47,15 @@
         <option value="fantastic_arcane">Fantastic (Arcane)</option>
       </select>
 
-      <label>Figures</label>
+      <label for="aFigs">Figures</label>
       <input type="number" id="aFigs" min="1" max="9" value="4">
       <span class="mod-val"></span>
 
-      <label>Attack</label>
+      <label for="aAtk">Attack</label>
       <input type="number" id="aAtk" min="0" max="50" value="3">
       <span class="mod-val" id="aAtkMod"></span>
 
-      <label>Ranged/Thrown/Breath</label>
+      <label for="aRtbType">Ranged/Thrown/Breath</label>
       <select class="mid" id="aRtbType">
         <option value="none" selected>None</option>
         <option value="missile">Missile</option>
@@ -67,38 +70,38 @@
       <input type="number" id="aRtb" min="0" max="50" value="0">
       <span class="mod-val" id="aRtbMod"></span>
 
-      <label>To hit melee</label>
+      <label for="aToHitMod">To hit melee</label>
       <span class="prefix">30% +</span>
       <input type="number" id="aToHitMod" min="-20" max="70" value="0">
       <span class="mod-val" id="aToHitMeleeMod"></span>
 
-      <label>To hit ranged/thrown/breath</label>
+      <label for="aToHitRtbMod">To hit ranged/thrown/breath</label>
       <span class="prefix">30% +</span>
       <input type="number" id="aToHitRtbMod" min="-20" max="70" value="0">
       <span class="mod-val" id="aToHitRtbModDisp"></span>
 
-      <label>To block</label>
+      <label for="aToBlkMod">To block</label>
       <span class="prefix">30% +</span>
       <input type="number" id="aToBlkMod" min="-20" max="70" value="0">
       <span class="mod-val" id="aToBlkModDisp"></span>
 
-      <label>Defense</label>
+      <label for="aDef">Defense</label>
       <input type="number" id="aDef" min="0" max="50" value="2">
       <span class="mod-val" id="aDefMod"></span>
 
-      <label>Resistance</label>
+      <label for="aRes">Resistance</label>
       <input type="number" id="aRes" min="0" max="50" value="5">
       <span class="mod-val" id="aResMod"></span>
 
-      <label>Hit Points</label>
+      <label for="aHP">Hit Points</label>
       <input type="number" id="aHP" min="1" max="99" value="1">
       <span class="mod-val" id="aHPMod"></span>
 
-      <label>Damage Taken</label>
+      <label for="aDmg">Damage Taken</label>
       <input type="number" id="aDmg" min="0" max="999" value="0">
       <span class="mod-val"></span>
 
-      <label>Level</label>
+      <label for="aLevel">Level</label>
       <select id="aLevel" disabled>
         <option value="normal" selected>Normal</option>
         <option value="regular">Regular</option>
@@ -108,7 +111,7 @@
         <option value="champion">Champion</option>
       </select>
 
-      <label>Weapon Type</label>
+      <label for="aWeapon">Weapon Type</label>
       <select id="aWeapon">
         <option value="normal" selected>Normal</option>
         <option value="magic">Magic</option>
@@ -117,15 +120,18 @@
       </select>
     </div>
     <div class="abilities-section hide-inactive">
-      <button class="toggle-abil-btn" onclick="toggleAllAbilities()" title="Show/hide inactive abilities and enchantments">Show all abilities</button>
+      <button class="toggle-abil-btn" title="Show/hide inactive abilities and enchantments">Show all abilities</button>
       <div class="abilities-content" id="aAbilities"></div>
     </div>
   </div>
 
   <div class="panel">
-    <h2><span>Defender</span><div class="unit-combobox"><input type="text" id="bUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="bUnitList"></div><input type="hidden" id="bUnit" value="custom"></div></h2>
+    <div class="panel-header">
+      <h2>Defender</h2>
+      <div class="unit-combobox"><input type="text" id="bUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="bUnitList"></div><input type="hidden" id="bUnit" value="custom"></div>
+    </div>
     <div class="panel-fields">
-      <label>Unit Type</label>
+      <label for="bAbil_unitType">Unit Type</label>
       <select id="bAbil_unitType">
         <option value="normal">Normal</option>
         <option value="hero">Hero</option>
@@ -137,15 +143,15 @@
         <option value="fantastic_arcane">Fantastic (Arcane)</option>
       </select>
 
-      <label>Figures</label>
+      <label for="bFigs">Figures</label>
       <input type="number" id="bFigs" min="1" max="9" value="4">
       <span class="mod-val"></span>
 
-      <label>Attack</label>
+      <label for="bAtk">Attack</label>
       <input type="number" id="bAtk" min="0" max="50" value="3">
       <span class="mod-val" id="bAtkMod"></span>
 
-      <label>Ranged/Thrown/Breath</label>
+      <label for="bRtbType">Ranged/Thrown/Breath</label>
       <select class="mid" id="bRtbType">
         <option value="none" selected>None</option>
         <option value="missile">Missile</option>
@@ -160,38 +166,38 @@
       <input type="number" id="bRtb" min="0" max="50" value="0">
       <span class="mod-val" id="bRtbMod"></span>
 
-      <label>To hit melee</label>
+      <label for="bToHitMod">To hit melee</label>
       <span class="prefix">30% +</span>
       <input type="number" id="bToHitMod" min="-20" max="70" value="0">
       <span class="mod-val" id="bToHitMeleeMod"></span>
 
-      <label>To hit ranged/thrown/breath</label>
+      <label for="bToHitRtbMod">To hit ranged/thrown/breath</label>
       <span class="prefix">30% +</span>
       <input type="number" id="bToHitRtbMod" min="-20" max="70" value="0">
       <span class="mod-val" id="bToHitRtbModDisp"></span>
 
-      <label>To block</label>
+      <label for="bToBlkMod">To block</label>
       <span class="prefix">30% +</span>
       <input type="number" id="bToBlkMod" min="-20" max="70" value="0">
       <span class="mod-val" id="bToBlkModDisp"></span>
 
-      <label>Defense</label>
+      <label for="bDef">Defense</label>
       <input type="number" id="bDef" min="0" max="50" value="2">
       <span class="mod-val" id="bDefMod"></span>
 
-      <label>Resistance</label>
+      <label for="bRes">Resistance</label>
       <input type="number" id="bRes" min="0" max="50" value="5">
       <span class="mod-val" id="bResMod"></span>
 
-      <label>Hit Points</label>
+      <label for="bHP">Hit Points</label>
       <input type="number" id="bHP" min="1" max="99" value="1">
       <span class="mod-val" id="bHPMod"></span>
 
-      <label>Damage Taken</label>
+      <label for="bDmg">Damage Taken</label>
       <input type="number" id="bDmg" min="0" max="999" value="0">
       <span class="mod-val"></span>
 
-      <label>Level</label>
+      <label for="bLevel">Level</label>
       <select id="bLevel" disabled>
         <option value="normal" selected>Normal</option>
         <option value="regular">Regular</option>
@@ -201,7 +207,7 @@
         <option value="champion">Champion</option>
       </select>
 
-      <label>Weapon Type</label>
+      <label for="bWeapon">Weapon Type</label>
       <select id="bWeapon">
         <option value="normal" selected>Normal</option>
         <option value="magic">Magic</option>
@@ -210,7 +216,7 @@
       </select>
     </div>
     <div class="abilities-section hide-inactive">
-      <button class="toggle-abil-btn" onclick="toggleAllAbilities()" title="Show/hide inactive abilities and enchantments">Show all abilities</button>
+      <button class="toggle-abil-btn" title="Show/hide inactive abilities and enchantments">Show all abilities</button>
       <div class="abilities-content" id="bAbilities"></div>
     </div>
   </div>
@@ -226,7 +232,7 @@
       </select>
     </label>
     <span class="field-group">
-      <label>City walls:</label>
+      <label for="cityWalls">City walls:</label>
       <select id="cityWalls">
         <option value="none" selected>None</option>
         <option value="1">+1 def</option>
@@ -253,7 +259,7 @@
       <input type="checkbox" id="rangedCheck" checked> Ranged attack
     </label>
     <span class="field-group" id="rangedDistLabel">
-      <label>Ranged attack distance:</label>
+      <label for="rangedDist">Ranged attack distance:</label>
       <input type="number" id="rangedDist" min="1" max="99" value="1">
     </span>
   </div>

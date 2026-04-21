@@ -335,6 +335,10 @@ function readAbilitiesFromDOM(prefix) {
 // Read DOM inputs and compute all effective stats for a unit.
 // Returns a stat object suitable for both display and resolveCombat.
 function readUnitStats(prefix) {
+  function anyNonZero(values) {
+    return values.some(v => Math.abs(v || 0) > 1e-9);
+  }
+
   const version = document.getElementById('gameVersion').value;
   const lvl = getLevelBonuses(document.getElementById(prefix + 'Level').value, version);
   const weapon = document.getElementById(prefix + 'Weapon').value;
@@ -344,14 +348,26 @@ function readUnitStats(prefix) {
   let rangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
   let thrownType = THROWN_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
 
-  // Chaos Channels (Fire Breath option): grants innate Fire Breath 2. Per manual, CC never
-  // picks this option if the unit already has a ranged or breath attack. If the unit has
-  // Thrown, fire breath replaces it. Applied before rangedGetsWpn/thrownGetsWpn so all
-  // downstream logic treats this as a fire breath attack.
+  // Read abilities from DOM early because Chaos Channels eligibility can depend on gaze attacks.
+  const abilities = readAbilitiesFromDOM(prefix);
+
+  // Chaos Channels (Fire Breath option): version-sensitive strength.
+  // MoM: strength 2.
+  // CoM/CoM2: strength 4.
+  // Fire Breath is not rolled for units that already have a ranged or breath attack.
+  // If the unit has Thrown, Fire Breath replaces it.
+  // CoM2 exception: Fire Breath can also replace Gaze and Lightning Breath.
   const ccValEarly = document.getElementById(prefix + 'Abil_chaosChannels');
   const ccVal = ccValEarly ? ccValEarly.value : 'none';
+  const hasGazeAttack = (abilities.gazeRanged || 0) > 0
+    || abilities.stoningGaze != null
+    || abilities.deathGaze != null
+    || (abilities.doomGaze || 0) > 0;
+  const ccCanOverwriteSpecial = version.startsWith('com2')
+    && (thrownType === 'lightning' || hasGazeAttack);
+  const ccFireBreathStrength = version.startsWith('com') ? 4 : 2;
   const ccFireBreathActive = ccVal === 'fireBreath' && rangedType === 'none'
-    && (thrownType === 'none' || thrownType === 'thrown');
+    && (thrownType === 'none' || thrownType === 'thrown' || ccCanOverwriteSpecial);
   if (ccFireBreathActive) {
     thrownType = 'fire';
   }
@@ -363,7 +379,7 @@ function readUnitStats(prefix) {
   const baseFigs = Math.max(1, parseInt(document.getElementById(prefix + 'Figs').value) || 1);
   const baseAtk = Math.max(0, parseInt(document.getElementById(prefix + 'Atk').value) || 0);
   let baseRtb = Math.max(0, parseInt(document.getElementById(prefix + 'Rtb').value) || 0);
-  if (ccFireBreathActive) baseRtb = 2;
+  if (ccFireBreathActive) baseRtb = ccFireBreathStrength;
   const baseDef = Math.max(0, parseInt(document.getElementById(prefix + 'Def').value) || 0);
   const baseRes = Math.max(0, parseInt(document.getElementById(prefix + 'Res').value) || 0);
   const baseHP  = Math.max(1, parseInt(document.getElementById(prefix + 'HP').value) || 1);
@@ -375,15 +391,18 @@ function readUnitStats(prefix) {
   const cwVal = document.getElementById('cityWalls').value;
   const cityWallBonus = (prefix === 'b' && cwVal !== 'none') ? parseInt(cwVal) : 0;
 
-  // Read abilities from DOM
-  const abilities = readAbilitiesFromDOM(prefix);
-  const abilMods = getAbilityStatModifiers(abilities, version);
-
-  // Node Aura bonus: +2 atk, +2 rtb, +2 def, +2 res for matching Fantastic units
-  // Chaos Channels: mutates the unit into a Fantastic Chaos creature. It benefits from
-  // Chaos Node aura and Darkness/True Light effects that target Chaos units.
+  // Node Aura bonus: +2 atk, +2 rtb, +2 def, +2 res for matching Fantastic units.
+  // Chaos Channels mutates the unit into a Fantastic Chaos creature, while Blood Lust
+  // turns the unit into an Undead Death creature. Blood Lust wins if both are present.
   const unitTypeRaw = document.getElementById(prefix + 'Abil_unitType').value;
-  const unitTypeVal = (ccVal !== 'none') ? 'fantastic_chaos' : unitTypeRaw;
+  const unitTypeVal = abilities.bloodLust
+    ? 'fantastic_death'
+    : (ccVal !== 'none') ? 'fantastic_chaos' : unitTypeRaw;
+  const supremeLightEligible = supremeLightActiveForUnit(abilities, unitTypeVal, version);
+  const effectiveAbilities = supremeLightEligible || !abilities.supremeLight
+    ? abilities
+    : { ...abilities, supremeLight: false };
+  const abilMods = getAbilityStatModifiers(effectiveAbilities, version);
   const nodeAuraVal = document.getElementById('nodeAura').value;
   const unitRealm = unitTypeVal.startsWith('fantastic_') ? unitTypeVal.slice('fantastic_'.length) : null;
   const nodeAuraActive = unitRealm !== null && nodeAuraVal !== 'none' && unitRealm === nodeAuraVal;
@@ -417,9 +436,12 @@ function readUnitStats(prefix) {
   const charmOfLifeHpMod = (abilities && abilities.charmOfLife)
     ? (baseHP >= 8 ? Math.floor(baseHP * 0.25) : 1)
     : 0;
+  const supremeLightDefMod = supremeLightEligible
+    ? Math.floor(Math.max(0, baseRes + lvl.res + abilMods.resMod + nodeBonus + darkLightBonus) / 3)
+    : 0;
 
   const atk = baseAtk > 0 ? Math.max(0, baseAtk + lvl.atk + wpn.atk + abilMods.atkMod + nodeBonus + darkLightBonus) : 0;
-  const def = Math.max(0, baseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + nodeBonus + darkLightBonus);
+  const def = Math.max(0, baseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + supremeLightDefMod + nodeBonus + darkLightBonus);
   const res = Math.max(0, baseRes + lvl.res + abilMods.resMod + nodeBonus + darkLightBonus);
   const hp  = Math.max(1, baseHP + lvl.hp + abilMods.hpMod + lionheartHpMod + charmOfLifeHpMod);
 
@@ -451,10 +473,14 @@ function readUnitStats(prefix) {
     else if (thrownType === 'thrown' && version !== 'mom_1.31') hwRtbToHit = 10;
   }
   const weaponUpgradedByHW = hwActive && weapon === 'normal';
+  const wraithFormBypassesWI = weapon === 'normal'
+    && version.startsWith('com')
+    && !!(abilities && (abilities.wraithForm || abilities.rulerOfUnderworld));
   const eldritchActive = !!(abilities && abilities.eldritchWeapon);
   const effectiveWeapon = (fbAtkBonus > 0 && weapon === 'normal') ? 'magic'
     : (weaponUpgradedByHW ? 'magic'
-    : ((eldritchActive && weapon === 'normal') ? 'magic' : weapon));
+    : (wraithFormBypassesWI ? 'magic'
+    : ((eldritchActive && weapon === 'normal') ? 'magic' : weapon)));
 
   // Ranged/Thrown/Breath strength
   let rtbLvl = 0, rtbWpn = 0;
@@ -470,17 +496,22 @@ function readUnitStats(prefix) {
   // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
   // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
   // gaze attack does not fire.
-  const baseGazeRanged = (abilities && abilities.gazeRanged) || 0;
+  const gazeOverwrittenByCC = ccFireBreathActive && ccCanOverwriteSpecial && hasGazeAttack;
+  const baseGazeRanged = gazeOverwrittenByCC ? 0 : ((abilities && abilities.gazeRanged) || 0);
   const effectiveGazeRanged = baseGazeRanged > 0
     ? Math.max(0, baseGazeRanged + lvl.ranged + abilMods.rtbMod + nodeBonus + darkLightBonus)
     : 0;
 
   // Doom Gaze: delivers exact doom damage. Affected by node aura, darkness/light,
   // and ability modifiers (e.g. Black Prayer), but NOT level or weapon bonuses.
-  const baseDoomGaze = (abilities && abilities.doomGaze) || 0;
+  const baseDoomGaze = gazeOverwrittenByCC ? 0 : ((abilities && abilities.doomGaze) || 0);
   const effectiveDoomGaze = baseDoomGaze > 0
     ? Math.max(0, baseDoomGaze + abilMods.rtbMod + nodeBonus + darkLightBonus)
     : 0;
+
+  const combatAbilities = gazeOverwrittenByCC
+    ? { ...effectiveAbilities, gazeRanged: 0, stoningGaze: null, deathGaze: null, doomGaze: 0 }
+    : effectiveAbilities;
 
   // To Hit percentage bonuses
   const meleeToHitBonus = lvl.toHit + wpn.toHit + abilMods.toHitMod + hwMeleeToHit;
@@ -499,7 +530,7 @@ function readUnitStats(prefix) {
   // Pre-clamped To Hit/Block values for combat (decimals 0.1-1.0)
   let toHitMelee = clampPct(30, baseToHitMod + meleeToHitBonus);
   let toHitRtb = clampPct(30, baseToHitRtbMod + lvl.toHit + rtbToHitWpn + rtbDistPenalty + abilMods.toHitMod + hwRtbToHit);
-  const toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod);
+  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod);
   // Immolation To Hit: always base 30%, ignoring all modifiers (it's a spell attack)
   let toHitImmolation = 0.3;
 
@@ -511,6 +542,21 @@ function readUnitStats(prefix) {
     toHitMelee      = Math.max(0.1, toHitMelee - 0.2);
     toHitRtb        = Math.max(0.1, toHitRtb - 0.2);
     toHitImmolation = Math.max(0.1, toHitImmolation - 0.2);
+  }
+
+  // Vertigo: reflect the displayed penalty in the red To Hit / To Block numbers.
+  // MoM: -20% To Hit, -1 Defense. CoM/CoM2: -30% To Hit, -1 To Defend.
+  const vertigoActive = !!(abilities && abilities.vertigo)
+    && !(abilities && (abilities.illusionImmunity || abilities.magicImmunity));
+  if (vertigoActive) {
+    if (version.startsWith('com')) {
+      toHitMelee = Math.max(0.1, toHitMelee - 0.3);
+      toHitRtb = Math.max(0.1, toHitRtb - 0.3);
+      toBlock = Math.max(0.0, toBlock - 0.1);
+    } else {
+      toHitMelee = Math.max(0.1, toHitMelee - 0.2);
+      toHitRtb = Math.max(0.1, toHitRtb - 0.2);
+    }
   }
 
   // Berserk: doubles melee attack (applied last, after all other bonuses), sets defense
@@ -536,6 +582,34 @@ function readUnitStats(prefix) {
   if (abilities && abilities.warpResist) {
     finalRes = 0;
   }
+  if (vertigoActive && !isCoMVer) {
+    finalDef = Math.max(0, finalDef - 1);
+  }
+
+  const toHitMeleeHasModifiers = anyNonZero([
+    baseToHitMod,
+    lvl.toHit,
+    wpn.toHit,
+    abilMods.toHitMod,
+    hwMeleeToHit,
+    (warpRealityActive && !unitIsChaos) ? -20 : 0,
+    vertigoActive ? (version.startsWith('com') ? -30 : -20) : 0,
+  ]);
+  const toHitRtbHasModifiers = anyNonZero([
+    baseToHitRtbMod,
+    lvl.toHit,
+    rtbToHitWpn,
+    rtbDistPenalty,
+    abilMods.toHitMod,
+    hwRtbToHit,
+    (warpRealityActive && !unitIsChaos) ? -20 : 0,
+    vertigoActive ? (version.startsWith('com') ? -30 : -20) : 0,
+  ]);
+  const toBlockHasModifiers = anyNonZero([
+    baseToBlkMod,
+    abilMods.toBlkMod,
+    (vertigoActive && version.startsWith('com')) ? -10 : 0,
+  ]);
 
   return {
     // Base values (for display)
@@ -551,6 +625,9 @@ function readUnitStats(prefix) {
     rtbToHitWpnBonus: rtbToHitWpn,
     rtbToHitLvlBonus: lvl.toHit,
     rtbDistPenalty,
+    toHitMeleeHasModifiers,
+    toHitRtbHasModifiers,
+    toBlockHasModifiers,
     // Effective values (for calculation)
     figs: baseFigs,
     atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
@@ -562,7 +639,7 @@ function readUnitStats(prefix) {
     // Pre-clamped combat values
     toHitMelee, toHitRtb, toHitImmolation, toBlock,
     // Abilities (for combat flow modifiers)
-    abilities,
+    abilities: combatAbilities,
   };
 }
 
@@ -586,11 +663,11 @@ function updateModifiedDisplay(prefix, stats) {
   }
 
   // Show the total percentage whenever it differs from the default 30%.
-  function showModPct(id, effective) {
+  function showModPct(id, effective, forceShow) {
     const el = document.getElementById(id);
     if (!el) return;
     const pct = Math.round(effective * 100);
-    if (pct !== 30) {
+    if (pct !== 30 || forceShow) {
       el.textContent = pct + '%';
       el.classList.add('visible');
     } else {
@@ -605,9 +682,9 @@ function updateModifiedDisplay(prefix, stats) {
   showMod(prefix + 'ResMod', s.res, s.baseRes);
   showMod(prefix + 'HPMod', s.hp, s.baseHP);
 
-  showModPct(prefix + 'ToHitMeleeMod', s.toHitMelee);
-  showModPct(prefix + 'ToHitRtbModDisp', s.toHitRtb);
-  showModPct(prefix + 'ToBlkModDisp', s.toBlock);
+  showModPct(prefix + 'ToHitMeleeMod', s.toHitMelee, s.toHitMeleeHasModifiers);
+  showModPct(prefix + 'ToHitRtbModDisp', s.toHitRtb, s.toHitRtbHasModifiers);
+  showModPct(prefix + 'ToBlkModDisp', s.toBlock, s.toBlockHasModifiers);
 }
 
 // --- Level Bonuses ---
@@ -944,8 +1021,12 @@ function renderLifeStealSummary(result) {
     return ev;
   }
 
-  const aLS = result.aLifeStealDist ? expectedValue(result.aLifeStealDist) : 0;
-  const bLS = result.bLifeStealDist ? expectedValue(result.bLifeStealDist) : 0;
+  const aLS = (result.aLifeStealExpected != null)
+    ? result.aLifeStealExpected
+    : (result.aLifeStealDist ? expectedValue(result.aLifeStealDist) : 0);
+  const bLS = (result.bLifeStealExpected != null)
+    ? result.bLifeStealExpected
+    : (result.bLifeStealDist ? expectedValue(result.bLifeStealDist) : 0);
 
   if (aLS < 0.001 && bLS < 0.001) {
     el.style.display = 'none';
@@ -1307,6 +1388,10 @@ buildAbilitiesUI('b');
 });
 
 document.getElementById('gameVersion').addEventListener('change', onVersionChange);
+document.getElementById('swapBtn').addEventListener('click', swapAttackerDefender);
+document.querySelectorAll('.toggle-abil-btn').forEach(btn => {
+  btn.addEventListener('click', toggleAllAbilities);
+});
 document.getElementById('aUnit').addEventListener('change', () => {
   updateUnitLock('a');
   updateTypeVisibility();

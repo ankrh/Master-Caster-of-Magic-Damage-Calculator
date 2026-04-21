@@ -49,6 +49,12 @@ function getLevelBonuses(level, version) {
   }
 }
 
+function supremeLightActiveForUnit(abilities, unitType, version) {
+  const isCoMPlus = version && (version.startsWith('com_') || version.startsWith('com2_'));
+  if (!isCoMPlus || !abilities || !abilities.supremeLight) return false;
+  return unitType === 'fantastic_life' || !!abilities.caster;
+}
+
 // Compute ranged distance penalty for missile/boulder attacks.
 // Returns a negative percentage modifier or 0.
 // MoM: tiered at 3/6/9 tiles (-10/-20/-30%).
@@ -190,6 +196,14 @@ function getAbilityStatModifiers(abilities, version) {
     atkMod -= isCoM ? 3 : 2;
   }
 
+  // Supreme Light: CoM/CoM2 combat enchantment. Applies only to Life creatures and
+  // Caster units; the defense-from-resistance component is handled in ui.js because
+  // it depends on the effective resistance after other modifiers are applied.
+  if (abilities && abilities.supremeLight) {
+    atkMod += 2;
+    rtbMod += 2;
+  }
+
   return { atkMod, defMod, resMod, hpMod, toHitMod, toBlkMod, rtbMod };
 }
 
@@ -261,12 +275,14 @@ function deathGazeFailProb(defRes, defAbilities, modifier, version) {
 // Includes (at most once) the hidden physical ranged component, followed by
 // doom gaze (exact damage), stoning-kill rolls and death-kill rolls.
 // Blur applies only to the hidden physical ranged component, not doom gaze.
-function buildGazeDist(atk, def, defAlive, defRemHP, stoningFail, deathFail, doomStr, defDefStat, defInvulnBonus, blurChance, blurBuggy, defTopFigHP) {
+function buildGazeDist(atk, def, defAlive, defRemHP, stoningFail, deathFail, doomStr, defDefStat, defInvulnBonus, blurChance, blurBuggy, defTopFigHP, conventionalAsDoom = false) {
   if (defAlive <= 0 || defRemHP <= 0) return [1];
   let dist = [1];
   const defStat = (defDefStat != null) ? defDefStat : def.def;
   if (atk.effectiveGazeRanged > 0) {
-    dist = calcTotalDamageDist(1, atk.effectiveGazeRanged, atk.toHitRtb, defStat, def.toBlock, def.hp, defRemHP, defInvulnBonus, blurChance, blurBuggy, defTopFigHP);
+    dist = conventionalAsDoom
+      ? calcDoomDist(1, atk.effectiveGazeRanged, defRemHP)
+      : calcTotalDamageDist(1, atk.effectiveGazeRanged, atk.toHitRtb, defStat, def.toBlock, def.hp, defRemHP, defInvulnBonus, blurChance, blurBuggy, defTopFigHP);
   }
   // Doom Gaze: exact damage, no rolls, no immunities
   if (doomStr > 0) {
@@ -336,6 +352,10 @@ function gazeAttackFires(effectiveGazeRanged, effectiveDoomGaze, version) {
   return true;
 }
 
+function hasWeaponImmunityEffect(abilities) {
+  return !!(abilities && (abilities.weaponImmunity || abilities.invulnerability || abilities.wraithForm || abilities.rulerOfUnderworld));
+}
+
 // --- Weapon Immunity ---
 // Applies Weapon Immunity defense boost after armor piercing.
 // MoM: defense raised to minimum 10.  CoM2: +8 defense.
@@ -347,8 +367,11 @@ function gazeAttackFires(effectiveGazeRanged, effectiveDoomGaze, version) {
 //   Magic ranged: never (already magical).
 // v1.31 bug: Generic units (Trireme, Galley, Warship, Catapult) bypass WI regardless of attack type.
 function weaponImmunityDef(baseDef, defAbilities, atkWeapon, atkUnitType, version, atkGeneric) {
-  if (!defAbilities || !(defAbilities.weaponImmunity || defAbilities.invulnerability)) return baseDef;
-  if (atkWeapon !== 'normal') return baseDef;
+  if (!hasWeaponImmunityEffect(defAbilities)) return baseDef;
+  // Ruler of Underworld preserves Weapon Immunity against magical/mithril/adamantium
+  // weapons, but still only against normal-unit attacks.
+  const weaponBypasses = atkWeapon !== 'normal' && !(defAbilities && defAbilities.rulerOfUnderworld);
+  if (weaponBypasses) return baseDef;
   if (atkUnitType !== 'normal') return baseDef;
   if (version === 'mom_1.31' && atkGeneric) return baseDef;
   if (version && version.startsWith('com')) {
@@ -511,8 +534,31 @@ function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
                             immolationDist, defInvulnBonus,
                             blurChance, blurBuggy,
                             doubleStrike, defTopFigHP) {
-  if (remHP <= 0 || maxFigs <= 0) return [1];
+  return calcMeleeTouchOutcome(
+    fearDist, maxFigs, isDoom, atk, toHit,
+    def, toBlock, targetHP, remHP,
+    poisonStr, poisonFail,
+    stoningFail,
+    dispelEvilFail,
+    lifeStealMod, lifeStealRes,
+    immolationDist, defInvulnBonus,
+    blurChance, blurBuggy,
+    doubleStrike, defTopFigHP
+  ).damageDist;
+}
+
+function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
+                               def, toBlock, targetHP, remHP,
+                               poisonStr, poisonFail,
+                               stoningFail,
+                               dispelEvilFail,
+                               lifeStealMod, lifeStealRes,
+                               immolationDist, defInvulnBonus,
+                               blurChance, blurBuggy,
+                               doubleStrike, defTopFigHP) {
+  if (remHP <= 0 || maxFigs <= 0) return { damageDist: [1], lifeStealEV: 0 };
   const result = new Array(remHP + 1).fill(0);
+  let lifeStealEV = 0;
   const lo = fearDist ? 0 : maxFigs;
   for (let k = lo; k <= maxFigs; k++) {
     const pK = fearDist ? fearDist[k] : 1;
@@ -535,17 +581,36 @@ function calcMeleeTouchDmg(fearDist, maxFigs, isDoom, atk, toHit,
       dist = convolveDists(dist, calcFigureKillDmgDist(k, dispelEvilFail, targetHP, remHP), remHP);
     }
     if (lifeStealMod !== null && k > 0) {
-      dist = convolveDists(dist, calcLifeStealDmgDist(k, lifeStealRes, lifeStealMod, remHP), remHP);
+      const lsDist = calcLifeStealDmgDist(k, lifeStealRes, lifeStealMod, remHP);
+      dist = convolveDists(dist, lsDist, remHP);
+      lifeStealEV += pK * expectedDamage(lsDist);
     }
     if (immolationDist && k > 0) {
       dist = convolveDists(dist, immolationDist, remHP);
     }
     if (doubleStrike && k > 0 && atk > 0) {
       dist = convolveDists(dist, dist, remHP);
+      if (lifeStealMod !== null) lifeStealEV += pK * expectedDamage(calcLifeStealDmgDist(k, lifeStealRes, lifeStealMod, remHP));
     }
     for (let d = 0; d < dist.length; d++) result[d] += pK * dist[d];
   }
+  return { damageDist: result, lifeStealEV };
+}
+
+function repeatDist(dist, times, cap) {
+  if (!dist || times <= 0) return null;
+  let result = [1];
+  for (let i = 0; i < times; i++) {
+    result = convolveDists(result, dist, cap);
+  }
   return result;
+}
+
+function expectedDamage(dist) {
+  if (!dist) return 0;
+  let ev = 0;
+  for (let d = 0; d < dist.length; d++) ev += d * dist[d];
+  return ev;
 }
 
 // Build feared-count display distributions for the phase breakdown.
@@ -623,8 +688,11 @@ function applyUndeadImmunities(unit, version) {
     extra.illusionImmunity = true;
     extra.coldImmunity = true;
   }
+  const newUnitType = (unit.unitType && unit.unitType !== 'normal' && unit.unitType !== 'hero')
+    ? unit.unitType
+    : 'fantastic_death';
   return Object.assign({}, unit, {
-    unitType: 'fantastic_death',
+    unitType: newUnitType,
     abilities: Object.assign({}, unit.abilities, extra),
   });
 }
@@ -650,12 +718,25 @@ function applyBlackChannelsEffects(unit) {
   });
 }
 
+// Blood Lust makes the unit undead and turns it into a Death-realm fantastic unit.
+function applyBloodLustEffects(unit) {
+  if (!unit.abilities || !unit.abilities.bloodLust) return unit;
+  return Object.assign({}, unit, {
+    unitType: 'fantastic_death',
+    abilities: Object.assign({}, unit.abilities, { undead: true }),
+  });
+}
+
+function bloodLustMeleeAttack(atkUnit, defUnit) {
+  const targetIsNormal = defUnit && (defUnit.unitType === 'normal' || defUnit.unitType === 'hero');
+  if (!targetIsNormal || !atkUnit.abilities || !atkUnit.abilities.bloodLust) return atkUnit.atk;
+  return atkUnit.atk * 2;
+}
+
 // --- Combat Flow Modifiers ---
 // Abilities that change *how* combat resolves rather than just stat values.
 // These are checked during resolveCombat to alter phase ordering, defense
 // effectiveness, damage types, etc.
-//
-// TODO: Implement each modifier. For now these are documented stubs.
 //
 // Categories:
 //   Phase ordering:  First Strike, Negate First Strike
@@ -686,10 +767,14 @@ function resolveCombat(a, b, opts) {
   const isRanged = opts.isRanged;
   const ver = opts.version;
 
+  a = applyBloodLustEffects(a);
+  b = applyBloodLustEffects(b);
   a = applyUndeadImmunities(a, ver);
   b = applyUndeadImmunities(b, ver);
   a = applyBlackChannelsEffects(a);
   b = applyBlackChannelsEffects(b);
+  const aMeleeAtkVsB = bloodLustMeleeAttack(a, b);
+  const bMeleeAtkVsA = bloodLustMeleeAttack(b, a);
 
   // Lucky v1.31: defender's Lucky penalizes opponent's melee To Hit by -10%.
   // Removed in v1.40n+ (Insecticide patch). Only affects melee, not ranged/thrown/breath.
@@ -740,6 +825,26 @@ function resolveCombat(a, b, opts) {
     });
   }
 
+  // Vertigo: unit curse that penalizes the affected unit's conventional attacks and defense.
+  // MoM: -20% To Hit and -1 Defense.
+  // CoM/CoM2: no defense penalty; instead -30% To Hit and -1 To Defend
+  // (implemented as -10 percentage points to block chance).
+  // Illusion/Magic Immunity prevent the curse from taking effect.
+  const isCoM = ver && ver.startsWith('com');
+  const aVertigo = !!(a.abilities && a.abilities.vertigo)
+    && !(a.abilities && (a.abilities.illusionImmunity || a.abilities.magicImmunity));
+  const bVertigo = !!(b.abilities && b.abilities.vertigo)
+    && !(b.abilities && (b.abilities.illusionImmunity || b.abilities.magicImmunity));
+  const vertigoHitPenalty = isCoM ? 0.3 : 0.2;
+  const aToHitMeleeVert = aVertigo ? Math.max(0.1, a.toHitMelee - vertigoHitPenalty) : a.toHitMelee;
+  const bToHitMeleeVert = bVertigo ? Math.max(0.1, b.toHitMelee - vertigoHitPenalty) : b.toHitMelee;
+  const aToHitRtbVert = aVertigo ? Math.max(0.1, a.toHitRtb - vertigoHitPenalty) : a.toHitRtb;
+  const bToHitRtbVert = bVertigo ? Math.max(0.1, b.toHitRtb - vertigoHitPenalty) : b.toHitRtb;
+  const aVertigoDefPenalty = !isCoM && aVertigo ? 1 : 0;
+  const bVertigoDefPenalty = !isCoM && bVertigo ? 1 : 0;
+  const aVertigoBlockPenalty = isCoM && aVertigo ? 0.1 : 0;
+  const bVertigoBlockPenalty = isCoM && bVertigo ? 0.1 : 0;
+
   // Blur: pre-defense hit negation. Applies to melee, counter, ranged, thrown/breath,
   // and gaze hidden ranged component. Does NOT apply to doom damage or special/spell damage.
   // Rate: 10% (MoM), 20% (CoM/CoM2; Invisibility also grants 20%, combined cap 30%).
@@ -780,6 +885,19 @@ function resolveCombat(a, b, opts) {
   // Black Sleep: sleeping unit cannot attack; all incoming conventional damage becomes Doom.
   const aBlackSleep = !!(a.abilities && a.abilities.blackSleep);
   const bBlackSleep = !!(b.abilities && b.abilities.blackSleep);
+  // A Black Slept attacker cannot initiate combat at all.
+  // No ranged volley, gaze exchange, Wall of Fire, melee, or counter-attack occurs.
+  if (aBlackSleep) {
+    return {
+      phases: null,
+      totalDmgToA: [1],
+      totalDmgToB: [1],
+      aLifeStealDist: null,
+      bLifeStealDist: null,
+      aRemHP, aHP: a.hp, aAlive,
+      bRemHP, bHP: b.hp, bAlive,
+    };
+  }
   const aDoomsB = aDoom || bBlackSleep; // A's conventional attacks against B → Doom
   const bDoomsA = bDoom || aBlackSleep; // B's conventional attacks against A → Doom
 
@@ -836,7 +954,6 @@ function resolveCombat(a, b, opts) {
   // so that AP halves the combined defense total.
   const bLargeShield = !!(b.abilities && b.abilities.largeShield);
   const aLargeShield = !!(a.abilities && a.abilities.largeShield);
-  const isCoM = ver && ver.startsWith('com');
   const largeShieldBonus = isCoM ? 3 : 2;
   // Elemental Armor / Resist Elements: version-sensitive bonus amounts.
   // MoM: EA +10 def+res, RE +3 def+res vs Chaos/Nature magic ranged + fire/lightning breath.
@@ -856,17 +973,22 @@ function resolveCombat(a, b, opts) {
     : (aElemVal === 'elementalArmor' ? 10 : aElemVal === 'resistElements' ? 3 : 0);
   const bResStoning = bResM + bElemResBonus;
   const aResStoning = aResM + aElemResBonus;
-  const bDefLS = bLargeShield ? b.def + largeShieldBonus : b.def;
-  const aDefLS = aLargeShield ? a.def + largeShieldBonus : a.def;
+  const bDefBase = Math.max(0, b.def - bVertigoDefPenalty);
+  const aDefBase = Math.max(0, a.def - aVertigoDefPenalty);
+  const bDefLS = bLargeShield ? bDefBase + largeShieldBonus : bDefBase;
+  const aDefLS = aLargeShield ? aDefBase + largeShieldBonus : aDefBase;
+  const bDefLSNoVert = bLargeShield ? b.def + largeShieldBonus : b.def;
+  const aDefLSNoVert = aLargeShield ? a.def + largeShieldBonus : a.def;
 
   // Bless (defense half): +3 defense vs Death/Chaos conventional damage attacks.
-  // Per the MoM wiki:
+  // MoM 1.31/1.60:
   //   Melee: Death/Chaos fantastic units (incl. Chaos Channeled) → +3 def
   //   Fire Breath / Lightning Breath / Immolation / Wall of Fire: always Chaos → +3 def
   //   Ranged Magic(C): always Chaos → +3 def
   //   Ranged Missile/Boulder & Thrown: Death/Chaos fantastic units → +3 def
-  //     (approximation: MoM also tags some Normal Unit ranged attacks as Chaos/Death
-  //      by projectile type, e.g. Dark Elf sparkles — not modelled here.)
+  // CoM/CoM2:
+  //   No melee protection vs Chaos/Death creatures; only spells and ranged/breath/gaze-style
+  //   attacks retain the Bless defense bonus.
   // Defense bonus is applied BEFORE armor piercing (AP halves it) and BEFORE
   // defense-overriding effects (Fire/Magic Immunity, Righteousness, Illusion, Doom),
   // so those effects wipe out the bonus entirely.
@@ -876,8 +998,9 @@ function resolveCombat(a, b, opts) {
                   || (a.thrownType === 'thrown' && aIsDC);
   const aRangedDC = a.rangedType === 'magic_c'
                   || ((a.rangedType === 'missile' || a.rangedType === 'boulder') && aIsDC);
-  const blessBMelee  = (bBless && aIsDC)     ? 3 : 0;
-  const blessAMelee  = (aBless && bIsDC)     ? 3 : 0;
+  const blessMeleeActive = !isCoM;
+  const blessBMelee  = (blessMeleeActive && bBless && aIsDC) ? 3 : 0;
+  const blessAMelee  = (blessMeleeActive && aBless && bIsDC) ? 3 : 0;
   const blessBThrown = (bBless && aThrownDC) ? 3 : 0;
   const blessBRanged = (bBless && aRangedDC) ? 3 : 0;
   const blessBGaze   = (bBless && aIsDC)     ? 3 : 0;
@@ -906,8 +1029,8 @@ function resolveCombat(a, b, opts) {
   const aArmorPiercing = !!(a.abilities && a.abilities.armorPiercing);
   const bArmorPiercing = !!(b.abilities && b.abilities.armorPiercing);
   const bLightningResist = !!(b.abilities && b.abilities.lightningResist);
-  const bDefAP = aArmorPiercing ? Math.floor((b.def + blessBMelee) / 2) : (b.def + blessBMelee);
-  const aDefAP = bArmorPiercing ? Math.floor((a.def + blessAMelee) / 2) : (a.def + blessAMelee);
+  const bDefAP = aArmorPiercing ? Math.floor((bDefBase + blessBMelee) / 2) : (bDefBase + blessBMelee);
+  const aDefAP = bArmorPiercing ? Math.floor((aDefBase + blessAMelee) / 2) : (aDefBase + blessAMelee);
   // Large Shield variants: applied to non-melee defense before AP. Bless bonus varies
   // by phase (ranged vs gaze vs immolation), so each gets its own pre-AP value.
   const bDefAPLSRanged = aArmorPiercing ? Math.floor((bDefLS + blessBRanged + bElemRanged) / 2) : (bDefLS + blessBRanged + bElemRanged);
@@ -915,9 +1038,9 @@ function resolveCombat(a, b, opts) {
   // Immolation is fire/Chaos-realm — elem bonus applies in MoM but not CoM (not "magical ranged").
   const bElemImm = !isCoM ? bElemDefBonus : 0;
   const aElemImm = !isCoM ? aElemDefBonus : 0;
-  const bDefAPLSImm    = aArmorPiercing ? Math.floor((bDefLS + blessBImm    + bElemImm) / 2) : (bDefLS + blessBImm    + bElemImm);
+  const bDefAPLSImm    = aArmorPiercing ? Math.floor((bDefLSNoVert + blessBImm + bElemImm) / 2) : (bDefLSNoVert + blessBImm + bElemImm);
   const aDefAPLSGaze   = bArmorPiercing ? Math.floor((aDefLS + blessAGaze   + aElemGaze)   / 2) : (aDefLS + blessAGaze   + aElemGaze);
-  const aDefAPLSImm    = bArmorPiercing ? Math.floor((aDefLS + blessAImm    + aElemImm) / 2) : (aDefLS + blessAImm    + aElemImm);
+  const aDefAPLSImm    = bArmorPiercing ? Math.floor((aDefLSNoVert + blessAImm + aElemImm) / 2) : (aDefLSNoVert + blessAImm + aElemImm);
   const bLightningAP = a.thrownType === 'lightning' && !bLightningResist;
   const bDefAPThrownLS = (aArmorPiercing || bLightningAP)
     ? Math.floor((bDefLS + blessBThrown + bElemThrown) / 2) : (bDefLS + blessBThrown + bElemThrown);
@@ -947,10 +1070,12 @@ function resolveCombat(a, b, opts) {
   // Does not apply to breath, ranged boulder, or ranged magical attacks.
   const aEW = !!(a.abilities && a.abilities.eldritchWeapon);
   const bEW = !!(b.abilities && b.abilities.eldritchWeapon);
-  const bToBlockVsAMelee   = aEW ? Math.max(0, b.toBlock - 0.10) : b.toBlock;
-  const bToBlockVsAThrEW   = (aEW && a.thrownType === 'thrown') ? Math.max(0, b.toBlock - 0.10) : b.toBlock;
-  const bToBlockVsARangedEW = (aEW && a.rangedType === 'missile') ? Math.max(0, b.toBlock - 0.10) : b.toBlock;
-  const aToBlockVsBMelee   = bEW ? Math.max(0, a.toBlock - 0.10) : a.toBlock;
+  const bToBlockConventional = Math.max(0, b.toBlock - bVertigoBlockPenalty);
+  const aToBlockConventional = Math.max(0, a.toBlock - aVertigoBlockPenalty);
+  const bToBlockVsAMelee   = aEW ? Math.max(0, bToBlockConventional - 0.10) : bToBlockConventional;
+  const bToBlockVsAThrEW   = (aEW && a.thrownType === 'thrown') ? Math.max(0, bToBlockConventional - 0.10) : bToBlockConventional;
+  const bToBlockVsARangedEW = (aEW && a.rangedType === 'missile') ? Math.max(0, bToBlockConventional - 0.10) : bToBlockConventional;
+  const aToBlockVsBMelee   = bEW ? Math.max(0, aToBlockConventional - 0.10) : aToBlockConventional;
 
   // Missile Immunity: defense set to 50/100 against missile ranged attacks only (not boulder/magic).
   // Applied after armor piercing and weapon immunity.
@@ -1045,7 +1170,7 @@ function resolveCombat(a, b, opts) {
     }
     let dmgToB = aAlive > 0 && bRemHP > 0 && a.rtb > 0 && !aBlackSleep
       ? (aDoomsB ? calcDoomDist(aAlive, a.rtb, bRemHP)
-                 : calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, bDefVsARanged, bToBlockVsARangedEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
+                 : calcTotalDamageDist(aAlive, a.rtb, aToHitRtbVert, bDefVsARanged, bToBlockVsARangedEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
                      isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined))
       : [1];
 
@@ -1073,12 +1198,14 @@ function resolveCombat(a, b, opts) {
 
     // Life Steal accompanies ranged attacks
     let aLifeStealDistR = null;
+    let aLifeStealExpectedR = 0;
     const aLifeStealActive = a.abilities && a.abilities.lifeSteal != null
       && touchAttackFires(a.rtb, a.baseRtb, opts.version);
     if (aLifeStealActive && aAlive > 0 && bRemHP > 0) {
       const lsMod = lifeStealEffective(bResDeath, b.abilities, a.abilities.lifeSteal, opts.version);
       if (lsMod !== null) {
         aLifeStealDistR = calcLifeStealDmgDist(aAlive, bResDeath, lsMod, bRemHP);
+        aLifeStealExpectedR = expectedDamage(aLifeStealDistR);
         dmgToB = convolveDists(dmgToB, aLifeStealDistR, bRemHP);
       }
     }
@@ -1102,6 +1229,7 @@ function resolveCombat(a, b, opts) {
     if (hasteDoublesRanged) {
       dmgToB = convolveDists(dmgToB, dmgToB, bRemHP);
       if (aLifeStealDistR) aLifeStealDistR = convolveDists(aLifeStealDistR, aLifeStealDistR, bRemHP);
+      aLifeStealExpectedR *= 2;
     }
 
     return {
@@ -1109,7 +1237,9 @@ function resolveCombat(a, b, opts) {
       totalDmgToA: [1],
       totalDmgToB: dmgToB,
       aLifeStealDist: aLifeStealDistR,
+      aLifeStealExpected: aLifeStealExpectedR,
       bLifeStealDist: null,
+      bLifeStealExpected: 0,
       aRemHP, aHP: a.hp, aAlive,
       bRemHP, bHP: b.hp, bAlive,
     };
@@ -1199,7 +1329,7 @@ function resolveCombat(a, b, opts) {
     // Touch attacks scale with B's surviving count and are added per-iteration below.
     let bGazeDistNoTouch = bGazeActive
       ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail, bDoomGazeStr, aDefForGaze, aInvulnBonus, aBlurChance, blurBuggy,
-          isCoM2 ? woundedTopFigHP(aRemHP, a.hp) : undefined)
+          isCoM2 ? woundedTopFigHP(aRemHP, a.hp) : undefined, aBlackSleep)
       : [1];
     if (aAlive > 0 && aRemHP > 0 && bImmWithGaze) {
       bGazeDistNoTouch = convolveDists(bGazeDistNoTouch,
@@ -1211,7 +1341,7 @@ function resolveCombat(a, b, opts) {
     // Phase 1: Thrown/Breath damage
     let thrownDist = aAlive > 0 && bRemHP > 0
       ? (aDoomsB ? calcDoomDist(aAlive, a.rtb, bRemHP)
-                 : calcTotalDamageDist(aAlive, a.rtb, a.toHitRtb, bDefForThrown, bToBlockVsAThrEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
+                 : calcTotalDamageDist(aAlive, a.rtb, aToHitRtbVert, bDefForThrown, bToBlockVsAThrEW, b.hp, bRemHP, bInvulnBonus, bBlurChance, blurBuggy,
                      isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined))
       : [1];
 
@@ -1258,6 +1388,9 @@ function resolveCombat(a, b, opts) {
     let pDestroyBAfterAGaze = 0; // P(B destroyed after thrown + A-gaze)
     let pDestroyAAfterWof1 = 0;  // P(A destroyed after B-gaze + WoF)
     let pDestroyBAfterFS1 = 0;   // P(B destroyed after thrown + A-gaze + FS) [FS path only]
+    let aLifeStealExpectedT = phase1HasLifeSteal ? expectedDamage(calcLifeStealDmgDist(aAlive, bResDeath, aLifeStealMod, bRemHP)) : 0;
+    let bLifeStealExpectedT = 0;
+    if (aHaste && aAlive > 0 && a.rtb > 0 && bRemHP > 0) aLifeStealExpectedT *= 2;
 
     for (let p1Dmg = 0; p1Dmg < phase1Dist.length; p1Dmg++) {
       if (phase1Dist[p1Dmg] < 1e-15) continue;
@@ -1272,7 +1405,7 @@ function resolveCombat(a, b, opts) {
       // A's gaze: physical ranged + doom + stoning + death effects on B's surviving figures
       let aGazeDist = aGazeActive
         ? buildGazeDist(a, b, bAliveAfterP1, bRemHPAfterP1, aStoningGazeFail, aDeathGazeFail, aDoomGazeStr, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy,
-            isCoM2 ? woundedTopFigHP(bRemHPAfterP1, b.hp) : undefined)
+            isCoM2 ? woundedTopFigHP(bRemHPAfterP1, b.hp) : undefined, bBlackSleep)
         : [1];
       // A's touch attacks fire simultaneously with A's gaze
       if (aAlive > 0 && bAliveAfterP1 > 0 && bRemHPAfterP1 > 0) {
@@ -1289,6 +1422,7 @@ function resolveCombat(a, b, opts) {
             calcFigureKillDmgDist(aAlive, aStoningFail, b.hp, bRemHPAfterP1), bRemHPAfterP1);
         }
         if (aLifeStealWithGaze) {
+          aLifeStealExpectedT += pPhase1 * expectedDamage(calcLifeStealDmgDist(aAlive, bResDeath, aLifeStealMod, bRemHPAfterP1));
           aGazeDist = convolveDists(aGazeDist,
             calcLifeStealDmgDist(aAlive, bResDeath, aLifeStealMod, bRemHPAfterP1), bRemHPAfterP1);
         }
@@ -1321,6 +1455,9 @@ function resolveCombat(a, b, opts) {
 
         // Accumulate B's survivor distribution before fear (depends only on thrown+A-gaze, not B-gaze).
         if (defSurvT) defSurvT[bAliveAfterGaze] += pPhase1 * aGazeDist[aGzDmg];
+        if (bLifeStealWithGaze && bAliveAfterGaze > 0) {
+          bLifeStealExpectedT += pPhase1 * aGazeDist[aGzDmg] * expectedDamage(calcLifeStealDmgDist(bAliveAfterGaze, aResDeath, bLifeStealMod, aRemHP));
+        }
 
         for (let bGzDmg = 0; bGzDmg < bGazeDist.length; bGzDmg++) {
           if (bGazeDist[bGzDmg] < 1e-15) continue;
@@ -1366,9 +1503,9 @@ function resolveCombat(a, b, opts) {
             const aUnfeared_preFS1 = hasFirstStrike
               ? (aFearedByB ? calcFearDist(aAliveAfterWof, aPFear) : null)
               : null;
-            const meleeDist = calcMeleeTouchDmg(
+            const meleeOutcome = calcMeleeTouchOutcome(
               hasFirstStrike ? aUnfeared_preFS1 : aUnfeared1,
-              aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : a.atk, a.toHitMelee,
+              aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
               bDefVsA, bToBlockVsAMelee, b.hp, bRemHPAfterGaze,
               aPoisonWithMelee ? aPoisonStr : 0, aPoisonFail,
               aStoningWithMelee ? aStoningFail : 0,
@@ -1377,6 +1514,8 @@ function resolveCombat(a, b, opts) {
               aImmMeleeDist1, bInvulnBonus, bBlurChance, blurBuggy,
               hasFirstStrike ? false : aHaste,
               isCoM2 ? woundedTopFigHP(bRemHPAfterGaze, b.hp) : undefined);
+            const meleeDist = meleeOutcome.damageDist;
+            aLifeStealExpectedT += pCombined * meleeOutcome.lifeStealEV;
 
             if (hasFirstStrike && (!isCoM1Only || woundedTopFigHP(bRemHPAfterGaze, b.hp) <= 24)) {
               // A's melee resolves before B's counter-attack; counter uses post-melee survivors.
@@ -1395,7 +1534,7 @@ function resolveCombat(a, b, opts) {
                 // B's immolation on counter targets A (A's alive count unchanged by B's counter)
                 const bImmFSDist1 = bImmWithMeleeT && aAliveAfterWof > 0 && aRemHPAfterWof > 0
                   ? calcAreaDamageDist(aAliveAfterWof, immStr, b.toHitImmolation, aDefForImm, a.toBlock, a.hp, aRemHPAfterWof, aInvulnBonus) : null;
-                const counterDist = calcMeleeTouchDmg(bUnfearedFS1, bAliveAfterMelee, bDoomsA, bBlackSleep ? 0 : b.atk, b.toHitMelee,
+                const counterOutcome = calcMeleeTouchOutcome(bUnfearedFS1, bAliveAfterMelee, bDoomsA, bBlackSleep ? 0 : bMeleeAtkVsA, bToHitMeleeVert,
                   aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
                   bPoisonWithMelee ? bPoisonStr : 0, bPoisonFail,
                   bStoningWithMelee ? bStoningFail : 0,
@@ -1404,13 +1543,15 @@ function resolveCombat(a, b, opts) {
                   bImmFSDist1, aInvulnBonus, aBlurChance, blurBuggy,
                   bCounterHaste,
                   isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
+                const counterDist = counterOutcome.damageDist;
+                bLifeStealExpectedT += pM * counterOutcome.lifeStealEV;
 
                 // A's hasted 2nd strike (simultaneous with counter), targeting post-FS B.
                 let secondDmgToB;
                 if (aHaste && aAliveAfterWof > 0 && bRemHPAfterMelee > 0) {
                   const aImm2nd = aImmWithMeleeT && bAliveAfterMelee > 0 && bRemHPAfterMelee > 0
                     ? calcAreaDamageDist(bAliveAfterMelee, immStr, a.toHitImmolation, bDefForImm, b.toBlock, b.hp, bRemHPAfterMelee, bInvulnBonus) : null;
-                  secondDmgToB = calcMeleeTouchDmg(aUnfeared1, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : a.atk, a.toHitMelee,
+                  const secondOutcome = calcMeleeTouchOutcome(aUnfeared1, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
                     bDefVsA, bToBlockVsAMelee, b.hp, bRemHPAfterMelee,
                     aPoisonWithMelee ? aPoisonStr : 0, aPoisonFail,
                     aStoningWithMelee ? aStoningFail : 0,
@@ -1419,6 +1560,8 @@ function resolveCombat(a, b, opts) {
                     aImm2nd, bInvulnBonus, bBlurChance, blurBuggy,
                     false,
                     isCoM2 ? woundedTopFigHP(bRemHPAfterMelee, b.hp) : undefined);
+                  secondDmgToB = secondOutcome.damageDist;
+                  aLifeStealExpectedT += pM * secondOutcome.lifeStealEV;
                 } else {
                   secondDmgToB = [1];
                 }
@@ -1441,7 +1584,7 @@ function resolveCombat(a, b, opts) {
 
             // Counter-attack (surviving B figures after gaze, simultaneous with A's melee)
             const bUnfeared1 = bFearedByA ? calcFearDist(bAliveAfterGaze, bPFear) : null;
-            const counterDist = calcMeleeTouchDmg(bUnfeared1, bAliveAfterGaze, bDoomsA, bBlackSleep ? 0 : b.atk, b.toHitMelee,
+            const counterOutcome = calcMeleeTouchOutcome(bUnfeared1, bAliveAfterGaze, bDoomsA, bBlackSleep ? 0 : bMeleeAtkVsA, bToHitMeleeVert,
               aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
               bPoisonWithMelee ? bPoisonStr : 0, bPoisonFail,
               bStoningWithMelee ? bStoningFail : 0,
@@ -1450,6 +1593,8 @@ function resolveCombat(a, b, opts) {
               bImmMeleeDist1, aInvulnBonus, aBlurChance, blurBuggy,
               bCounterHaste,
               isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
+            const counterDist = counterOutcome.damageDist;
+            bLifeStealExpectedT += pCombined * counterOutcome.lifeStealEV;
 
             // Accumulate total damage (thrown + gaze + WoF + melee)
             for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
@@ -1530,14 +1675,13 @@ function resolveCombat(a, b, opts) {
     let aLifeStealDistT = null, bLifeStealDistT = null;
     if (aLifeStealMod !== null && aAlive > 0 && bRemHP > 0) {
       const singlePhase = calcLifeStealDmgDist(aAlive, bResDeath, aLifeStealMod, bRemHP);
-      if (aLifeStealWithThrown && aLifeStealWithMelee) {
-        aLifeStealDistT = convolveDists(singlePhase, singlePhase, bRemHP);
-      } else if (aLifeStealWithThrown || aLifeStealWithMelee) {
-        aLifeStealDistT = singlePhase;
-      }
+      const phaseCount = (aLifeStealWithThrown ? 1 : 0) + (aLifeStealWithGaze ? 1 : 0) + (aLifeStealWithMelee ? 1 : 0);
+      aLifeStealDistT = repeatDist(singlePhase, phaseCount, bRemHP);
     }
-    if (bLifeStealMod !== null && bAlive > 0 && aRemHP > 0 && bLifeStealWithMelee) {
-      bLifeStealDistT = calcLifeStealDmgDist(bAlive, aResDeath, bLifeStealMod, aRemHP);
+    if (bLifeStealMod !== null && bAlive > 0 && aRemHP > 0) {
+      const singlePhase = calcLifeStealDmgDist(bAlive, aResDeath, bLifeStealMod, aRemHP);
+      const phaseCount = (bLifeStealWithGaze ? 1 : 0) + (bLifeStealWithMelee ? 1 : 0);
+      bLifeStealDistT = repeatDist(singlePhase, phaseCount, aRemHP);
     }
 
     // Build phases array (with optional gaze phase between thrown and melee)
@@ -1626,7 +1770,9 @@ function resolveCombat(a, b, opts) {
       totalDmgToA,
       totalDmgToB,
       aLifeStealDist: aLifeStealDistT,
+      aLifeStealExpected: aLifeStealExpectedT,
       bLifeStealDist: bLifeStealDistT,
+      bLifeStealExpected: bLifeStealExpectedT,
       aRemHP, aHP: a.hp, aAlive,
       bRemHP, bHP: b.hp, bAlive,
     };
@@ -1717,7 +1863,7 @@ function resolveCombat(a, b, opts) {
       // Touch attacks scale with B's surviving count and are added per-iteration below.
       let bGazeDistNoTouch2 = bGazeActive
         ? buildGazeDist(b, a, aAlive, aRemHP, bStoningGazeFail, bDeathGazeFail, bDoomGazeStr, aDefForGaze, aInvulnBonus, aBlurChance, blurBuggy,
-            isCoM2 ? woundedTopFigHP(aRemHP, a.hp) : undefined)
+            isCoM2 ? woundedTopFigHP(aRemHP, a.hp) : undefined, aBlackSleep)
         : [1];
       if (aAlive > 0 && aRemHP > 0 && bImmWithGazeM) {
         bGazeDistNoTouch2 = convolveDists(bGazeDistNoTouch2,
@@ -1739,11 +1885,13 @@ function resolveCombat(a, b, opts) {
       // Cumulative P(destroyed) scalars for phase breakdown "% destroyed" display.
       let pDestroyAAfterWof2 = 0; // P(A destroyed after B-gaze + WoF)
       let pDestroyBAfterFS2 = 0;  // P(B destroyed after A-gaze + FS) [FS path only]
+      let aLifeStealExpectedM = 0;
+      let bLifeStealExpectedM = 0;
 
       // A's gaze: physical ranged + doom + stoning + death effects on B's figures
       let aGazeDist = aGazeActive
         ? buildGazeDist(a, b, bAlive, bRemHP, aStoningGazeFail, aDeathGazeFail, aDoomGazeStr, bDefForGaze, bInvulnBonus, bBlurChance, blurBuggy,
-            isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined)
+            isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined, bBlackSleep)
         : [1];
       if (aAlive > 0 && bAlive > 0 && bRemHP > 0) {
         if (aImmWithGazeM) {
@@ -1759,6 +1907,7 @@ function resolveCombat(a, b, opts) {
             calcFigureKillDmgDist(aAlive, aStoningFailG, b.hp, bRemHP), bRemHP);
         }
         if (aLifeStealWithGazeM) {
+          aLifeStealExpectedM += expectedDamage(calcLifeStealDmgDist(aAlive, bResDeath, aLifeStealModG, bRemHP));
           aGazeDist = convolveDists(aGazeDist,
             calcLifeStealDmgDist(aAlive, bResDeath, aLifeStealModG, bRemHP), bRemHP);
         }
@@ -1790,6 +1939,9 @@ function resolveCombat(a, b, opts) {
 
         // Accumulate B's survivor distribution before fear (depends only on A-gaze, not B-gaze).
         if (defSurvG) defSurvG[bAliveAfterGaze] += aGazeDist[aGzDmg];
+        if (bLifeStealWithGazeM && bAliveAfterGaze > 0) {
+          bLifeStealExpectedM += aGazeDist[aGzDmg] * expectedDamage(calcLifeStealDmgDist(bAliveAfterGaze, aResDeath, bLifeStealModG, aRemHP));
+        }
 
         for (let bGzDmg = 0; bGzDmg < bGazeDist.length; bGzDmg++) {
           if (bGazeDist[bGzDmg] < 1e-15) continue;
@@ -1835,14 +1987,16 @@ function resolveCombat(a, b, opts) {
               ? (aFearedByB ? calcFearDist(aAliveAfterWof, aPFear) : null)
               : null;
             // A's melee: single under FS (Haste's 2nd strike split out), doubled otherwise.
-            const meleeDist = calcMeleeTouchDmg(
+            const meleeOutcome = calcMeleeTouchOutcome(
               hasFirstStrike ? aUnfeared_preFS2 : aUnfeared2,
-              aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : a.atk, a.toHitMelee,
+              aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
               bDefVsA, bToBlockVsAMelee, b.hp, bRemHPAfterGaze,
               aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
               aImmMDist2, bInvulnBonus, bBlurChance, blurBuggy,
               hasFirstStrike ? false : aHaste,
               isCoM2 ? woundedTopFigHP(bRemHPAfterGaze, b.hp) : undefined);
+            const meleeDist = meleeOutcome.damageDist;
+            aLifeStealExpectedM += pGW * meleeOutcome.lifeStealEV;
 
             if (hasFirstStrike && (!isCoM1Only || woundedTopFigHP(bRemHPAfterGaze, b.hp) <= 24)) {
               // A's melee resolves before B's counter; counter uses post-melee survivors.
@@ -1860,24 +2014,28 @@ function resolveCombat(a, b, opts) {
                 const bUnfearedFS2 = bFearedByA ? calcFearDist(bAliveAfterMelee, bPFear) : null;
                 const bImmFSDist2 = bImmWithMeleeM && aAliveAfterWof > 0 && aRemHPAfterWof > 0
                   ? calcAreaDamageDist(aAliveAfterWof, immStr, b.toHitImmolation, aDefForImm, a.toBlock, a.hp, aRemHPAfterWof, aInvulnBonus) : null;
-                const counterDist = calcMeleeTouchDmg(bUnfearedFS2, bAliveAfterMelee, bDoomsA, bBlackSleep ? 0 : b.atk, b.toHitMelee,
+                const counterOutcome = calcMeleeTouchOutcome(bUnfearedFS2, bAliveAfterMelee, bDoomsA, bBlackSleep ? 0 : bMeleeAtkVsA, bToHitMeleeVert,
                   aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
                   bPoisonStr, bPoisonFail, bStoningFail, bDispelEvilFail, bLifeStealModM, aResDeath,
                   bImmFSDist2, aInvulnBonus, aBlurChance, blurBuggy,
                   bCounterHaste,
                   isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
+                const counterDist = counterOutcome.damageDist;
+                bLifeStealExpectedM += pM * counterOutcome.lifeStealEV;
 
                 // A's hasted 2nd strike (simultaneous with counter), targeting post-FS B.
                 let secondDmgToB;
                 if (aHaste && aAliveAfterWof > 0 && bRemHPAfterMelee > 0) {
                   const aImm2nd = aImmWithMeleeM && bAliveAfterMelee > 0 && bRemHPAfterMelee > 0
                     ? calcAreaDamageDist(bAliveAfterMelee, immStr, a.toHitImmolation, bDefForImm, b.toBlock, b.hp, bRemHPAfterMelee, bInvulnBonus) : null;
-                  secondDmgToB = calcMeleeTouchDmg(aUnfeared2, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : a.atk, a.toHitMelee,
+                  const secondOutcome = calcMeleeTouchOutcome(aUnfeared2, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
                     bDefVsA, bToBlockVsAMelee, b.hp, bRemHPAfterMelee,
                     aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
                     aImm2nd, bInvulnBonus, bBlurChance, blurBuggy,
                     false,
                     isCoM2 ? woundedTopFigHP(bRemHPAfterMelee, b.hp) : undefined);
+                  secondDmgToB = secondOutcome.damageDist;
+                  aLifeStealExpectedM += pM * secondOutcome.lifeStealEV;
                 } else {
                   secondDmgToB = [1];
                 }
@@ -1900,12 +2058,14 @@ function resolveCombat(a, b, opts) {
 
             // Simultaneous: counter uses post-gaze+WoF figures
             const bUnfeared2 = bFearedByA ? calcFearDist(bAliveAfterGaze, bPFear) : null;
-            const counterDist = calcMeleeTouchDmg(bUnfeared2, bAliveAfterGaze, bDoomsA, bBlackSleep ? 0 : b.atk, b.toHitMelee,
+            const counterOutcome = calcMeleeTouchOutcome(bUnfeared2, bAliveAfterGaze, bDoomsA, bBlackSleep ? 0 : bMeleeAtkVsA, bToHitMeleeVert,
               aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
               bPoisonStr, bPoisonFail, bStoningFail, bDispelEvilFail, bLifeStealModM, aResDeath,
               bImmMDist2, aInvulnBonus, aBlurChance, blurBuggy,
               bCounterHaste,
               isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
+            const counterDist = counterOutcome.damageDist;
+            bLifeStealExpectedM += pGW * counterOutcome.lifeStealEV;
 
             for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
               if (meleeDist[mDmg] < 1e-15) continue;
@@ -1958,13 +2118,19 @@ function resolveCombat(a, b, opts) {
         ? buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, false, aFearBug, bFearedByA, false, defSurvG, atkSurvG)
         : null;
 
-      // Life steal display distributions (approximate using initial figure counts)
+      // Life steal PMFs below remain approximate, but the displayed summary EV is exact.
       let aLifeStealDistM = null, bLifeStealDistM = null;
-      if (aLifeStealModM !== null && aAlive > 0 && bRemHP > 0) {
-        aLifeStealDistM = calcLifeStealDmgDist(aAlive, bResDeath, aLifeStealModM, bRemHP);
+      const aLifeStealSummaryMod = aLifeStealModG !== null ? aLifeStealModG : aLifeStealModM;
+      const bLifeStealSummaryMod = bLifeStealModG !== null ? bLifeStealModG : bLifeStealModM;
+      if (aLifeStealSummaryMod !== null && aAlive > 0 && bRemHP > 0) {
+        const singlePhase = calcLifeStealDmgDist(aAlive, bResDeath, aLifeStealSummaryMod, bRemHP);
+        const phaseCount = (aLifeStealWithGazeM ? 1 : 0) + (aLifeStealOnM ? 1 : 0);
+        aLifeStealDistM = repeatDist(singlePhase, phaseCount, bRemHP);
       }
-      if (bLifeStealModM !== null && bAlive > 0 && aRemHP > 0) {
-        bLifeStealDistM = calcLifeStealDmgDist(bAlive, aResDeath, bLifeStealModM, aRemHP);
+      if (bLifeStealSummaryMod !== null && bAlive > 0 && aRemHP > 0) {
+        const singlePhase = calcLifeStealDmgDist(bAlive, aResDeath, bLifeStealSummaryMod, aRemHP);
+        const phaseCount = (bLifeStealWithGazeM ? 1 : 0) + (bLifeStealOnM ? 1 : 0);
+        bLifeStealDistM = repeatDist(singlePhase, phaseCount, aRemHP);
       }
 
       // Cumulative P(destroyed) at each phase endpoint for "% destroyed" display.
@@ -2059,7 +2225,9 @@ function resolveCombat(a, b, opts) {
         totalDmgToA,
         totalDmgToB,
         aLifeStealDist: aLifeStealDistM,
+        aLifeStealExpected: aLifeStealExpectedM,
         bLifeStealDist: bLifeStealDistM,
+        bLifeStealExpected: bLifeStealExpectedM,
         aRemHP, aHP: a.hp, aAlive,
         bRemHP, bHP: b.hp, bAlive,
       };
@@ -2094,7 +2262,7 @@ function resolveCombat(a, b, opts) {
       }
       const fearPhaseDists3 = buildFearPhaseDists(aAlive, bAlive, bPFear, aPFear, aFearedByB, aFearBug, bFearedByA, showFearNoop, null, atkSurvivors3);
 
-      // Immolation dists and life steal displays use initial A/B counts (approximate for display)
+      // Life steal PMFs below remain approximate, but the displayed summary EV is exact.
       let aLifeStealDistM = null;
       if (aLifeStealModM !== null && aAlive > 0 && bRemHP > 0) {
         aLifeStealDistM = calcLifeStealDmgDist(aAlive, bResDeath, aLifeStealModM, bRemHP);
@@ -2103,6 +2271,8 @@ function resolveCombat(a, b, opts) {
       if (bLifeStealModM !== null && bAlive > 0 && aRemHP > 0) {
         bLifeStealDistM = calcLifeStealDmgDist(bAlive, aResDeath, bLifeStealModM, aRemHP);
       }
+      let aLifeStealExpectedM = 0;
+      let bLifeStealExpectedM = 0;
 
       if (hasFirstStrike && (!isCoM1Only || woundedTopFigHP(bRemHP, b.hp) <= 24)) {
         // A's melee resolves first; B's counter-attack uses survivors after A's damage.
@@ -2132,12 +2302,14 @@ function resolveCombat(a, b, opts) {
           // aFearBug fires at step 6 (after FS), so A's FS uses only aFearedByB.
           const aUnfeared_preFS3 = aFearedByB ? calcFearDist(aAliveAfterWof, aPFear) : null;
           // A's 1st strike is single under FS (Haste's 2nd strike is split out below).
-          const dmgToB = calcMeleeTouchDmg(aUnfeared_preFS3, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : a.atk, a.toHitMelee,
+          const meleeOutcomeFS3 = calcMeleeTouchOutcome(aUnfeared_preFS3, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
             bDefVsA, bToBlockVsAMelee, b.hp, bRemHP,
             aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
             aImmMDist3, bInvulnBonus, bBlurChance, blurBuggy,
             false,
             isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined);
+          const dmgToB = meleeOutcomeFS3.damageDist;
+          aLifeStealExpectedM += pWof * meleeOutcomeFS3.lifeStealEV;
 
           for (let mDmg = 0; mDmg < dmgToB.length; mDmg++) {
             const pM = dmgToB[mDmg];
@@ -2151,12 +2323,14 @@ function resolveCombat(a, b, opts) {
             const bUnfearedFS3 = bFearedByA ? calcFearDist(bAliveAfter, bPFear) : null;
             const bImmMDist3 = bImmWithMeleeM && aAliveAfterWof > 0 && aRemHPAfterWof > 0
               ? calcAreaDamageDist(aAliveAfterWof, immStr, b.toHitImmolation, aDefForImm, a.toBlock, a.hp, aRemHPAfterWof, aInvulnBonus) : null;
-            const counterDist = calcMeleeTouchDmg(bUnfearedFS3, bAliveAfter, bDoomsA, bBlackSleep ? 0 : b.atk, b.toHitMelee,
+            const counterOutcomeFS3 = calcMeleeTouchOutcome(bUnfearedFS3, bAliveAfter, bDoomsA, bBlackSleep ? 0 : bMeleeAtkVsA, bToHitMeleeVert,
               aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
               bPoisonStr, bPoisonFail, bStoningFail, bDispelEvilFail, bLifeStealModM, aResDeath,
               bImmMDist3, aInvulnBonus, aBlurChance, blurBuggy,
               bCounterHaste,
               isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
+            const counterDist = counterOutcomeFS3.damageDist;
+            bLifeStealExpectedM += pCombinedM * counterOutcomeFS3.lifeStealEV;
 
             // A's hasted 2nd strike: targets post-FS B figures, simultaneous with B's counter.
             // A's figure count is unchanged (A has not been hit yet by WoF-excluded damage).
@@ -2164,12 +2338,14 @@ function resolveCombat(a, b, opts) {
             if (aHaste && aAliveAfterWof > 0 && bRemHPAfter > 0) {
               const aImm2nd = aImmWithMeleeM && bAliveAfter > 0 && bRemHPAfter > 0
                 ? calcAreaDamageDist(bAliveAfter, immStr, a.toHitImmolation, bDefForImm, b.toBlock, b.hp, bRemHPAfter, bInvulnBonus) : null;
-              secondDmgToB = calcMeleeTouchDmg(aUnfeared3, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : a.atk, a.toHitMelee,
+              const secondOutcomeFS3 = calcMeleeTouchOutcome(aUnfeared3, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
                 bDefVsA, bToBlockVsAMelee, b.hp, bRemHPAfter,
                 aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
                 aImm2nd, bInvulnBonus, bBlurChance, blurBuggy,
                 false,
                 isCoM2 ? woundedTopFigHP(bRemHPAfter, b.hp) : undefined);
+              secondDmgToB = secondOutcomeFS3.damageDist;
+              aLifeStealExpectedM += pCombinedM * secondOutcomeFS3.lifeStealEV;
             } else {
               secondDmgToB = [1];
             }
@@ -2266,7 +2442,9 @@ function resolveCombat(a, b, opts) {
           totalDmgToA,
           totalDmgToB,
           aLifeStealDist: aLifeStealDistM,
+          aLifeStealExpected: aLifeStealExpectedM,
           bLifeStealDist: bLifeStealDistM,
+          bLifeStealExpected: bLifeStealExpectedM,
           aRemHP, aHP: a.hp, aAlive,
           bRemHP, bHP: b.hp, bAlive,
         };
@@ -2299,21 +2477,25 @@ function resolveCombat(a, b, opts) {
                          : null;
         // Compute A's single-strike dist first; if Hasted, the two strikes are independent
         // so the total is the self-convolution. Split the phase rows to show each strike.
-        const dmgToBSingle = calcMeleeTouchDmg(aUnfeared3, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : a.atk, a.toHitMelee,
+        const meleeOutcome3 = calcMeleeTouchOutcome(aUnfeared3, aAliveAfterWof, aDoomsB, aBlackSleep ? 0 : aMeleeAtkVsB, aToHitMeleeVert,
           bDefVsA, bToBlockVsAMelee, b.hp, bRemHP,
           aPoisonStr, aPoisonFail, aStoningFail, aDispelEvilFail, aLifeStealModM, bResDeath,
           aImmMDist3, bInvulnBonus, bBlurChance, blurBuggy,
           false,
           isCoM2 ? woundedTopFigHP(bRemHP, b.hp) : undefined);
+        const dmgToBSingle = meleeOutcome3.damageDist;
+        aLifeStealExpectedM += pWof * meleeOutcome3.lifeStealEV * (aHaste ? 2 : 1);
         const dmgToB = aHaste ? convolveDists(dmgToBSingle, dmgToBSingle, bRemHP) : dmgToBSingle;
 
         const bUnfeared3 = bFearedByA ? calcFearDist(bAlive, bPFear) : null;
-        const dmgToA = calcMeleeTouchDmg(bUnfeared3, bAlive, bDoomsA, bBlackSleep ? 0 : b.atk, b.toHitMelee,
+        const counterOutcome3 = calcMeleeTouchOutcome(bUnfeared3, bAlive, bDoomsA, bBlackSleep ? 0 : bMeleeAtkVsA, bToHitMeleeVert,
           aDefVsB, aToBlockVsBMelee, a.hp, aRemHPAfterWof,
           bPoisonStr, bPoisonFail, bStoningFail, bDispelEvilFail, bLifeStealModM, aResDeath,
           bImmMDist3, aInvulnBonus, aBlurChance, blurBuggy,
           bCounterHaste,
           isCoM2 ? woundedTopFigHP(aRemHPAfterWof, a.hp) : undefined);
+        const dmgToA = counterOutcome3.damageDist;
+        bLifeStealExpectedM += pWof * counterOutcome3.lifeStealEV;
 
         for (let mDmg = 0; mDmg < dmgToB.length; mDmg++) {
           if (dmgToB[mDmg] < 1e-15) continue;
@@ -2363,7 +2545,9 @@ function resolveCombat(a, b, opts) {
         totalDmgToA,
         totalDmgToB,
         aLifeStealDist: aLifeStealDistM,
+        aLifeStealExpected: aLifeStealExpectedM,
         bLifeStealDist: bLifeStealDistM,
+        bLifeStealExpected: bLifeStealExpectedM,
         aRemHP, aHP: a.hp, aAlive,
         bRemHP, bHP: b.hp, bAlive,
       };

@@ -84,17 +84,16 @@ Source: `Manuals/Spell list version differences.md` (spell list diff) and `Manua
 - **Stone Skin** (Nature) — removed. Iron Skin (+5 defense) remains as the sole defense buff of this kind.
 - **Eldritch Weapon** (Chaos) — removed.
 - **Metal Fires** (Chaos) — removed. Flame Blade (now Common) remains as the +2 magical weapon buff.
+- Righteousness
 
 #### Changed effects on existing enchantments
 
-- **High Prayer** (Life) — now +1 To Hit, +1 To Defend, +3 attack, +3 resistance, +2 defense (in MoM the buff was smaller and structured differently). Not cumulative with Prayer.
+- **High Prayer** (Life) — actually doubtful whether this changed. Assuming not.
 - **Lionheart** (Life) — now +3 attack, +3 resistance, and **(8 ÷ figure count, rounded down) extra HP per figure** (was +3 attack / +3 defense / +3 resistance / +3 HP per figure in MoM). Multi-figure units get less, single-figure units (heroes) get a full +8 HP.
-- **Invulnerability** (Life) — in addition to Weapon Immunity, the unit now also takes **−2 damage from every incoming damage instance** (even damage that would bypass defense, except Doom damage). Effectively +~6.7 defense on top of Weapon Immunity.
 - **Blur** (Sorcery) — moved to Common and strengthened: **each point of incoming damage has a 20% chance to be nullified** (applied before defense rolls), not the old 10%. Still does not apply against Illusion-immune attackers per base mechanics.
 - **Invisibility** (Sorcery) — still grants Blur-equivalent damage prevention, but when **stacked with Blur** the combined damage-ignore chance is 30% (not 40%).
 - **Haste** (Sorcery) — moved to Very Rare. Still doubles movement and gives two attacks per attack, but **no longer doubles counter-attacks** (counter-attack happens only once).
-- **Wraith Form** (Death) — moved to Common. Grants Weapon Immunity + Non-Corporeal, and additionally **lets the enchanted unit bypass Weapon Immunity on its own attacks (as if it had magic weapons)**. No longer grants Poison Immunity.
-- **Flame Blade** (Chaos) — moved to Common (effect unchanged: +2 magical to melee / ranged / thrown / breath).
+- **Wraith Form** (Death) — moved to Common. Grants Weapon Immunity + Non-Corporeal, and additionally **lets the enchanted unit bypass Weapon Immunity on its own attacks (as if it had magic weapons)**.
 - **Chaos Channels** (Chaos) — Fire Breath option's strength raised to **4** (from 2 in MoM). Intermediate step: raised to 3 at CoM v0.81 (`CoM change log.txt` line 1880), then to 4 at CoM v2.0 (`CoM change log.txt` line 3778).
 - **Bless** (Life) — now only grants protection from **Chaos/Death spells and ranged/breath/gaze attacks**. No longer grants defense against normal melee attacks from Chaos and Death creatures. (`CoM change log.txt` line 4363, CoM v2.5)
 - **Vertigo** (Chaos/Death) — now reduces **To Defend by 1** (not defense) and reduces **To Hit by 3**. (`CoM change log.txt` line 4429, CoM v2.4)

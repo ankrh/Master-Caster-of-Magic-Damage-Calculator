@@ -236,11 +236,14 @@ function calcLifeStealDmgDist(numFigs, defRes, modifier, cap) {
   const effRes = defRes + modifier;
   if (effRes >= 10) return [1];
 
-  // Single figure distribution: P(0) = max(0, effRes)/10, P(d) = 1/10 for d=1..(10-effRes)
+  // Single figure distribution:
+  // - for effRes >= 0: P(0) = effRes/10, P(d) = 1/10 for d=1..(10-effRes)
+  // - for effRes < 0: every d10 roll deals damage in the range (1-effRes)..(10-effRes)
+  const minSingleDmg = Math.max(1 - effRes, 1);
   const maxSingleDmg = 10 - effRes;  // could be >10 if effRes < 0
   const single = new Array(maxSingleDmg + 1).fill(0);
   single[0] = Math.max(0, effRes) / 10;
-  for (let d = 1; d <= maxSingleDmg; d++) {
+  for (let d = minSingleDmg; d <= maxSingleDmg; d++) {
     single[d] = 1 / 10;
   }
 
