@@ -79,22 +79,26 @@ const ABILITY_DEFS = [
   { key: 'chaosChannels', label: 'Chaos Channels', type: 'select', options: [['none','None'],['defense','+Defense'],['fireBreath','+Fire Breath']], group: 'Enchantments', subgroup: 'All versions', realm: 'chaos' },
   { key: 'elemArmor', label: 'Elements', type: 'select', options: [['none','None'],['resistElements','Resist Elements'],['elementalArmor','Elemental Armor']], group: 'Enchantments', subgroup: 'All versions', realm: 'nature' },
   // Bools in a separate grid (subgroup '_All versions') so they start fresh at pos 1(L).
-  // Left col filled first in realm order (7 items), then right col (7 items); interleaved for row-first CSS grid.
-  // Left  (pos 1,3,5,7,9,11,13): bless, invulnerability, holyWeapon, lionheart, holyArmor, charmOfLife, blackSleep
-  // Right (pos 2,4,6,8,10,12,14): blackPrayer, flameBlade, shatter, ironSkin, blur, resistMagic, haste
+  // Left col (9): life×6, death×3. Right col (9): chaos×5, nature×1, sorcery×3. Interleaved for row-first CSS grid.
+  // Left  (pos 1,3,5,7,9,11,13,15,17): bless, invulnerability, holyWeapon, lionheart, holyArmor, charmOfLife, blackSleep, blackPrayer, weakness
+  // Right (pos 2,4,6,8,10,12,14,16,18): flameBlade, shatter, warpAttack, warpDefense, warpResist, ironSkin, blur, resistMagic, haste
   { key: 'bless', label: 'Bless', type: 'bool', match: 'Bless', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
-  { key: 'blackPrayer', label: 'Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
-  { key: 'invulnerability', label: 'Invulnerability', type: 'bool', match: 'Invulnerability', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
   { key: 'flameBlade', label: 'Flame Blade', type: 'bool', match: 'FlameBlade', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos' },
-  { key: 'holyWeapon', label: 'Holy Weapon/Holy Arms', type: 'bool', match: 'HolyWeapon', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
+  { key: 'invulnerability', label: 'Invulnerability', type: 'bool', match: 'Invulnerability', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
   { key: 'shatter', label: 'Shatter', type: 'bool', match: 'Shatter', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos' },
+  { key: 'holyWeapon', label: 'Holy Weapon/Holy Arms', type: 'bool', match: 'HolyWeapon', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
+  { key: 'warpAttack', label: 'Warp: Attack', type: 'bool', match: 'WarpAttack', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos' },
   { key: 'lionheart', label: 'Lionheart', type: 'bool', match: 'Lionheart', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
-  { key: 'ironSkin', label: 'Iron Skin', type: 'bool', match: 'IronSkin', group: 'Enchantments', subgroup: '_All versions', realm: 'nature' },
+  { key: 'warpDefense', label: 'Warp: Defense', type: 'bool', match: 'WarpDefense', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos' },
   { key: 'holyArmor', label: 'Holy Armor', type: 'bool', match: 'HolyArmor', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
-  { key: 'blur', label: 'Blur', type: 'bool', match: 'Blur', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery' },
+  { key: 'warpResist', label: 'Warp: Resist', type: 'bool', match: 'WarpResist', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos' },
   { key: 'charmOfLife', label: 'Charm of Life', type: 'bool', match: 'CharmOfLife', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
-  { key: 'resistMagic', label: 'Resist Magic', type: 'bool', match: 'ResistMagic', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery' },
+  { key: 'ironSkin', label: 'Iron Skin', type: 'bool', match: 'IronSkin', group: 'Enchantments', subgroup: '_All versions', realm: 'nature' },
   { key: 'blackSleep', label: 'Black Sleep', type: 'bool', match: 'BlackSleep', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
+  { key: 'blur', label: 'Blur', type: 'bool', match: 'Blur', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery' },
+  { key: 'blackPrayer', label: 'Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
+  { key: 'resistMagic', label: 'Resist Magic', type: 'bool', match: 'ResistMagic', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery' },
+  { key: 'weakness', label: 'Weakness', type: 'bool', match: 'Weakness', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
   { key: 'haste', label: 'Haste', type: 'bool', match: 'Haste', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery' },
   // Enchantments — MoM only (removed in CoM) — column-wise: life → death → chaos → nature
   { key: 'righteousness', label: 'Righteousness', type: 'bool', match: 'Righteousness', group: 'Enchantments', subgroup: 'MoM only', realm: 'life' },
@@ -505,6 +509,20 @@ const PRESETS = {
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3 },
+  },
+  firstStrikeCapCoM: {
+    desc: 'First Strike cap (CoM): B top figure has 30hp (>24) so FS is simultaneous — B counters with all 6 atk despite dying',
+    version: 'com_6.08',
+    a: { atk:30, toHitMod:70, hp:10, abilities: { firstStrike: true } },
+    b: { atk:6, toHitMod:70, hp:30 },
+    expected: { dmgToA: 6, dmgToB: 30 },
+  },
+  firstStrikeCapCoM2: {
+    desc: 'First Strike cap removed (CoM2): A (atk 30) kills B (30hp) before counter — dmgToA=0',
+    version: 'com2_1.05.11',
+    a: { atk:30, toHitMod:70, hp:10, abilities: { firstStrike: true } },
+    b: { atk:6, toHitMod:70, hp:30 },
+    expected: { dmgToA: 0, dmgToB: 30 },
   },
 
   // --- Haste ---
@@ -2109,7 +2127,50 @@ const PRESETS = {
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
-
+  resistElementsNotVsMagicSMoM: {
+    desc: 'MoM Resist Elements does NOT apply to Sorcery ranged: 5 hits vs def 0 → 5 dmg',
+    a: { rtbType:'magic_s', rtb:5, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  resistElementsVsMagicSCoM2: {
+    desc: 'CoM2 Resist Elements +4 def vs ALL magic ranged incl. Sorcery: 5 hits vs def 4 → 1 dmg',
+    version: 'com2_1.05.11',
+    a: { rtbType:'magic_s', rtb:5, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  resistElementsFireBreathMoM: {
+    desc: 'MoM Resist Elements +3 def vs Fire Breath: 5 breath vs def 3 → 2 dmg + 1 melee = 3 total',
+    a: { atk:1, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  resistElementsFireBreathCoM2: {
+    desc: 'CoM2 Resist Elements +4 def vs Fire Breath: 5 breath vs def 4 → 1 dmg + 1 melee = 2 total',
+    version: 'com2_1.05.11',
+    a: { atk:1, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  resistElementsMagicCCoM2: {
+    desc: 'CoM2 Resist Elements +4 def vs Chaos magic ranged: 5 hits vs def 4 → 1 dmg (not 2 in MoM)',
+    version: 'com2_1.05.11',
+    a: { rtbType:'magic_c', rtb:5, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  elemArmorVsMagicSCoM2: {
+    desc: 'CoM2 Elemental Armor +12 def vs ALL magic ranged incl. Sorcery: 5 hits vs def 12 → 0 dmg',
+    version: 'com2_1.05.11',
+    a: { rtbType:'magic_s', rtb:5, toHitRtbMod:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'elementalArmor' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 0 },
+  },
   // --- Eldritch Weapon ---
   eldritchWeaponMelee: {
     desc: 'Eldritch Weapon melee: toBlock 30% → 20% (1 shield, 20% block) → E[dmg]=0.800',
@@ -2387,6 +2448,102 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 8.000 },
   },
 
+  // --- Warp Creature ---
+  warpAttackMelee: {
+    desc: 'Warp Attack melee: atk 6 → floor(6/2)=3, 100% hit vs 0 def → 3 dmg',
+    a: { atk:6, toHitMod:70, hp:10, abilities: { warpAttack: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  warpAttackNotRangedMoM: {
+    desc: 'Warp Attack: missile rtb NOT halved in MoM — rtb 5 unchanged, 100% hit → 5 dmg',
+    a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { warpAttack: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+  warpAttackHalvedCoM: {
+    desc: 'Warp Attack CoM: missile rtb 5 → floor(5/2)=2, 100% hit → 2 dmg',
+    version: 'com_6.08',
+    a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { warpAttack: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  warpDefenseHalfMoM: {
+    desc: 'Warp Defense MoM: def 9 → floor(9/2)=4, atk 5 100% hit 100% block → 5−4=1 dmg',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:9, toBlkMod:70, hp:10, abilities: { warpDefense: true } },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+  },
+  warpDefenseThirdCoM: {
+    desc: 'Warp Defense CoM: def 9 → floor(9/3)=3, atk 5 100% hit 100% block → 5−3=2 dmg',
+    version: 'com_6.08',
+    a: { atk:5, toHitMod:70, hp:10 },
+    b: { def:9, toBlkMod:70, hp:10, abilities: { warpDefense: true } },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  warpResistSetsToZero: {
+    desc: 'Warp Resist: res 5 → 0, stoningTouch 0 → pFail 100%, E[dmg]=10.0',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { stoningTouch: 0 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { warpResist: true } },
+    expected: { dmgToA: 0, dmgToB: 10.000 },
+  },
+  warpResistMagicSurvives: {
+    desc: 'Warp Resist + Resist Magic: res zeroed but RM +5 survives → res=5, pFail=50%, E[dmg]=5.0',
+    a: { atk:1, toHitMod:70, hp:10, abilities: { stoningTouch: 0 } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { warpResist: true, resistMagic: true } },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+
+  // --- Weakness ---
+  weaknessMeleePenalty: {
+    desc: 'Weakness melee: 5 atk − 2 = 3, 100% hit vs 0 def → 3 dmg',
+    a: { atk:5, toHitMod:70, hp:10, abilities: { weakness: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  weaknessMissileRangedPenalty: {
+    desc: 'Weakness missile ranged: 5 rtb − 2 = 3, 100% hit vs 0 def → 3 dmg',
+    a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { weakness: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  weaknessThrownNotAffected131: {
+    desc: 'Weakness thrown (MoM 1.31 bug): thrown 5 NOT reduced, melee 5 − 2 = 3 → total 8 dmg',
+    a: { atk:5, rtbType:'thrown', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { weakness: true } },
+    b: { atk:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+  },
+  weaknessThrownFixed160: {
+    desc: 'Weakness thrown (MoM 1.60 fixed): thrown 5 − 2 = 3, melee 5 − 2 = 3 → total 6 dmg',
+    version: 'mom_cp_1.60.00',
+    a: { atk:5, rtbType:'thrown', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { weakness: true } },
+    b: { atk:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 6.000 },
+  },
+  weaknessMeleePenaltyMoM: {
+    desc: 'Weakness melee MoM: 5 atk − 2 = 3, 100% hit vs 0 def → 3 dmg',
+    a: { atk:5, toHitMod:70, hp:10, abilities: { weakness: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  weaknessMeleePenaltyCoM2: {
+    desc: 'Weakness melee CoM2: 5 atk − 3 = 2, 100% hit vs 0 def → 2 dmg',
+    version: 'com2_1.05.11',
+    a: { atk:5, toHitMod:70, hp:10, abilities: { weakness: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
+  weaknessBoulderNotAffected: {
+    desc: 'Weakness boulder: boulder rtb NOT reduced (only missile affected) — 5 rtb 100% vs 0 def → 5 dmg',
+    a: { rtbType:'boulder', rtb:5, toHitRtbMod:70, hp:10, abilities: { weakness: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+
   // --- Undead ---
   undeadBypassesWeaponImmunity: {
     desc: 'Undead normal unit bypasses defender WI: unitType overridden to fantastic_death, WI does not trigger — 5 atk 100% vs def 2 → 4.4',
@@ -2578,7 +2735,7 @@ const TEST_TREE = [
       { name: 'Dispel Evil', keys: ['dispelEvilBasicDC', 'dispelEvilUndead', 'dispelEvilNormalImmune', 'dispelEvilMagicImmune', 'dispelEvilHighRes', 'dispelEvilChaosChanneled', 'dispelEvilChaos', 'dispelEvilMultiFig'] },
       { name: 'Doom damage', keys: ['doomDamageMelee', 'doomDamageMultiFig', 'doomDamageRanged', 'doomDamageThrownAffected', 'doomDamageCounter'] },
       { name: 'Doom gaze', keys: ['doomGazeBasic', 'doomGazeMagicImmunity', 'doomGazeKill', 'doomGazeChaosSpawn'] },
-      { name: 'Elemental Armor / Resist Elements', keys: ['elemArmorMagicCRanged', 'elemArmorMagicNRanged', 'elemArmorNotVsMagicS', 'elemArmorNotMelee', 'elemArmorFireBreath', 'elemArmorLightningBreath', 'resistElementsMagicC', 'elemArmorNotCumulative'] },
+      { name: 'Elemental Armor / Resist Elements', keys: ['elemArmorMagicCRanged', 'elemArmorMagicNRanged', 'elemArmorNotVsMagicS', 'elemArmorNotMelee', 'elemArmorFireBreath', 'elemArmorLightningBreath', 'resistElementsMagicC', 'resistElementsNotVsMagicSMoM', 'resistElementsFireBreathMoM', 'elemArmorNotCumulative'] },
       { name: 'Eldritch Weapon', keys: ['eldritchWeaponMelee', 'eldritchWeaponRangedMissile', 'eldritchWeaponWeaponUpgrade'] },
       { name: 'Fire Immunity', keys: ['fireImmunityFireBreath', 'fireImmunityNotMelee', 'fireImmunityNotThrown', 'fireImmunityNotMissile', 'fireImmunityAfterArmorPiercing', 'fireImmunityIllusionOverrides'] },
       { name: 'First Strike', keys: ['firstStrikeKillsBeforeCounter', 'negateFirstStrike', 'firstStrikeMultiFig', 'firstStrikeNoKillUnchanged', 'firstStrikeIgnoredOnRanged'] },
@@ -2613,7 +2770,9 @@ const TEST_TREE = [
       { name: 'Thrown', keys: ['thrownBasic'] },
       { name: 'Undead', keys: ['undeadDeathImmunity131', 'undeadBypassesWeaponImmunity', 'undeadTriggersBless'] },
       { name: 'Wall of Fire', keys: ['wallOfFireBasic', 'wallOfFireMultiFig', 'wallOfFireMagicImmunity', 'wallOfFireRighteousness', 'wallOfFireFireImmunity', 'wallOfFireNotRanged', 'wallOfFireAfterThrown', 'wallOfFireAfterGazeCounter', 'wallOfFireAfterThrownAndGaze', 'wallOfFireBilateralGaze'] },
+      { name: 'Warp Creature', keys: ['warpAttackMelee', 'warpAttackNotRangedMoM', 'warpDefenseHalfMoM', 'warpResistSetsToZero', 'warpResistMagicSurvives'] },
       { name: 'Warp Reality', keys: ['warpRealityBasic', 'warpRealityChaosExempt', 'warpRealityChaosChannelsExempt', 'warpRealityMagicImmunityNotExempt', 'warpRealityBothSides', 'warpRealityFloorAt10', 'warpRealityRanged'] },
+      { name: 'Weakness', keys: ['weaknessMeleePenalty', 'weaknessMissileRangedPenalty', 'weaknessThrownNotAffected131', 'weaknessBoulderNotAffected'] },
       { name: 'Weapon Immunity', keys: ['weaponImmunityMelee', 'weaponImmunityMagicWeapon', 'weaponImmunityFantastic', 'weaponImmunityHero', 'weaponImmunityCounter', 'weaponImmunityThrown131', 'weaponImmunityRangedMissile', 'weaponImmunityRangedMagic'] },
     ],
   },
@@ -2639,6 +2798,8 @@ const TEST_TREE = [
       { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderFixedFirstStrike'] },
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed'] },
       { name: 'Defense Rollover', keys: ['defRolloverWoundedCoM', 'defRolloverWoundedCoM2'] },
+      { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsMagicCCoM2', 'resistElementsNotVsMagicSMoM', 'resistElementsVsMagicSCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorVsMagicSCoM2'] },
+      { name: 'First Strike', keys: ['firstStrikeCapCoM', 'firstStrikeCapCoM2'] },
       { name: 'Haste', keys: ['hasteCounterDoublesMoM', 'hasteCounterNotDoubledCoM2', 'hasteMagicRangedNotDoubledForCaster', 'hasteMagicRangedCasterCoM2'] },
       { name: 'Haste (complex)', keys: ['hasteComplexThrownDefenderGaze', 'hasteComplexThrownDefenderGaze160', 'hasteComplexBilateralGaze', 'hasteComplexBilateralGaze160'] },
       { name: 'Holy Bonus', keys: ['holyBonusRangedMoM', 'holyBonusRangedCoM2'] },
@@ -2654,6 +2815,8 @@ const TEST_TREE = [
       { name: 'Ranged Distance Penalty', keys: ['distPenaltyMoM3', 'distPenaltyCoM3', 'distPenaltyCoM6', 'distPenaltyCoM2_6'] },
       { name: 'Undead', keys: ['undeadBypassesWeaponImmunity', 'undeadTriggersBless', 'undeadDeathImmunity131', 'undeadPoisonImmunityPatched', 'undeadIllusionImmunityPatched', 'undeadPoisonNotImmune131', 'undeadIllusionNotImmune131'] },
       { name: 'Wall of Fire', keys: ['wallOfFireBasic', 'wallOfFireCoM2Strength', 'wallOfFireCoMStrength'] },
+      { name: 'Warp Creature', keys: ['warpAttackNotRangedMoM', 'warpAttackHalvedCoM', 'warpDefenseHalfMoM', 'warpDefenseThirdCoM'] },
+      { name: 'Weakness', keys: ['weaknessThrownNotAffected131', 'weaknessThrownFixed160', 'weaknessMeleePenaltyMoM', 'weaknessMeleePenaltyCoM2'] },
       { name: 'Weapon Immunity', keys: ['weaponImmunityThrown131', 'weaponImmunityThrownPatched', 'weaponImmunityMelee', 'weaponImmunityCom2Melee', 'weaponImmunityGeneric131', 'weaponImmunityGenericPatched', 'weaponImmunityGenericCatapult131', 'weaponImmunityGenericCatapultPatched'] },
     ],
   },

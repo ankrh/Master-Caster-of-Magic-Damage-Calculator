@@ -2,6 +2,9 @@
 
 ## Key Files
 - `Manuals/MoM source - Fandom site/` — Primary source for MoM game mechanics. Use these wiki-sourced .md files to determine how combat abilities, damage types, and immunities work.
+- `Manuals/CoM spells.md` — Primary source for CoM spell descriptions and mechanics.
+- `Manuals/CoM2 spells.md` — Primary source for CoM2 spell descriptions and mechanics.
+- `Manuals/CoM2 spells helptext.txt` — Primary source for CoM2 spell and ability descriptions, taken directly from the game UI. Use this to determine exact CoM2 behavior for any spell or ability.
 - `Reference docs/MoM Combat Mechanics Reference.md` — Condensed combat mechanics reference summarizing the above.
 - `Reference docs/Damage calculation version differences.md` — Documents how damage calculation differs between MoM 1.31, MoM 1.60, and CoM2.
 
@@ -11,7 +14,7 @@ The `ABILITY_DEFS` array in `data.js` controls the order abilities appear in the
 Within each subgroup, order entries in column-major ordering so columns read top-to-bottom by realm in this sequence: **life → death → chaos → nature → sorcery**. Select inputs (like Prayer, Chaos Channels) sit at the top of the subgroup. Checkboxes fill the remaining slots interleaved L/R. When adding or removing an entry, recount columns and reorder neighbours to preserve the realm grouping in both columns.
 
 ## Rules
-- When implementing a new mechanic, read the relevant .md files in `Manuals/MoM source - Fandom site/` first to understand the exact rules. Also check `Reference docs/Damage calculation version differences.md` for version-specific behavior.
+- When implementing a new mechanic, read the relevant .md files in `Manuals/MoM source - Fandom site/` first to understand the base MoM rules. For CoM/CoM2-specific behavior, check `Manuals/CoM spells.md`, `Manuals/CoM2 spells.md`, `Manuals/CoM2 spells helptext.txt`, and `Reference docs/Damage calculation version differences.md`.
 - Use exact probability distributions (binomial math), not Monte Carlo simulation.
 
 ## Test Case Conventions

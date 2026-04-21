@@ -184,6 +184,12 @@ function getAbilityStatModifiers(abilities, version) {
     hpMod += 1;
   }
 
+  // Weakness: -2 (MoM) or -3 (CoM/CoM2) melee attack. RTB penalty is type-specific, applied in ui.js.
+  if (abilities && abilities.weakness) {
+    const isCoM = version && version.startsWith('com');
+    atkMod -= isCoM ? 3 : 2;
+  }
+
   return { atkMod, defMod, resMod, hpMod, toHitMod, toBlkMod, rtbMod };
 }
 
@@ -757,6 +763,7 @@ function resolveCombat(a, b, opts) {
   const bCounterHaste = bHaste && !isCoMVer;
 
   const isCoM2 = opts.version && opts.version.startsWith('com2');
+  const isCoM1Only = isCoMVer && !isCoM2;
 
   // Compute alive figures and remaining HP
   const aTotalHP = a.figs * a.hp;
@@ -795,15 +802,10 @@ function resolveCombat(a, b, opts) {
   const bResDeath = bResM + (bBless ? 3 : 0);
   const aResDeath = aResM + (aBless ? 3 : 0);
 
-  // Elemental Armor / Resist Elements: +10/+3 defense and resistance vs Chaos/Nature attacks.
-  // Not cumulative — higher bonus wins.
+  // Elemental Armor / Resist Elements: defense and resistance bonus vs magical attacks.
+  // Not cumulative — higher bonus wins. Bonus amounts and scope are version-sensitive.
   const bElemVal = (b.abilities && b.abilities.elemArmor) || 'none';
   const aElemVal = (a.abilities && a.abilities.elemArmor) || 'none';
-  const bElemArmorBonus = bElemVal === 'elementalArmor' ? 10 : bElemVal === 'resistElements' ? 3 : 0;
-  const aElemArmorBonus = aElemVal === 'elementalArmor' ? 10 : aElemVal === 'resistElements' ? 3 : 0;
-  // Resistance bonus applies to Stoning Touch/Gaze checks (Nature realm).
-  const bResStoning = bResM + bElemArmorBonus;
-  const aResStoning = aResM + aElemArmorBonus;
 
   // Cause Fear: reduces opponent's effective melee + touch-attack figures.
   // Fires before the melee exchange. No resistance modifier.
@@ -836,6 +838,24 @@ function resolveCombat(a, b, opts) {
   const aLargeShield = !!(a.abilities && a.abilities.largeShield);
   const isCoM = ver && ver.startsWith('com');
   const largeShieldBonus = isCoM ? 3 : 2;
+  // Elemental Armor / Resist Elements: version-sensitive bonus amounts.
+  // MoM: EA +10 def+res, RE +3 def+res vs Chaos/Nature magic ranged + fire/lightning breath.
+  // CoM: EA +12 def only (no res) vs ALL magic ranged (not thrown); RE +4 def + +4 res (Nature only).
+  const bElemDefBonus = isCoM
+    ? (bElemVal === 'elementalArmor' ? 12 : bElemVal === 'resistElements' ? 4 : 0)
+    : (bElemVal === 'elementalArmor' ? 10 : bElemVal === 'resistElements' ? 3 : 0);
+  const aElemDefBonus = isCoM
+    ? (aElemVal === 'elementalArmor' ? 12 : aElemVal === 'resistElements' ? 4 : 0)
+    : (aElemVal === 'elementalArmor' ? 10 : aElemVal === 'resistElements' ? 3 : 0);
+  // Resistance bonus: CoM EA has none; CoM RE +4 vs Nature (stoning) only; MoM both get bonus.
+  const bElemResBonus = isCoM
+    ? (bElemVal === 'resistElements' ? 4 : 0)
+    : (bElemVal === 'elementalArmor' ? 10 : bElemVal === 'resistElements' ? 3 : 0);
+  const aElemResBonus = isCoM
+    ? (aElemVal === 'resistElements' ? 4 : 0)
+    : (aElemVal === 'elementalArmor' ? 10 : aElemVal === 'resistElements' ? 3 : 0);
+  const bResStoning = bResM + bElemResBonus;
+  const aResStoning = aResM + aElemResBonus;
   const bDefLS = bLargeShield ? b.def + largeShieldBonus : b.def;
   const aDefLS = aLargeShield ? a.def + largeShieldBonus : a.def;
 
@@ -865,16 +885,19 @@ function resolveCombat(a, b, opts) {
   const blessBImm    = bBless ? 3 : 0;
   const blessAImm    = aBless ? 3 : 0;
 
-  // Elemental Armor defense triggers: which attack types from A/B are Chaos/Nature realm.
-  const aRangedElem = a.rangedType === 'magic_c' || a.rangedType === 'magic_n';
+  // Elemental Armor / Resist Elements defense triggers: which attack types trigger the bonus.
+  // CoM: ALL magic ranged (incl. sorcery) + breath; NOT physical thrown. MoM: Chaos/Nature magic ranged + breath.
+  const aRangedElem = isCoM
+    ? (a.rangedType === 'magic_c' || a.rangedType === 'magic_n' || a.rangedType === 'magic_s')
+    : (a.rangedType === 'magic_c' || a.rangedType === 'magic_n');
   const aThrownElem = a.thrownType === 'fire' || a.thrownType === 'lightning';
-  // Gaze physical component is Nature realm only if attacker has stoningGaze but not deathGaze.
+  // Gaze physical component (stoning gaze only, not death gaze). CoM: not "magical ranged", no bonus.
   const aStoningGazeOnly = !!(a.abilities && a.abilities.stoningGaze != null) && !(a.abilities && a.abilities.deathGaze != null);
   const bStoningGazeOnly = !!(b.abilities && b.abilities.stoningGaze != null) && !(b.abilities && b.abilities.deathGaze != null);
-  const bElemRanged = aRangedElem ? bElemArmorBonus : 0;
-  const bElemThrown = aThrownElem ? bElemArmorBonus : 0;
-  const bElemGaze   = aStoningGazeOnly ? bElemArmorBonus : 0;
-  const aElemGaze   = bStoningGazeOnly ? aElemArmorBonus : 0;
+  const bElemRanged = aRangedElem ? bElemDefBonus : 0;
+  const bElemThrown = aThrownElem ? bElemDefBonus : 0;
+  const bElemGaze   = (!isCoM && aStoningGazeOnly) ? bElemDefBonus : 0;
+  const aElemGaze   = (!isCoM && bStoningGazeOnly) ? aElemDefBonus : 0;
 
   // Armor Piercing: halve defense (round down) before immunities. Applies to all of
   // the attacker's attacks. Lightning Breath is intrinsically armor piercing but only
@@ -889,9 +912,12 @@ function resolveCombat(a, b, opts) {
   // by phase (ranged vs gaze vs immolation), so each gets its own pre-AP value.
   const bDefAPLSRanged = aArmorPiercing ? Math.floor((bDefLS + blessBRanged + bElemRanged) / 2) : (bDefLS + blessBRanged + bElemRanged);
   const bDefAPLSGaze   = aArmorPiercing ? Math.floor((bDefLS + blessBGaze   + bElemGaze)   / 2) : (bDefLS + blessBGaze   + bElemGaze);
-  const bDefAPLSImm    = aArmorPiercing ? Math.floor((bDefLS + blessBImm    + bElemArmorBonus) / 2) : (bDefLS + blessBImm    + bElemArmorBonus);
+  // Immolation is fire/Chaos-realm — elem bonus applies in MoM but not CoM (not "magical ranged").
+  const bElemImm = !isCoM ? bElemDefBonus : 0;
+  const aElemImm = !isCoM ? aElemDefBonus : 0;
+  const bDefAPLSImm    = aArmorPiercing ? Math.floor((bDefLS + blessBImm    + bElemImm) / 2) : (bDefLS + blessBImm    + bElemImm);
   const aDefAPLSGaze   = bArmorPiercing ? Math.floor((aDefLS + blessAGaze   + aElemGaze)   / 2) : (aDefLS + blessAGaze   + aElemGaze);
-  const aDefAPLSImm    = bArmorPiercing ? Math.floor((aDefLS + blessAImm    + aElemArmorBonus) / 2) : (aDefLS + blessAImm    + aElemArmorBonus);
+  const aDefAPLSImm    = bArmorPiercing ? Math.floor((aDefLS + blessAImm    + aElemImm) / 2) : (aDefLS + blessAImm    + aElemImm);
   const bLightningAP = a.thrownType === 'lightning' && !bLightningResist;
   const bDefAPThrownLS = (aArmorPiercing || bLightningAP)
     ? Math.floor((bDefLS + blessBThrown + bElemThrown) / 2) : (bDefLS + blessBThrown + bElemThrown);
@@ -1352,7 +1378,7 @@ function resolveCombat(a, b, opts) {
               hasFirstStrike ? false : aHaste,
               isCoM2 ? woundedTopFigHP(bRemHPAfterGaze, b.hp) : undefined);
 
-            if (hasFirstStrike) {
+            if (hasFirstStrike && (!isCoM1Only || woundedTopFigHP(bRemHPAfterGaze, b.hp) <= 24)) {
               // A's melee resolves before B's counter-attack; counter uses post-melee survivors.
               // With Haste, A's 2nd strike is simultaneous with B's counter.
               for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
@@ -1818,7 +1844,7 @@ function resolveCombat(a, b, opts) {
               hasFirstStrike ? false : aHaste,
               isCoM2 ? woundedTopFigHP(bRemHPAfterGaze, b.hp) : undefined);
 
-            if (hasFirstStrike) {
+            if (hasFirstStrike && (!isCoM1Only || woundedTopFigHP(bRemHPAfterGaze, b.hp) <= 24)) {
               // A's melee resolves before B's counter; counter uses post-melee survivors.
               // With Haste, A also gets a 2nd strike simultaneous with B's counter.
               for (let mDmg = 0; mDmg < meleeDist.length; mDmg++) {
@@ -2078,7 +2104,7 @@ function resolveCombat(a, b, opts) {
         bLifeStealDistM = calcLifeStealDmgDist(bAlive, aResDeath, bLifeStealModM, aRemHP);
       }
 
-      if (hasFirstStrike) {
+      if (hasFirstStrike && (!isCoM1Only || woundedTopFigHP(bRemHP, b.hp) <= 24)) {
         // A's melee resolves first; B's counter-attack uses survivors after A's damage.
         // With Haste, A's second strike happens simultaneously with B's counter (step 7 in manual).
         const totalDmgToA = new Array(aRemHP + 1).fill(0);

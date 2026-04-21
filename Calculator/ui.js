@@ -431,6 +431,15 @@ function readUnitStats(prefix) {
   // Giant Strength: +1 thrown only (not missile/boulder/magic ranged, not breath).
   const gsRtbMod = (abilities.giantStrength && thrownType === 'thrown') ? 1 : 0;
 
+  // Weakness: -2 (MoM) or -3 (CoM/CoM2) to missile ranged and thrown.
+  // In MoM 1.31, thrown is bugged and NOT reduced (fixed in 1.60+).
+  const weaknessActive = !!(abilities && abilities.weakness);
+  const weaknessPenalty = weaknessActive ? (version.startsWith('com') ? 3 : 2) : 0;
+  const weaknessRtbMod = weaknessActive
+    ? (rangedType === 'missile' ? -weaknessPenalty
+      : (thrownType !== 'none' && version !== 'mom_1.31' ? -weaknessPenalty : 0))
+    : 0;
+
   // Holy Weapon: +10% To Hit on melee, missile, and boulder attacks. Also applies to thrown
   // in all versions except MoM 1.31 (bug). Does NOT affect magic ranged, fire/lightning
   // breath, or gaze attacks. Also upgrades normal weapon to magic (bypasses Weapon Immunity).
@@ -456,7 +465,7 @@ function readUnitStats(prefix) {
     rtbLvl = lvl.thrown;
     rtbWpn = (baseRtb > 0 && thrownGetsWpn) ? wpn.atk : 0;
   }
-  const rtb = baseRtb > 0 ? Math.max(0, baseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + fbRtbMod + gsRtbMod + lionheartRtbMod + nodeBonus + darkLightBonus) : 0;
+  const rtb = baseRtb > 0 ? Math.max(0, baseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + fbRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + nodeBonus + darkLightBonus) : 0;
 
   // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
   // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
@@ -507,8 +516,26 @@ function readUnitStats(prefix) {
   // Berserk: doubles melee attack (applied last, after all other bonuses), sets defense
   // to 0 absolutely (no other bonus can raise it while Berserk is active).
   const berserkActive = !!(abilities && abilities.berserk);
-  const finalAtk = berserkActive ? atk * 2 : atk;
-  const finalDef = berserkActive ? 0 : def;
+  let finalAtk = berserkActive ? atk * 2 : atk;
+  let finalDef = berserkActive ? 0 : def;
+  let finalRtb = rtb;
+  let finalRes = res;
+
+  // Warp Creature effects (applied after all other bonuses per MoM wiki).
+  // Warp Attack: halves melee (all versions) and all ranged/thrown (CoM/CoM2 only).
+  // Warp Defense: halves defense (MoM) or reduces to one-third (CoM/CoM2).
+  // Warp Resist: sets resistance to 0; Resist Magic +5 still applies in combat.js.
+  const isCoMVer = version.startsWith('com');
+  if (abilities && abilities.warpAttack) {
+    finalAtk = Math.floor(finalAtk / 2);
+    if (isCoMVer) finalRtb = Math.floor(finalRtb / 2);
+  }
+  if (abilities && abilities.warpDefense) {
+    finalDef = Math.floor(finalDef / (isCoMVer ? 3 : 2));
+  }
+  if (abilities && abilities.warpResist) {
+    finalRes = 0;
+  }
 
   return {
     // Base values (for display)
@@ -526,7 +553,7 @@ function readUnitStats(prefix) {
     rtbDistPenalty,
     // Effective values (for calculation)
     figs: baseFigs,
-    atk: finalAtk, def: finalDef, res, hp, rtb, effectiveGazeRanged, effectiveDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
+    atk: finalAtk, def: finalDef, res: finalRes, hp, rtb: finalRtb, effectiveGazeRanged, effectiveDoomGaze, weapon: effectiveWeapon, unitType: unitTypeVal, generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
     dmg: Math.max(0, parseInt(document.getElementById(prefix + 'Dmg').value) || 0),
     rangedType, thrownType,
     rangedGetsWpn, thrownGetsWpn,
