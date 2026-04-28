@@ -76,60 +76,61 @@ const ABILITY_DEFS = [
   { key: 'missileImmunity', label: 'Missile Imm./Guardian Wind', type: 'bool', match: 'MissileImmunity', group: 'Abilities/Enchantments', realm: 'sorcery', tooltip: 'Immunity to ranged missile attacks.' },
   { key: 'immolation', label: 'Immolation', type: 'bool', match: 'Immolation', group: 'Abilities/Enchantments', realm: 'chaos', tooltip: 'Fire area attack hitting all opponent figures each melee combat phase.\nMoM 1.31: Strength 4. Bug: Also fires alongside ranged attacks.\nMoM 1.60: Strength 4.\nCoM 1 & 2: Strength 10.\nImmune: Fire Immunity, Magic Immunity, Righteousness.' },
   // Enchantments — All versions selects (each takes one grid cell: L, R, L)
-  { key: 'prayer', label: 'Prayer', type: 'select', options: [['none','None'],['prayer','Prayer'],['highPrayer','High Prayer']], group: 'Enchantments', subgroup: 'All versions', realm: 'life', tooltip: 'Prayer: All units in combat gain +10% To Hit, +10% To Defend, +1 resistance.\nHigh Prayer: All units in combat gain +10% To Hit, +10% To Defend, +2 defense, +3 resistance.\nMoM 1.31 & 1.60, CoM 1: Also +3 melee.\nCoM 2: Also +2 melee.' },
+  { key: 'prayer', label: 'Prayer', type: 'select', options: [['none','None'],['prayer','Prayer'],['highPrayer','High Prayer']], group: 'Enchantments', subgroup: 'All versions', realm: 'life', tooltip: 'Prayer: All units in combat gain +10% To Hit, +10% To Block, +1 resistance.\nHigh Prayer: All units in combat gain +10% To Hit, +10% To Block, +2 defense, +3 resistance.\nMoM 1.31 & 1.60, CoM 1: Also +3 melee.\nCoM 2: Also +2 melee.' },
   { key: 'chaosChannels', label: 'Chaos Channels', type: 'select', options: [['none','None'],['defense','+Defense'],['fireBreath','+Fire Breath'],['flight','+Flight']], group: 'Enchantments', subgroup: 'All versions', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\n+Defense: +3 defense. MoM 1.31 bug: Applied twice in combat (net +6).\n+Fire Breath: MoM 1.31 & 1.60: Strength 2. CoM 1 & 2: Strength 4.\n+Flight: Flight has no consequences in this calculator.' },
   { key: 'elemArmor', label: 'Elements', type: 'select', options: [['none','None'],['resistElements','Resist Elements'],['elementalArmor','Elemental Armor']], group: 'Enchantments', subgroup: 'All versions', realm: 'nature', tooltip: 'Resist Elements: Bonus defense and resistance vs. magical ranged attacks, breath attacks, Stoning Touch and Stoning Gaze.\nMoM 1.31 & 1.60: +3 bonus.\nCoM 1 & 2: +4 bonus.\nElemental Armor:\nMoM 1.31 & 1.60: +10 defense against Chaos/Nature conventional damage (ranged magical, fire breath, immolation, etc.).\n+10 resistance against Stoning Touch and Stoning Gaze.\nCoM 1 & 2: +12 defense against magical ranged attacks and breath attacks.' },
   // Bools in a separate grid (subgroup '_All versions') so they start fresh at pos 1(L).
-  // Left col (11): life×6, death×5. Right col (11): death×1, chaos×5, nature×1, sorcery×4. Interleaved for row-first CSS grid.
-  // Left  (pos 1,3,5,7,9,11,13,15,17,19,21): bless, invulnerability, holyWeapon, lionheart, holyArmor, charmOfLife, blackSleep, blackPrayer, raiseDead, weakness, wraithForm
-  // Right (pos 2,4,6,8,10,12,14,16,18,20,22): animateDead, flameBlade, shatter, warpAttack, warpDefense, warpResist, ironSkin, blur, resistMagic, haste, vertigo
+  // Left col (12): life×6, death×6. Right col (11): chaos×5, nature×1, sorcery×5. Interleaved for row-first CSS grid.
+  // Left  (pos 1,3,5,7,9,11,13,15,17,19,21,23): bless, invulnerability, holyWeapon, lionheart, holyArmor, charmOfLife, animated, blackSleep, blackPrayer, raiseDead, weakness, wraithForm
+  // Right (pos 2,4,6,8,10,12,14,16,18,20,22):   flameBlade, shatter, warpAttack, warpDefense, warpResist, ironSkin, blur, resistMagic, haste, vertigo, mindStorm
   { key: 'bless', label: 'Bless', type: 'bool', match: 'Bless', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: "MoM 1.31 & 1.60: +3 defense and +3 resistance vs. breath attacks, Death Gaze, Life Steal,\nCause Fear and Chaos/Death creatures' melee and ranged.\nCoM 1 & 2: +5 defense and +5 resistance vs. breath attacks, Death Gaze, Life Steal and Cause Fear." },
-  { key: 'animated', label: 'Animate Dead', type: 'bool', match: 'Animated', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature): gains Death, Cold, Poison, and Illusion Immunity.\nMoM 1.31 bug: Only Death Immunity applies; Cold, Poison, and Illusion Immunity are missing.\nCoM 1 & 2: Also grants Animated buff: +1 melee, ranged, thrown, breath, defense, +10% To Hit, and Weapon Immunity.' },
-  { key: 'invulnerability', label: 'Invulnerability', type: 'bool', match: 'Invulnerability', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: 'Grants Weapon Immunity. Reduces damage by 2 per defense roll.\nDoes not reduce Doom damage.' },
   { key: 'flameBlade', label: 'Flame Blade', type: 'bool', match: 'FlameBlade', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'Bypasses Weapon Immunity.\nMoM 1.31 & 1.60: +2 melee, thrown and missile attack.\nCoM 1 & 2: +3 melee and +2 missile.' },
-  { key: 'holyWeapon', label: 'Holy Weapon/Holy Arms', type: 'bool', match: 'HolyWeapon', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: '+10% To Hit on melee, thrown, missile, and boulder attacks. Negates Weapon Immunity.\nMoM 1.31 bug: Does not affect thrown attacks.' },
+  { key: 'invulnerability', label: 'Invulnerability', type: 'bool', match: 'Invulnerability', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: 'Grants Weapon Immunity. Reduces damage by 2 per defense roll.\nDoes not reduce Doom damage.' },
   { key: 'shatter', label: 'Shatter', type: 'bool', match: 'Shatter', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'All attack strengths reduced to 1.' },
-  { key: 'lionheart', label: 'Lionheart', type: 'bool', match: 'Lionheart', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
-  { key: 'warpAttack', label: 'Warp: Attack', type: 'bool', match: 'WarpAttack', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos' },
-  { key: 'holyArmor', label: 'Holy Armor', type: 'bool', match: 'HolyArmor', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
-  { key: 'warpDefense', label: 'Warp: Defense', type: 'bool', match: 'WarpDefense', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos' },
-  { key: 'charmOfLife', label: 'Charm of Life', type: 'bool', match: 'CharmOfLife', group: 'Enchantments', subgroup: '_All versions', realm: 'life' },
-  { key: 'warpResist', label: 'Warp: Resist', type: 'bool', match: 'WarpResist', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos' },
-  { key: 'blackSleep', label: 'Black Sleep', type: 'bool', match: 'BlackSleep', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
-  { key: 'ironSkin', label: 'Iron Skin', type: 'bool', match: 'IronSkin', group: 'Enchantments', subgroup: '_All versions', realm: 'nature' },
-  { key: 'blackPrayer', label: 'Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
-  { key: 'blur', label: 'Blur', type: 'bool', match: 'Blur', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery' },
-  { key: 'raiseDead', label: 'Raise Dead', type: 'bool', match: 'RaiseDead', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
-  { key: 'resistMagic', label: 'Resist Magic', type: 'bool', match: 'ResistMagic', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery' },
-  { key: 'weakness', label: 'Weakness', type: 'bool', match: 'Weakness', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
-  { key: 'haste', label: 'Haste', type: 'bool', match: 'Haste', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery' },
-  { key: 'wraithForm', label: 'Wraith Form', type: 'bool', match: 'WraithForm', group: 'Enchantments', subgroup: '_All versions', realm: 'death' },
-  { key: 'vertigo', label: 'Vertigo', type: 'bool', match: 'Vertigo', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery' },
+  { key: 'holyWeapon', label: 'Holy Weapon/Holy Arms', type: 'bool', match: 'HolyWeapon', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: '+10% To Hit on melee, thrown, missile, and boulder attacks. Negates Weapon Immunity.\nMoM 1.31 bug: Does not affect thrown attacks.' },
+  { key: 'warpAttack', label: 'Warp: Attack', type: 'bool', match: 'WarpAttack', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'Melee attack halved.\nCoM 1 & 2: All ranged and thrown attacks also halved.' },
+  { key: 'lionheart', label: 'Lionheart', type: 'bool', match: 'Lionheart', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: '+3 melee, missile, boulder, and thrown attack; +3 resistance.\nMoM 1.31 & 1.60: +3 HP per figure.\nCoM 1 & 2: +floor(8/figures) HP per figure.' },
+  { key: 'warpDefense', label: 'Warp: Defense', type: 'bool', match: 'WarpDefense', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'Defense halved.\nCoM 1 & 2: Defense reduced to one-third instead.' },
+  { key: 'holyArmor', label: 'Holy Armor', type: 'bool', match: 'HolyArmor', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: 'MoM 1.31 & 1.60: +2 defense.\nCoM 1 & 2: +2 defense if defense ≤ 5; +10% To Block if defense > 5.' },
+  { key: 'warpResist', label: 'Warp: Resist', type: 'bool', match: 'WarpResist', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'Resistance set to 0.' },
+  { key: 'charmOfLife', label: 'Charm of Life', type: 'bool', match: 'CharmOfLife', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: '+25% HP per figure (minimum +1 HP per figure).' },
+  { key: 'ironSkin', label: 'Iron Skin', type: 'bool', match: 'IronSkin', group: 'Enchantments', subgroup: '_All versions', realm: 'nature', tooltip: '+5 defense. Supersedes Stone Skin.' },
+  { key: 'animated', label: 'Animate Dead', type: 'bool', match: 'Animated', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature): gains Death, Cold, Poison, and Illusion Immunity.\nMoM 1.31 bug: Only Death Immunity applies; Cold, Poison, and Illusion Immunity are missing.\nCoM 1 & 2: Also grants Animated buff: +1 melee, ranged, thrown, breath, defense, +10% To Hit, and Weapon Immunity.' },
+  { key: 'blur', label: 'Blur', type: 'bool', match: 'Blur', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: 'Each incoming hit has a chance to be negated before defense rolls.\nDoes not apply to Doom damage or to spell damage (Immolation, Wall of Fire, etc.).\nMoM 1.31 & 1.60: 10% per hit.\nMoM 1.31 bugs: Each successful negation skips the next roll, capping protection at 50%.\nThe unit\'s own Illusion Immunity disables their Blur, while the opponent\'s immunity is ignored.\nCoM 1 & 2: 20% per hit. Stacks with Invisibility to 30%.' },
+  { key: 'blackSleep', label: 'Black Sleep', type: 'bool', match: 'BlackSleep', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'All incoming conventional damage becomes Doom Damage (attack and\ndefense rolls skipped; ranged penalties and missile immunity ignored).' },
+  { key: 'resistMagic', label: 'Resist Magic', type: 'bool', match: 'ResistMagic', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: '+5 resistance vs. Cause Fear, Death Gaze, Life Steal, Stoning Gaze,\nStoning Touch, and Dispel Evil. Does not affect Poison Touch.' },
+  { key: 'blackPrayer', label: 'Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: '−1 to melee, missile, boulder, magic ranged, thrown and breath; −1 defense; −2 resistance.' },
+  { key: 'haste', label: 'Haste', type: 'bool', match: 'Haste', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: 'Melee, thrown, breath, ranged attacks, and counter-attacks are performed twice.\nMoM 1.31 & 1.60: Magic ranged attacks are not performed twice for Caster units (mana-pool casting).\nCoM 1 & 2: Hasted defenders do not counter-attack twice.' },
+  { key: 'raiseDead', label: 'Raise Dead', type: 'bool', match: 'RaiseDead', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'MoM 1.31 & 1.60: No effect on combat stats — the revived unit retains its original type and realm.\nCoM 1 & 2: Revived unit becomes an unaligned fantastic creature.' },
+  { key: 'vertigo', label: 'Vertigo', type: 'bool', match: 'Vertigo', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: 'To Hit, To Block and defense penalties. Affects melee, all ranged types, thrown, and breath.\nMoM 1.31 & 1.60: −20% To Hit; −1 Defense.\nCoM 1: −30% To Hit; −10% To Block.\nCoM 2: −25% To Hit; −7% To Block.' },
+  { key: 'weakness', label: 'Weakness', type: 'bool', match: 'Weakness', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'MoM 1.31: −2 melee and −2 missile. Bug: thrown is unaffected.\nMoM 1.60: −2 melee, −2 missile, −2 thrown.\nCoM 1 & 2: −3 melee, −3 missile, −3 thrown.' },
+  { key: 'mindStorm', label: 'Mind Storm', type: 'bool', match: 'MindStorm', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: 'MoM 1.31 & 1.60: −5 melee, ranged, thrown, breath, defense and resistance.\nCoM 1 & 2: −3 melee, −5 ranged, thrown, breath, defense, resistance.' },
+  { key: 'wraithForm', label: 'Wraith Form', type: 'bool', match: 'WraithForm', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'Grants Weapon Immunity to the unit. Attacks bypass enemy Weapon Immunity.' },
   // Enchantments — MoM only (removed in CoM) — column-wise: life → death → chaos → nature
-  { key: 'righteousness', label: 'Righteousness', type: 'bool', match: 'Righteousness', group: 'Enchantments', subgroup: 'MoM only', realm: 'life' },
-  { key: 'metalFires', label: 'Metal Fires', type: 'bool', match: 'MetalFires', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos' },
-  { key: 'berserk', label: 'Berserk', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'MoM only', realm: 'death' },
-  { key: 'giantStrength', label: 'Giant Strength', type: 'bool', match: 'GiantStrength', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature' },
-  { key: 'blackChannels', label: 'Black Channels', type: 'bool', match: 'BlackChannels', group: 'Enchantments', subgroup: 'MoM only', realm: 'death' },
-  { key: 'stoneSkin', label: 'Stone Skin', type: 'bool', match: 'StoneSkin', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature' },
-  { key: 'eldritchWeapon', label: 'Eldritch Weapon', type: 'bool', match: 'EldritchWeapon', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos' },
+  { key: 'righteousness', label: 'Righteousness', type: 'bool', match: 'Righteousness', group: 'Enchantments', subgroup: 'MoM only', realm: 'life', tooltip: 'Immunity to Cause Fear, Life Steal, Death Gaze, Chaos-realm magic ranged attacks,\nFire Breath, Lightning Breath, Immolation, and Wall of Fire.' },
+  { key: 'metalFires', label: 'Metal Fires', type: 'bool', match: 'MetalFires', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: '+1 melee, +1 missile and +1 thrown. Attacks bypass Weapon Immunity.\nSuperseded by Flame Blade — does not stack.' },
+  { key: 'berserk', label: 'Berserk', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: 'Melee attack doubled and defense set to 0, applied after all other bonuses.' },
+  { key: 'giantStrength', label: 'Giant Strength', type: 'bool', match: 'GiantStrength', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: '+1 melee and +1 thrown.' },
+  { key: 'blackChannels', label: 'Black Channels', type: 'bool', match: 'BlackChannels', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: '+2 melee, +1 to all ranged/thrown/breath/gaze, +1 defense, +1 resistance, +1 HP per figure.\nUnit permanently becomes a fantastic Death creature with Cold, Illusion, Poison, and Death Immunity.' },
+  { key: 'stoneSkin', label: 'Stone Skin', type: 'bool', match: 'StoneSkin', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: '+1 defense. Superseded by Iron Skin — does not stack.' },
+  { key: 'eldritchWeapon', label: 'Eldritch Weapon', type: 'bool', match: 'EldritchWeapon', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: "Opponent's To Block reduced by 10% against this unit's melee, missile,\nand thrown attacks. Attacks bypass Weapon Immunity." },
   // Enchantments — CoM & CoM2 (added in CoM, kept in CoM2) — column-wise: life → death → chaos → nature → sorcery
-  { key: 'supremeLight', label: 'Supreme Light', type: 'bool', match: 'SupremeLight', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life' },
-  { key: 'blazingMarch', label: 'Blazing March', type: 'bool', match: 'BlazingMarch', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'chaos' },
-  { key: 'endurance', label: 'Endurance', type: 'bool', match: 'Endurance', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life' },
-  { key: 'survivalInstinct', label: 'Survival Instinct', type: 'bool', match: 'SurvivalInstinct', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'nature' },
-  { key: 'bloodLust', label: 'Blood Lust', type: 'bool', match: 'BloodLust', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'death' },
-  { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'sorcery' },
-  { key: 'mysticSurge', label: 'Mystic Surge (excl. rand. enchs)', type: 'bool', match: 'MysticSurge', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'chaos' },
+  { key: 'supremeLight', label: 'Supreme Light', type: 'bool', match: 'SupremeLight', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life', tooltip: 'Applies only to Life fantastic creatures and Caster units.\n+2 melee and +2 ranged attack. Defense bonus = floor(resistance / 3).' },
+  { key: 'blazingMarch', label: 'Blazing March', type: 'bool', match: 'BlazingMarch', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'chaos', tooltip: '+3 melee and +3 missile attack. Melee and missile attacks bypass Weapon Immunity.' },
+  { key: 'endurance', label: 'Endurance', type: 'bool', match: 'Endurance', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life', tooltip: 'CoM 1: +2 defense.\nCoM 2: +floor(4 / figures) HP per figure, minimum +1 HP.' },
+  { key: 'survivalInstinct', label: 'Survival Instinct', type: 'bool', match: 'SurvivalInstinct', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'nature', tooltip: '+1 defense, +2 resistance, +10% To Hit.' },
+  { key: 'bloodLust', label: 'Blood Lust', type: 'bool', match: 'BloodLust', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature) and gains Death, Cold, Poison, and Illusion Immunity.\nDoubles melee attack against Normal and Hero targets.' },
+  { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'sorcery', tooltip: 'Magical ranged or breath attack present: +3 strength.\nThrown or missile attack present: Converted into a Sorcery magical ranged attack at strength at least 3.\nCoM 2 only — Doom Gaze present: +3 doom damage.\nOtherwise: Gains a strength-3 Sorcery magical ranged attack.' },
+  { key: 'mysticSurge', label: 'Mystic Surge (excl. rand. enchs)', type: 'bool', match: 'MysticSurge', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'chaos', tooltip: "+2 defense, −2 resistance. Opponent's To Block reduced by 10%.\nUnit becomes an unaligned fantastic creature." },
   // Enchantments — CoM2 only — select first, then bools interleaved for life → death → chaos → sorcery
-  { key: 'discipline', label: 'Discipline', type: 'select', options: [['none','None'],['overland','Overland'],['combat','Combat']], match: 'Discipline', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'life' },
-  { key: 'breakthrough', label: 'Breakthrough', type: 'select', options: [['none','None'],['melee','+1melee'],['meleeDef','+1melee/+1def']], match: 'Breakthrough', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos' },
-  { key: 'destiny', label: 'Destiny', type: 'bool', match: 'Destiny', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'life' },
-  { key: 'innerPower', label: 'Inner Power', type: 'bool', match: 'InnerPower', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos' },
-  { key: 'rulerOfUnderworld', label: 'Ruler of Underworld', type: 'bool', match: 'RulerOfUnderworld', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'death' },
-  { key: 'blazingEyes', label: 'Blazing Eyes', type: 'bool', match: 'BlazingEyes', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos' },
-  { key: 'mislead', label: 'Mislead/Misfortune', type: 'bool', match: 'Mislead', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'death' },
-  { key: 'reinforceMagic', label: 'Reinforce Magic', type: 'bool', match: 'ReinforceMagic', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'sorcery' },
+  { key: 'discipline', label: 'Discipline', type: 'select', options: [['none','None'],['overland','Overland'],['combat','Combat']], match: 'Discipline', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'life', tooltip: 'Normal: +1 defense.\nRegular: +2 defense.\nVeteran or higher: +2 defense, +1 melee, +1 missile/boulder.\nAlso, if unit is at least Elite and enchantment was cast in combat: Gain Negate First Strike.' },
+  { key: 'breakthrough', label: 'Breakthrough', type: 'select', options: [['none','None'],['melee','+1melee'],['meleeDef','+1melee/+1def']], match: 'Breakthrough', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos', tooltip: 'Permanent normal unit: +1 melee.\nNon-corporeal or temporary: +1 melee and +1 defense.' },
+  { key: 'destiny', label: 'Destiny', type: 'bool', match: 'Destiny', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'life', tooltip: 'Unit is stripped of experience and becomes a fantastic Life creature.\nDoubles base melee attack, ranged attack, and HP. +4 defense, +4 resistance.\nGrants Supernatural.' },
+  { key: 'innerPower', label: 'Inner Power', type: 'bool', match: 'InnerPower', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos', tooltip: 'Applies only to units with Fire Immunity or Lightning Resist.\n+3 to all attack strengths (melee, all ranged, thrown, breath). +2 defense, +2 resistance.' },
+  { key: 'rulerOfUnderworld', label: 'Ruler of Underworld', type: 'bool', match: 'RulerOfUnderworld', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'death', tooltip: 'Unit gains Wraith Form (Weapon Immunity + bypass enemy Weapon Immunity).\nAdditionally, opponents’ magical/mithril/adamantium weapons do not bypass this unit’s Weapon Immunity.' },
+  { key: 'blazingEyes', label: 'Blazing Eyes', type: 'bool', match: 'BlazingEyes', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos', tooltip: 'Applies only to fantastic Chaos creatures.\nGains Doom Gaze 3; if the unit already has Doom Gaze, its strength increases by 1.' },
+  { key: 'mislead', label: 'Mislead/Misfortune', type: 'bool', match: 'Mislead', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'death', tooltip: '−1 melee attack, −1 ranged attack, −1 defense, −1 resistance.' },
+  { key: 'reinforceMagic', label: 'Reinforce Magic', type: 'bool', match: 'ReinforceMagic', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'sorcery', tooltip: '+2 resistance.\nIf the unit has a magical ranged attack, it gains +2 strength.' },
 ];
 
 // --- Version -> Unit Data mapping ---
@@ -307,10 +308,10 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0 },
   },
   magicImmunityPoisonTouch: {
-    desc: 'Magic Immunity blocks poison touch: MI +50 res → effective res 55 ≥ 10 → 0% fail; melee blocked by def 1',
+    desc: 'Magic Immunity does NOT block poison (poison is not a magical effect): 4 rolls × Res 5 (50% fail) = 2.0; melee blocked by def 1',
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { magicImmunity: true } },
-    expected: { dmgToA: 0, dmgToB: 0 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   poisonHighRes: {
     desc: 'Poison vs High Res: 1 atk (100% blocked) + Poison 4 vs Res 10 — immune',
@@ -749,12 +750,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },
   bloodLustFantasticBecomesDeathRealmCoM2: {
-    desc: 'Blood Lust converts an existing fantastic unit into Death realm: True Light gives -1 atk, so fantastic_chaos atk 1 becomes 0 instead of doubling to 2',
+    desc: 'Blood Lust converts a fantastic_chaos unit into Death realm in CoM2: Darkness gives +1 atk to Death units, so atk 1 → 2, doubled to 4 vs normal → 4.0',
     version: 'com2_1.05.11',
-    enchLightDark: 'trueLight',
+    enchLightDark: 'darkness',
     a: { atk:1, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { bloodLust: true } },
     b: { hp:10, unitType:'normal' },
-    expected: { dmgToA: 0, dmgToB: 0.000 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   bloodLustBypassesWeaponImmunityCoM2: {
     desc: 'Blood Lust makes a normal attacker undead/fantastic_death in CoM2, so Weapon Immunity does not trigger, and the normal-unit target still takes doubled melee: 5 atk → 10 vs def 2 → 9.4',
@@ -1562,13 +1563,6 @@ const PRESETS = {
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 0.400 },
   },
-  survivalInstinctNormalNoBonusCoM2: {
-    desc: 'Survival Instinct (CoM2): normal unit keeps the checkbox available but gets no stat bonus, so atk 1 stays at base 30% → 0.3 dmg',
-    version: 'com2_1.05.11',
-    a: { atk:1, toHitMod:0, hp:10, unitType: 'normal', abilities: { survivalInstinct: true } },
-    b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 0.300 },
-  },
   survivalInstinctTransformedEligibleCoM2: {
     desc: 'Survival Instinct (CoM2): a normal unit transformed by Chaos Channels counts as fantastic_chaos and gains the +10% To Hit bonus → 0.4 dmg',
     version: 'com2_1.05.11',
@@ -1825,6 +1819,27 @@ const PRESETS = {
     a: { atk:3, toHitMod:70, hp:10 },
     b: { hp:10, abilities: { holyArmor: true, stoneSkin: true } },
     expected: { dmgToA: 0, dmgToB: 2.100 },
+  },
+  holyArmorHighDefMoM: {
+    desc: 'Holy Armor (MoM): always +2 def regardless of base def. 15 atk 100% hit vs def 8+2=10, 30% block → E[blocks]=3.0 → E[dmg]=12.0',
+    version: 'mom_1.31',
+    a: { atk:15, toHitMod:70, hp:30 },
+    b: { def:8, hp:30, abilities: { holyArmor: true } },
+    expected: { dmgToA: 0, dmgToB: 12.000 },
+  },
+  holyArmorLowDefCoM2: {
+    desc: 'Holy Armor (CoM2): def 5 ≤ 5 → +2 defense. 10 atk 100% hit vs def 5+2=7, 30% block → E[blocks]=2.1 → E[dmg]=7.9',
+    version: 'com2_1.05.11',
+    a: { atk:10, toHitMod:70, hp:20 },
+    b: { def:5, hp:20, abilities: { holyArmor: true } },
+    expected: { dmgToA: 0, dmgToB: 7.900 },
+  },
+  holyArmorHighDefCoM2: {
+    desc: 'Holy Armor (CoM2): def 8 > 5 → +10% To Defend instead of +2 def. 15 atk 100% hit vs def 8, toBlock 40% → E[blocks]=3.2 → E[dmg]=11.8',
+    version: 'com2_1.05.11',
+    a: { atk:15, toHitMod:70, hp:30 },
+    b: { def:8, hp:30, abilities: { holyArmor: true } },
+    expected: { dmgToA: 0, dmgToB: 11.800 },
   },
 
   // --- Holy Weapon ---
@@ -3262,6 +3277,34 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 5.000 },
   },
 
+  // --- Mind Storm ---
+  mindStormMeleePenaltyMoM: {
+    desc: 'Mind Storm MoM: 8 atk − 5 = 3, 100% hit vs 0 def → 3 dmg',
+    a: { atk:8, toHitMod:70, hp:10, abilities: { mindStorm: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  mindStormRangedPenaltyMoM: {
+    desc: 'Mind Storm MoM ranged: 8 rtb − 5 = 3, 100% hit vs 0 def → 3 dmg',
+    a: { rtbType:'missile', rtb:8, toHitRtbMod:70, hp:10, abilities: { mindStorm: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+  mindStormDefPenaltyMoM: {
+    desc: 'Mind Storm MoM: -5 def. Defender 6 def reduced to 1, so 1 guaranteed hit vs 1 die at 70% block → 0.3 dmg',
+    a: { atk:1, toHitMod:70, hp:10 },
+    b: { def:6, toBlkMod:70, hp:10, abilities: { mindStorm: true } },
+    expected: { dmgToA: 0, dmgToB: 0.300 },
+  },
+  mindStormMeleePenaltyCoM2: {
+    desc: 'Mind Storm CoM2: 8 atk − 3 = 5, 100% hit vs 0 def → 5 dmg',
+    version: 'com2_1.05.11',
+    a: { atk:8, toHitMod:70, hp:10, abilities: { mindStorm: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 5.000 },
+  },
+
   // --- Vertigo ---
   vertigoMeleeHitMoM: {
     desc: 'MoM Vertigo: -20% to hit on melee. Base 50% hit becomes 30%, so 1 atk vs 0 def → 0.3 dmg',
@@ -3271,11 +3314,11 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
   vertigoMeleeHitCoM2: {
-    desc: 'CoM2 Vertigo: -30% to hit on melee. Base 50% hit becomes 20%, so 1 atk vs 0 def → 0.2 dmg',
+    desc: 'CoM2 Vertigo: -25% to hit on melee. Base 50% hit becomes 25%, so 1 atk vs 0 def → 0.25 dmg',
     version: 'com2_1.05.11',
     a: { atk:1, toHitMod:20, hp:10, abilities: { vertigo: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 0.200 },
+    expected: { dmgToA: 0, dmgToB: 0.250 },
   },
   vertigoMeleeHitCoM: {
     desc: 'CoM Vertigo: -30% to hit on melee. Base 50% hit becomes 20%, so 1 atk vs 0 def → 0.2 dmg',
@@ -3293,12 +3336,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 0.300 },
   },
   vertigoRangedHitCoM2: {
-    desc: 'CoM2 Vertigo: -30% to hit on ranged attacks. Base 50% hit becomes 20%, so missile 1 vs 0 def → 0.2 dmg',
+    desc: 'CoM2 Vertigo: -25% to hit on ranged attacks. Base 50% hit becomes 25%, so missile 1 vs 0 def → 0.25 dmg',
     version: 'com2_1.05.11',
     a: { rtbType:'missile', rtb:1, toHitRtbMod:20, hp:10, abilities: { vertigo: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0.200 },
+    expected: { dmgToA: 0, dmgToB: 0.250 },
   },
   vertigoRangedHitCoM: {
     desc: 'CoM Vertigo: -30% to hit on ranged attacks. Base 50% hit becomes 20%, so missile 1 vs 0 def → 0.2 dmg',
@@ -3316,11 +3359,11 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
   vertigoDefenseCoM2: {
-    desc: 'CoM2 Vertigo: -1 to defend, not defense. Defender keeps 1 die but blocks at 90%, so 1 guaranteed hit deals 0.1 dmg',
+    desc: 'CoM2 Vertigo: -7% to block, not defense. Defender keeps 1 die but blocks at 93%, so 1 guaranteed hit deals 0.07 dmg',
     version: 'com2_1.05.11',
     a: { atk:1, toHitMod:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:10, abilities: { vertigo: true } },
-    expected: { dmgToA: 0, dmgToB: 0.100 },
+    expected: { dmgToA: 0, dmgToB: 0.070 },
   },
   vertigoDefenseCoM: {
     desc: 'CoM Vertigo: -1 to defend, not defense. Defender keeps 1 die but blocks at 90%, so 1 guaranteed hit deals 0.1 dmg',
@@ -3433,13 +3476,6 @@ const PRESETS = {
     b: { def:2, toBlkMod:70, hp:10, abilities: { weaponImmunity: true } },
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, dmgToB: 3.000 },
-  },
-  blazingMarchFireBreathCoM2: {
-    desc: 'Blazing March +3 melee and +3 fire breath in CoM2: fire breath 2 → 5, melee 1 → 4, total 9.0',
-    version: 'com2_1.05.11',
-    a: { atk:1, toHitMod:70, rtbType:'fire', rtb:2, toHitRtbMod:70, hp:10, abilities: { blazingMarch: true } },
-    b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 9.000 },
   },
   blazingMarchFlameBladeStacksCoM2: {
     desc: 'Blazing March stacks with Flame Blade in CoM2: missile 1 +3 +2 = 6 → 6.0',
@@ -3603,8 +3639,8 @@ const TEST_TREE = [
       { name: 'Holy Weapon', keys: ['holyWeaponMelee', 'holyWeaponMissile', 'holyWeaponBoulder', 'holyWeaponNotMagicRanged', 'holyWeaponNotFireBreath', 'holyWeaponBypassesWI'] },
       { name: 'Illusion', keys: ['illusionMelee', 'illusionRanged', 'illusionThrown', 'illusionCounter', 'illusionImmunityNegates', 'illusionCityWalls', 'illusionOverridesWeaponImmunity'] },
       { name: 'Immolation', keys: ['immolationMelee', 'immolationAreaMultiFig', 'immolationNoOverflow', 'immolationMagicImmunity', 'immolationRighteousness', 'immolationFireImmunity', 'immolationBothSides', 'immolationRangedMoM', 'immolationWithThrown', 'immolationAtkZeroNoFire'] },
-      { name: 'Invulnerability', keys: ['invulnerabilityMelee', 'invulnerabilityFloorsAtZero', 'invulnerabilityGrantsWeaponImmunity', 'invulnerabilityRanged', 'invulnerabilityImmolation', 'invulnerabilityNotDoom', 'invulnerabilityMultiFigOverflow'] },
       { name: 'Invisibility', keys: ['invisibilityMelee', 'invisibilityRangedBlocked', 'invisibilityRangedIllusionImmune', 'invisibilityCounter', 'invisibilityIllusionImmuneNoPenalty', 'invisibilityDoomIgnores'] },
+      { name: 'Invulnerability', keys: ['invulnerabilityMelee', 'invulnerabilityFloorsAtZero', 'invulnerabilityGrantsWeaponImmunity', 'invulnerabilityRanged', 'invulnerabilityImmolation', 'invulnerabilityNotDoom', 'invulnerabilityMultiFigOverflow'] },
       { name: 'Large Shield', keys: ['largeShieldRangedMissile', 'largeShieldMeleeNoEffect', 'largeShieldThrown', 'largeShieldArmorPiercing', 'largeShieldFireBreath'] },
       { name: 'Level & Weapon bonuses', keys: ['levelWeaponBonus'] },
       { name: 'Life steal', keys: ['lifeStealBasic', 'lifeStealDeathImmune', 'lifeStealMagicImmune', 'lifeStealHighRes', 'lifeStealNoMod', 'lifeStealNegativeRes'] },
@@ -3612,6 +3648,7 @@ const TEST_TREE = [
       { name: 'Lionheart', keys: ['lionheartMeleeAtk', 'lionheartRes', 'lionheartMissileBonus', 'lionheartBoulderBonus', 'lionheartNoMagicRangedBonus', 'lionheartThrownBonus'] },
       { name: 'Lucky', keys: ['luckyToHit', 'luckyToHitRanged', 'luckyToBlock', 'luckyResistance', 'luckyEnemyMeleePenalty131', 'luckyEnemyPenaltyNotRanged131'] },
       { name: 'Metal Fires / Flame Blade', keys: ['metalFiresMelee', 'metalFiresMissile', 'metalFiresNotBoulder', 'metalFiresThrown', 'metalFiresWeaponUpgrade', 'flameBladeMelee', 'flameBladeMissile', 'flameBladeThrown', 'flameBladeMetalFiresNoStack'] },
+      { name: 'Mind Storm', keys: ['mindStormMeleePenaltyMoM', 'mindStormRangedPenaltyMoM', 'mindStormDefPenaltyMoM'] },
       { name: 'Missile Immunity', keys: ['missileImmunityMissile', 'missileImmunityBoulder', 'missileImmunityMagic', 'missileImmunityMelee', 'missileImmunityArmorPiercing', 'missileImmunityWIOverwrite131', 'missileImmunityWIMagicWeapon'] },
       { name: 'Node aura', keys: ['nodeAuraChaos', 'nodeAuraNoMatch'] },
       { name: 'Poison touch', keys: ['poisonTouchBasic', 'poisonPlusMelee', 'poisonImmunity', 'magicImmunityPoisonTouch', 'poisonHighRes', 'poisonRanged', 'poisonThrown'] },
@@ -3630,8 +3667,8 @@ const TEST_TREE = [
       { name: 'Warp Creature', keys: ['warpAttackMelee', 'warpAttackNotRangedMoM', 'warpDefenseHalfMoM', 'warpResistSetsToZero', 'warpResistMagicSurvives'] },
       { name: 'Warp Reality', keys: ['warpRealityBasic', 'warpRealityChaosExempt', 'warpRealityChaosChannelsExempt', 'warpRealityMagicImmunityNotExempt', 'warpRealityBothSides', 'warpRealityFloorAt10', 'warpRealityRanged'] },
       { name: 'Weakness', keys: ['weaknessMeleePenalty', 'weaknessMissileRangedPenalty', 'weaknessThrownNotAffected131', 'weaknessBoulderNotAffected'] },
-      { name: 'Wraith Form', keys: ['wraithFormGrantsWeaponImmunity', 'wraithFormBypassesWIMoM'] },
       { name: 'Weapon Immunity', keys: ['weaponImmunityMelee', 'weaponImmunityMagicWeapon', 'weaponImmunityFantastic', 'weaponImmunityHero', 'weaponImmunityCounter', 'weaponImmunityThrown131', 'weaponImmunityRangedMissile', 'weaponImmunityRangedMagic'] },
+      { name: 'Wraith Form', keys: ['wraithFormGrantsWeaponImmunity', 'wraithFormBypassesWIMoM'] },
     ],
   },
   {
@@ -3676,7 +3713,6 @@ const TEST_TREE = [
       {
         name: 'Blazing March',
         keys: [
-          'blazingMarchFireBreathCoM2',
           'blazingMarchFlameBladeStacksCoM2',
           'blazingMarchMeleeCoM2',
           'blazingMarchMissileIgnoresWICoM2',
@@ -3702,6 +3738,16 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Destiny',
+        keys: [
+          'destinyDefenseAndHealthCoM2',
+          'destinyGrantsSupernaturalCoM2',
+          'destinyMeleeRemovesLevelsCoM2',
+          'destinyRangedDoublesBaseCoM2',
+          'destinyResistanceAndHpCoM2',
+        ],
+      },
+      {
         name: 'Discipline',
         keys: [
           'combatDisciplineEliteNegatesFirstStrikeCoM2',
@@ -3710,16 +3756,6 @@ const TEST_TREE = [
           'overlandDisciplineVeteranMagicRangedNoBonusCoM2',
           'overlandDisciplineVeteranMeleeCoM2',
           'overlandDisciplineVeteranMissileCoM2',
-        ],
-      },
-      {
-        name: 'Destiny',
-        keys: [
-          'destinyDefenseAndHealthCoM2',
-          'destinyGrantsSupernaturalCoM2',
-          'destinyMeleeRemovesLevelsCoM2',
-          'destinyRangedDoublesBaseCoM2',
-          'destinyResistanceAndHpCoM2',
         ],
       },
       {
@@ -3742,6 +3778,12 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Holy Armor',
+        keys: [
+          'holyArmorLowDefCoM2',
+        ],
+      },
+      {
         name: 'Inner Power',
         keys: [
           'innerPowerFireImmunityMeleeCoM2',
@@ -3761,15 +3803,6 @@ const TEST_TREE = [
         ],
       },
       {
-        name: 'Reinforce Magic',
-        keys: [
-          'reinforceMagicResistanceCoM2',
-          'reinforceMagicMagicRangedCoM2',
-          'reinforceMagicMissileNoBonusCoM2',
-          'reinforceMagicFocusConvertedCoM2',
-        ],
-      },
-      {
         name: 'Mislead/Misfortune',
         keys: [
           'misleadMisfortuneNormalMeleeCoM2',
@@ -3777,6 +3810,15 @@ const TEST_TREE = [
           'misleadMisfortuneNormalDefenseCoM2',
           'misleadMisfortuneNormalResistanceCoM2',
           'misleadMisfortuneHeroAffectedCoM2',
+        ],
+      },
+      {
+        name: 'Reinforce Magic',
+        keys: [
+          'reinforceMagicResistanceCoM2',
+          'reinforceMagicMagicRangedCoM2',
+          'reinforceMagicMissileNoBonusCoM2',
+          'reinforceMagicFocusConvertedCoM2',
         ],
       },
       {
@@ -3795,6 +3837,13 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Supernatural',
+        keys: [
+          'supernaturalFireBreathFireImmunityCoM2',
+          'supernaturalMagicImmunityRangedCoM2',
+        ],
+      },
+      {
         name: 'Supreme Light',
         keys: [
           'supremeLightLifeCreatureMeleeCoM',
@@ -3804,17 +3853,9 @@ const TEST_TREE = [
         ],
       },
       {
-        name: 'Supernatural',
-        keys: [
-          'supernaturalFireBreathFireImmunityCoM2',
-          'supernaturalMagicImmunityRangedCoM2',
-        ],
-      },
-      {
         name: 'Survival Instinct',
         keys: [
           'survivalInstinctFantasticBonusCoM2',
-          'survivalInstinctNormalNoBonusCoM2',
           'survivalInstinctTransformedEligibleCoM2',
         ],
       },
@@ -3836,19 +3877,21 @@ const TEST_TREE = [
       { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderFixedFirstStrike'] },
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathCoM', 'ccFireBreathReplacesLightningCoM2', 'ccFireBreathReplacesGazeCoM2'] },
       { name: 'Defense Rollover', keys: ['defRolloverWoundedCoM', 'defRolloverWoundedCoM2'] },
-      { name: 'Endurance', keys: ['enduranceEffectCoM', 'enduranceEffectCoM2'] },
       { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsMagicCCoM2', 'resistElementsNotVsMagicSMoM', 'resistElementsVsMagicSCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorVsMagicSCoM2'] },
+      { name: 'Endurance', keys: ['enduranceEffectCoM', 'enduranceEffectCoM2'] },
       { name: 'First Strike', keys: ['firstStrikeCapCoM', 'firstStrikeCapCoM2'] },
       { name: 'Focus Magic', keys: ['focusMagicDoomGazeCoM', 'focusMagicDoomGazeCoM2'] },
       { name: 'Haste', keys: ['hasteCounterDoublesMoM', 'hasteCounterNotDoubledCoM2', 'hasteMagicRangedNotDoubledForCaster', 'hasteMagicRangedCasterCoM2'] },
       { name: 'Haste (complex)', keys: ['hasteComplexThrownDefenderGaze', 'hasteComplexThrownDefenderGaze160', 'hasteComplexBilateralGaze', 'hasteComplexBilateralGaze160'] },
+      { name: 'Holy Armor', keys: ['holyArmorHighDefMoM', 'holyArmorHighDefCoM2'] },
       { name: 'Holy Bonus', keys: ['holyBonusRangedMoM', 'holyBonusRangedCoM2'] },
       { name: 'Holy Weapon', keys: ['holyWeaponThrownMoM', 'holyWeaponThrownPatched'] },
       { name: 'Immolation', keys: ['immolationRangedMoM', 'immolationNotRangedPatched', 'immolationMoMStrength', 'immolationCoMStrength10'] },
       { name: 'Invisibility', keys: ['invisToHitMoM', 'blurInvisCoM2'] },
       { name: 'Large Shield', keys: ['largeShieldRangedMissile', 'largeShieldCom2Ranged'] },
-      { name: 'Magic Immunity', keys: ['magicImmunityFireBreathMoM', 'magicImmunityFireBreathCoM'] },
       { name: 'Lionheart', keys: ['lionheartHpMoM', 'lionheartHpCoM2'] },
+      { name: 'Magic Immunity', keys: ['magicImmunityFireBreathMoM', 'magicImmunityFireBreathCoM'] },
+      { name: 'Mind Storm', keys: ['mindStormMeleePenaltyMoM', 'mindStormMeleePenaltyCoM2'] },
       { name: 'Lucky', keys: ['luckyEnemyMeleePenalty131', 'luckyEnemyPenaltyRemovedPatched'] },
       { name: 'Missile Immunity', keys: ['missileImmunityWIOverwrite131', 'missileImmunityWIOverwriteFixed'] },
       { name: 'Prayer', keys: ['prayerEnemyMeleePenalty131', 'prayerEnemyPenaltyRemovedPatched'] },
@@ -3860,8 +3903,8 @@ const TEST_TREE = [
       { name: 'Wall of Fire', keys: ['wallOfFireBasic', 'wallOfFireCoM2Strength', 'wallOfFireCoMStrength'] },
       { name: 'Warp Creature', keys: ['warpAttackNotRangedMoM', 'warpAttackHalvedCoM', 'warpDefenseHalfMoM', 'warpDefenseThirdCoM'] },
       { name: 'Weakness', keys: ['weaknessThrownNotAffected131', 'weaknessThrownFixed160', 'weaknessMeleePenaltyMoM', 'weaknessMeleePenaltyCoM2'] },
-      { name: 'Wraith Form', keys: ['wraithFormBypassesWIMoM', 'wraithFormBypassesWICoM2'] },
       { name: 'Weapon Immunity', keys: ['weaponImmunityThrown131', 'weaponImmunityThrownPatched', 'weaponImmunityMelee', 'weaponImmunityCom2Melee', 'weaponImmunityGeneric131', 'weaponImmunityGenericPatched', 'weaponImmunityGenericCatapult131', 'weaponImmunityGenericCatapultPatched'] },
+      { name: 'Wraith Form', keys: ['wraithFormBypassesWIMoM', 'wraithFormBypassesWICoM2'] },
     ],
   },
 ];

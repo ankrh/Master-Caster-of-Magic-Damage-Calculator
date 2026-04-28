@@ -233,9 +233,10 @@ function getAbilityStatModifiers(abilities, version) {
 
   // Mislead applies Misfortune in CoM2. The checkbox represents the current unit being
   // affected by Misfortune; normal units and heroes are eligible, and that gating is handled in ui.js.
+  // The -1 ranged-attack penalty applies only to ranged attacks (not thrown or breath) per the
+  // source helptext, so it is applied conditionally in ui.js as misleadRtbMod.
   if (abilities && abilities.mislead) {
     atkMod -= 1;
-    rtbMod -= 1;
     defMod -= 1;
     resMod -= 1;
   }
@@ -247,10 +248,7 @@ function getAbilityStatModifiers(abilities, version) {
     defMod += 1;
   }
 
-  // Holy Armor: +2 Defense.
-  if (abilities && abilities.holyArmor) {
-    defMod += 2;
-  }
+  // Holy Armor: handled in ui.js (version- and stat-conditional).
 
   // Lionheart: +3 Melee Attack (only if base > 0 — guarded in ui.js), +3 Resistance.
   // RTB bonus (non-magic ranged/thrown only) and HP bonus (version/figs-dependent) in ui.js.
@@ -315,12 +313,23 @@ function getAbilityStatModifiers(abilities, version) {
     atkMod -= isCoM ? 3 : 2;
   }
 
+  // Mind Storm: MoM: -5 melee, -5 all ranged/thrown/breath, -5 defense, -5 resistance.
+  // CoM2: -3 melee, -5 all ranged/thrown, -5 defense, -5 resistance.
+  if (abilities && abilities.mindStorm) {
+    const isCoM = version && version.startsWith('com');
+    atkMod -= isCoM ? 3 : 5;
+    rtbMod -= 5;
+    defMod -= 5;
+    resMod -= 5;
+  }
+
   // Supreme Light: CoM/CoM2 combat enchantment. Applies only to Life creatures and
   // Caster units; the defense-from-resistance component is handled in ui.js because
   // it depends on the effective resistance after other modifiers are applied.
+  // The +2 ranged-attack bonus is type-conditional (ranged only — not thrown/breath)
+  // and handled in ui.js.
   if (abilities && abilities.supremeLight) {
     atkMod += 2;
-    rtbMod += 2;
   }
 
   // Survival Instinct: CoM/CoM2 global enchantment. Applies only to fantastic creatures;
@@ -332,7 +341,7 @@ function getAbilityStatModifiers(abilities, version) {
   }
 
   // Mystic Surge: +2 Defense, -2 Resistance. The unaligned-fantastic conversion and
-  // -10% To Defend are applied in ui.js / resolveCombat.
+  // -10% To Block are applied in ui.js / resolveCombat.
   if (abilities && abilities.mysticSurge) {
     defMod += 2;
     resMod -= 2;
@@ -970,22 +979,24 @@ function resolveCombat(a, b, opts) {
   }
 
   // Vertigo: unit curse that penalizes the affected unit's conventional attacks and defense.
-  // MoM: -20% To Hit and -1 Defense.
-  // CoM/CoM2: no defense penalty; instead -30% To Hit and -1 To Defend
-  // (implemented as -10 percentage points to block chance).
+  // MoM:  -20% To Hit and -1 Defense.
+  // CoM:  -30% To Hit and -10% To Block (no defense-die penalty).
+  // CoM2: -25% To Hit and -7% To Block (no defense-die penalty).
   // Neither Illusion Immunity nor Magic Immunity negates Vertigo — we assume it was cast before those immunities were applied.
   const isCoM = ver && ver.startsWith('com');
+  const isCoM2Vert = ver && ver.startsWith('com2');
   const aVertigo = !!(a.abilities && a.abilities.vertigo);
   const bVertigo = !!(b.abilities && b.abilities.vertigo);
-  const vertigoHitPenalty = isCoM ? 0.3 : 0.2;
+  const vertigoHitPenalty = isCoM2Vert ? 0.25 : (isCoM ? 0.3 : 0.2);
+  const vertigoBlockPenalty = isCoM2Vert ? 0.07 : (isCoM ? 0.1 : 0);
   const aToHitMeleeVert = aVertigo ? Math.max(0.1, a.toHitMelee - vertigoHitPenalty) : a.toHitMelee;
   const bToHitMeleeVert = bVertigo ? Math.max(0.1, b.toHitMelee - vertigoHitPenalty) : b.toHitMelee;
   const aToHitRtbVert = aVertigo ? Math.max(0.1, a.toHitRtb - vertigoHitPenalty) : a.toHitRtb;
   const bToHitRtbVert = bVertigo ? Math.max(0.1, b.toHitRtb - vertigoHitPenalty) : b.toHitRtb;
   const aVertigoDefPenalty = !isCoM && aVertigo ? 1 : 0;
   const bVertigoDefPenalty = !isCoM && bVertigo ? 1 : 0;
-  const aVertigoBlockPenalty = isCoM && aVertigo ? 0.1 : 0;
-  const bVertigoBlockPenalty = isCoM && bVertigo ? 0.1 : 0;
+  const aVertigoBlockPenalty = aVertigo ? vertigoBlockPenalty : 0;
+  const bVertigoBlockPenalty = bVertigo ? vertigoBlockPenalty : 0;
 
   // Blur: pre-defense hit negation. Applies to melee, counter, ranged, thrown/breath,
   // and gaze hidden ranged component. Does NOT apply to doom damage or special/spell damage.

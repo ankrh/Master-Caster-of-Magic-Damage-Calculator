@@ -517,7 +517,13 @@ function readUnitStats(prefix) {
     && (rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
 
   const atk = calcBaseAtk > 0 ? Math.max(0, calcBaseAtk + lvl.atk + wpn.atk + abilMods.atkMod + disciplineAtkMod + nodeBonus + darkLightBonus) : 0;
-  const def = Math.max(0, calcBaseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod + nodeBonus + darkLightBonus);
+  const defBase = Math.max(0, calcBaseDef + lvl.def + wpn.def + cityWallBonus + abilMods.defMod + enduranceDefMod + disciplineDefMod + supremeLightDefMod + nodeBonus + darkLightBonus);
+  // Holy Armor: MoM: +2 defense. CoM/CoM2: +2 defense if def ≤ 5; +10% To Block if def > 5.
+  const holyArmorActive = !!(abilities && abilities.holyArmor);
+  const holyArmorHighDef = holyArmorActive && isCoMVersion && defBase > 5;
+  const holyArmorDefBonus = holyArmorActive && !holyArmorHighDef ? 2 : 0;
+  const holyArmorToBlkBonus = holyArmorHighDef ? 10 : 0;
+  const def = defBase + holyArmorDefBonus;
   const res = Math.max(0, calcBaseRes + lvl.res + abilMods.resMod + orihalconResMod + nodeBonus + darkLightBonus);
   const hp  = Math.max(1, calcBaseHP + lvl.hp + abilMods.hpMod + lionheartHpMod + enduranceHpMod + charmOfLifeHpMod);
 
@@ -526,10 +532,9 @@ function readUnitStats(prefix) {
   const fbAtkBonus = abilities.flameBlade ? 2 : (abilities.metalFires ? 1 : 0);
   const fbRtbMod = fbAtkBonus > 0 && (rangedType === 'missile' || thrownType === 'thrown') ? fbAtkBonus : 0;
 
-  // Blazing March: +3 to missile and breath (but not boulder, magic ranged, or physical thrown).
+  // Blazing March: +3 to missile only (not boulder, magic ranged, thrown, or breath).
   const blazingMarchActive = !!(abilities && abilities.blazingMarch);
-  const blazingMarchRtbMod = blazingMarchActive
-    && (rangedType === 'missile' || thrownType === 'fire' || thrownType === 'lightning') ? 3 : 0;
+  const blazingMarchRtbMod = blazingMarchActive && rangedType === 'missile' ? 3 : 0;
 
   const focusMagicRtbMod = focusMagicBuffsExisting
     && (rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s'
@@ -538,6 +543,18 @@ function readUnitStats(prefix) {
   // Reinforce Magic: +2 to magical ranged attack strength only.
   const reinforceMagicRtbMod = (abilities && abilities.reinforceMagic)
     && (rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
+
+  // Mislead/Misfortune: -1 ranged attack only (not thrown or breath) per source helptext.
+  // Eligibility (normal/hero) is handled via effectiveAbilities.mislead.
+  const misleadRtbMod = (effectiveAbilities && effectiveAbilities.mislead)
+    && (rangedType === 'missile' || rangedType === 'boulder'
+      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? -1 : 0;
+
+  // Supreme Light: +2 to ranged attack strength (missile/boulder/magic ranged).
+  // Source manuals say "+2 melee and ranged attack" — thrown and breath are not affected.
+  const supremeLightRtbMod = supremeLightEligible
+    && (rangedType === 'missile' || rangedType === 'boulder'
+      || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
 
   // Giant Strength: +1 thrown only (not missile/boulder/magic ranged, not breath).
   const gsRtbMod = (abilities.giantStrength && thrownType === 'thrown') ? 1 : 0;
@@ -556,9 +573,6 @@ function readUnitStats(prefix) {
   // breath, or gaze attacks. Also upgrades normal weapon to magic (bypasses Weapon Immunity).
   const hwActive = !!(abilities && abilities.holyWeapon);
   const hwMeleeToHit = hwActive ? 10 : 0;
-  const blazingMarchWeaponToHit = (blazingMarchActive && weapon === 'normal') ? 10 : 0;
-  const blazingMarchMeleeToHit = blazingMarchWeaponToHit;
-  const blazingMarchRtbToHit = (blazingMarchWeaponToHit > 0 && rangedType === 'missile') ? blazingMarchWeaponToHit : 0;
   let hwRtbToHit = 0;
   if (hwActive) {
     if (rangedType === 'missile' || rangedType === 'boulder') hwRtbToHit = 10;
@@ -583,7 +597,7 @@ function readUnitStats(prefix) {
     rtbLvl = lvl.thrown;
     rtbWpn = (calcBaseRtb > 0 && thrownGetsWpn) ? wpn.atk : 0;
   }
-  const rtb = calcBaseRtb > 0 ? Math.max(0, calcBaseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + disciplineRtbMod + fbRtbMod + blazingMarchRtbMod + focusMagicRtbMod + reinforceMagicRtbMod + orihalconRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + nodeBonus + darkLightBonus) : 0;
+  const rtb = calcBaseRtb > 0 ? Math.max(0, calcBaseRtb + rtbLvl + rtbWpn + abilMods.rtbMod + disciplineRtbMod + fbRtbMod + blazingMarchRtbMod + focusMagicRtbMod + reinforceMagicRtbMod + misleadRtbMod + supremeLightRtbMod + orihalconRtbMod + gsRtbMod + lionheartRtbMod + weaknessRtbMod + nodeBonus + darkLightBonus) : 0;
 
   // Hidden gaze ranged attack: affected by same modifiers as ranged (level, node aura,
   // darkness/light, ability mods) but NOT weapon bonuses. In v1.31, if reduced to 0 the
@@ -609,7 +623,7 @@ function readUnitStats(prefix) {
     : combatAbilitiesBase;
 
   // To Hit percentage bonuses
-  const meleeToHitBonus = lvl.toHit + wpn.toHit + abilMods.toHitMod + hwMeleeToHit + blazingMarchMeleeToHit;
+  const meleeToHitBonus = lvl.toHit + wpn.toHit + abilMods.toHitMod + hwMeleeToHit;
   const rtbToHitWpn = rangedGetsWpn ? wpn.toHit : 0;
 
   // Distance penalty (attacker ranged only)
@@ -624,8 +638,8 @@ function readUnitStats(prefix) {
 
   // Pre-clamped To Hit/Block values for combat (decimals 0.1-1.0)
   let toHitMelee = clampPct(30, baseToHitMod + meleeToHitBonus);
-  let toHitRtb = clampPct(30, baseToHitRtbMod + lvl.toHit + rtbToHitWpn + rtbDistPenalty + abilMods.toHitMod + hwRtbToHit + blazingMarchRtbToHit);
-  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod);
+  let toHitRtb = clampPct(30, baseToHitRtbMod + lvl.toHit + rtbToHitWpn + rtbDistPenalty + abilMods.toHitMod + hwRtbToHit);
+  let toBlock = clampPct(30, baseToBlkMod + abilMods.toBlkMod + holyArmorToBlkBonus);
   // Immolation To Hit: always base 30%, ignoring all modifiers (it's a spell attack)
   let toHitImmolation = 0.3;
 
@@ -644,7 +658,7 @@ function readUnitStats(prefix) {
   let displayToBlock = toBlock;
 
   // Vertigo: reflect the displayed penalty in the red To Hit / To Block numbers.
-  // MoM: -20% To Hit, -1 Defense. CoM/CoM2: -30% To Hit, -1 To Defend.
+  // MoM: -20% To Hit, -1 Defense. CoM/CoM2: -30% To Hit, -1 To Block.
   const vertigoActive = !!(abilities && abilities.vertigo)
     && !(abilities && (abilities.illusionImmunity || abilities.magicImmunity));
   if (vertigoActive) {
@@ -689,7 +703,6 @@ function readUnitStats(prefix) {
     wpn.toHit,
     abilMods.toHitMod,
     hwMeleeToHit,
-    blazingMarchMeleeToHit,
     (warpRealityActive && !unitIsChaos) ? -20 : 0,
     vertigoActive ? (version.startsWith('com') ? -30 : -20) : 0,
   ]);
@@ -700,13 +713,13 @@ function readUnitStats(prefix) {
     rtbDistPenalty,
     abilMods.toHitMod,
     hwRtbToHit,
-    blazingMarchRtbToHit,
     (warpRealityActive && !unitIsChaos) ? -20 : 0,
     vertigoActive ? (version.startsWith('com') ? -30 : -20) : 0,
   ]);
   const toBlockHasModifiers = anyNonZero([
     baseToBlkMod,
     abilMods.toBlkMod,
+    holyArmorToBlkBonus,
     (vertigoActive && version.startsWith('com')) ? -10 : 0,
   ]);
 
@@ -854,9 +867,33 @@ function applyUnit(prefix, unitIndex) {
     }
   }
 
+  // Clear any previous unit-innate locks before re-applying
+  const abilCont = document.getElementById(prefix + 'Abilities');
+  abilCont.querySelectorAll('.abil-unit-locked').forEach(item => {
+    item.classList.remove('abil-unit-locked');
+    item.querySelectorAll('input, select').forEach(inp => { inp.disabled = false; });
+  });
+
   const abilValues = parseAbilitiesFromUnit(unit);
   applyAbilities(prefix, abilValues);
   applyLevelBonuses(prefix);
+
+  // Lock Abilities/Enchantments items that are innate to this unit
+  for (const abil of ABILITY_DEFS) {
+    if (abil.group !== 'Abilities/Enchantments') continue;
+    const val = abilValues[abil.key];
+    const isActive = abil.type === 'bool' ? !!val
+      : abil.type === 'numcheck' ? val != null
+      : (val || 0) !== 0;
+    if (!isActive) continue;
+    const el = document.getElementById(prefix + 'Abil_' + abil.key);
+    if (!el) continue;
+    const item = el.closest('.abil-item');
+    if (!item) continue;
+    item.classList.add('abil-unit-locked');
+    item.querySelectorAll('input, select').forEach(inp => { inp.disabled = true; });
+  }
+
   refreshAbilityFieldVisibility();
 }
 
@@ -890,6 +927,12 @@ function updateUnitLock(prefix) {
   } else {
     delete unitBaseStats[prefix];
     weaponSel.classList.remove('weapon-locked');
+    // Clear unit-innate locks when switching to custom
+    const abilContCustom = document.getElementById(prefix + 'Abilities');
+    abilContCustom.querySelectorAll('.abil-unit-locked').forEach(item => {
+      item.classList.remove('abil-unit-locked');
+      item.querySelectorAll('input, select').forEach(inp => { inp.disabled = false; });
+    });
     updateCustomLevelState(prefix);
   }
 }
@@ -999,9 +1042,53 @@ function onVersionChange() {
     syncUnitDisplay(prefix);
   }
 
+  // Save user enchantments — updateUnitLock calls applyUnit which resets all abilities
+  const savedEnch = {};
+  for (const prefix of ['a', 'b']) {
+    savedEnch[prefix] = {};
+    for (const abil of ABILITY_DEFS) {
+      if (abil.group !== 'Enchantments') continue;
+      const el = document.getElementById(prefix + 'Abil_' + abil.key);
+      if (!el) continue;
+      if (abil.type === 'bool') {
+        savedEnch[prefix][abil.key] = el.checked;
+      } else if (abil.type === 'select') {
+        savedEnch[prefix][abil.key] = el.value;
+      } else if (abil.type === 'numcheck') {
+        const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
+        savedEnch[prefix][abil.key] = chk && chk.checked ? (parseInt(el.value) || 0) : null;
+      } else {
+        savedEnch[prefix][abil.key] = parseInt(el.value) || 0;
+      }
+    }
+  }
+
   _activeVersion = version;
   updateUnitLock('a');
   updateUnitLock('b');
+
+  // Restore user enchantments; updateTypeVisibility will still disable/uncheck version-incompatible ones
+  for (const prefix of ['a', 'b']) {
+    for (const abil of ABILITY_DEFS) {
+      if (abil.group !== 'Enchantments') continue;
+      const el = document.getElementById(prefix + 'Abil_' + abil.key);
+      if (!el) continue;
+      const val = savedEnch[prefix][abil.key];
+      if (val === undefined) continue;
+      if (abil.type === 'bool') {
+        el.checked = val;
+      } else if (abil.type === 'select') {
+        el.value = val;
+      } else if (abil.type === 'numcheck') {
+        const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
+        if (chk) chk.checked = val != null;
+        el.value = val != null ? val : 0;
+      } else {
+        el.value = val || 0;
+      }
+    }
+  }
+
   updateTypeVisibility();
   recalculate();
 }

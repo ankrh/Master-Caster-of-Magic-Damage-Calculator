@@ -551,6 +551,10 @@ h1 {
 .abilities-content.locked .group-abilities label input {
   opacity: 1;
 }
+.abil-item.abil-unit-locked {
+  opacity: 0.5;
+  pointer-events: none;
+}
 .abil-group-header {
   font-size: 0.7rem;
   text-transform: uppercase;

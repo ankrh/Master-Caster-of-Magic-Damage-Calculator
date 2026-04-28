@@ -8,8 +8,6 @@
 
 - **UNITS.INI validity** The data on settlers in the UNITS.INI file has no lucky settlers, but they exist in game in CoM2. Are we sure that the UNITS.INI from the CoM2 folder actually describes CoM2 units?
 
-- Change default test cases to be based on CoM2
-
 - Warp reality wiki says to hit can be reduced to 0%, but the to hit wiki page says we can't go below 10%
 
 - Does the chaos spawn poison touch trigger on doom gaze, melee attack or on both?
@@ -22,8 +20,10 @@
 
 - With blazing eyes, can a unit have doom gaze at the same time as ranged attacks?
 
-mojibake
-
 does destiny remove the buff from magical/mithril/adamantium weapons?
 
 does animate dead give +ranged attack?
+
+does "ranged" typically include thrown and breath?
+
+better UI layout

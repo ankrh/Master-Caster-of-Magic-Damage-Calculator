@@ -135,6 +135,7 @@ Source: `Manuals/Spell list version differences.md` (CoM → CoM2 section) and `
 - **Endurance** (Life) — moved from Common to Uncommon and the effect changed. CoM: +1 movement, **+2 defense**. CoM2: +1 movement, **+4 total HP split evenly between figures (minimum 1 per figure)**. Single-figure units (heroes, big fantastics) gain the full +4 HP; multi-figure units lose the defense bonus in exchange for a small per-figure HP top-up.
 - **High Prayer** (Life) — attack bonus reduced from **+3 to +2**. Other components unchanged (+10% To Hit, +10% To Defend, +3 resistance, +2 defense).
 - **Magic Immunity** (Sorcery) — tier-moved from Rare to Very Rare; effect unchanged (100 defense and 100 resistance vs. spells, magical ranged, gaze, and touch attacks).
+- **Vertigo** (Sorcery) — penalties softened. CoM was −30% To Hit / −10% To Defend; CoM2 is **−25% To Hit / −7% To Defend**. (`Manuals/CoM2 spells helptext.txt`, `Manuals/CoM2 spells.md` line 1212)
 
 ### Combat mechanics changes
 

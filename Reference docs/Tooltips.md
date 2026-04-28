@@ -189,8 +189,8 @@ Long Range caps penalty at −10%.
 ## Enchantments group
 
 ### Prayer / High Prayer
-**Prayer:** All units in combat gain +10% To Hit, +10% To Defend, +1 resistance.
-**High Prayer:** All units in combat gain +10% To Hit, +10% To Defend, +2 defense, +3 resistance.
+**Prayer:** All units in combat gain +10% To Hit, +10% To Block, +1 resistance.
+**High Prayer:** All units in combat gain +10% To Hit, +10% To Block, +2 defense, +3 resistance.
 **MoM 1.31 & 1.60, CoM 1:** Also +3 melee.
 **CoM 2:** Also +2 melee.
 
@@ -231,3 +231,172 @@ Bypasses Weapon Immunity.
 
 ### Shatter
 All attack strengths reduced to 1.
+
+### Iron Skin
++5 defense. Supersedes Stone Skin.
+
+### Lionheart
++3 melee, missile, boulder, and thrown attack; +3 resistance.
+**MoM 1.31 & 1.60:** +3 HP per figure.
+**CoM 1 & 2:** +floor(8/figures) HP per figure.
+
+### Holy Armor
+**MoM 1.31 & 1.60:** +2 defense.
+**CoM 1 & 2:** +2 defense if defense ≤ 5; +10% To Block if defense > 5.
+
+### Charm of Life
++25% HP per figure (minimum +1 HP per figure).
+
+### Black Sleep
+All incoming conventional damage becomes Doom Damage (attack and defense rolls skipped; ranged penalties and missile immunity ignored).
+
+### Warp: Attack
+Melee attack halved.
+**CoM 1 & 2:** All ranged and thrown attacks also halved.
+
+### Warp: Defense
+Defense halved.
+**CoM 1 & 2:** Defense reduced to one-third instead.
+
+### Warp: Resist
+Resistance set to 0.
+
+### Black Prayer
+−1 to melee, missile, boulder, magic ranged, thrown and breath; −1 defense; −2 resistance.
+
+### Raise Dead
+**MoM 1.31 & 1.60:** No effect on combat stats — the revived unit retains its original type and realm.
+**CoM 1 & 2:** Revived unit becomes an unaligned fantastic creature.
+
+### Weakness
+**MoM 1.31:** −2 melee and −2 missile. Bug: thrown is unaffected.
+**MoM 1.60:** −2 melee, −2 missile, −2 thrown.
+**CoM 1 & 2:** −3 melee, −3 missile, −3 thrown.
+
+### Wraith Form
+Grants Weapon Immunity to the unit. Attacks bypass enemy Weapon Immunity.
+
+### Blur
+Each incoming hit has a chance to be negated before defense rolls. Does not apply to Doom damage or to spell damage (Immolation, Wall of Fire, etc.).
+**MoM 1.31 & 1.60:** 10% per hit.
+**MoM 1.31 bugs:** Each successful negation skips the next roll, capping protection at 50%. The unit's own Illusion Immunity disables their Blur, while the opponent's immunity is ignored.
+**CoM 1 & 2:** 20% per hit. Stacks with Invisibility to 30%.
+
+### Resist Magic
++5 resistance vs. Cause Fear, Death Gaze, Life Steal, Stoning Gaze, Stoning Touch, and Dispel Evil. Does not affect Poison Touch.
+
+### Haste
+Melee, thrown, breath, ranged attacks, and counter-attacks are performed twice.
+**MoM 1.31 & 1.60:** Magic ranged attacks are not performed twice for Caster units (mana-pool casting).
+**CoM 1 & 2:** Hasted defenders do not counter-attack twice.
+
+### Vertigo
+To Hit and To Block penalties. Affects melee, all ranged types, thrown, and breath.
+**MoM 1.31 & 1.60:** −20% To Hit; −1 Defense.
+**CoM 1:** −30% To Hit; −10% To Block.
+**CoM 2:** −25% To Hit; −7% To Block.
+
+---
+
+## Enchantments group — CoM & CoM2 only
+
+These enchantments exist in CoM 1 and CoM 2 only.
+
+### Supreme Light
+Applies only to Life fantastic creatures and Caster units.
++2 melee and +2 ranged attack. Defense bonus = floor(resistance / 3).
+
+### Endurance
+**CoM 1:** +2 defense.
+**CoM 2:** +floor(4 / figures) HP per figure, minimum +1 HP.
+
+### Blood Lust
+Unit becomes undead (fantastic Death creature) and gains Death, Cold, Poison, and Illusion Immunity.
+Doubles melee attack against Normal and Hero targets.
+
+### Mystic Surge
++2 defense, −2 resistance. Opponent's To Block reduced by 10%.
+Unit becomes an unaligned fantastic creature.
+
+### Blazing March
++3 melee and +3 missile attack. Melee and missile attacks bypass Weapon Immunity.
+
+### Survival Instinct
++1 defense, +2 resistance, +10% To Hit.
+
+### Focus Magic
+**Magical ranged or breath attack present:** +3 strength.
+**Thrown or missile attack present:** Converted into a Sorcery magical ranged attack at strength at least 3.
+**CoM 2 only — Doom Gaze present:** +3 doom damage.
+**Otherwise:** Gains a strength-3 Sorcery magical ranged attack.
+
+---
+
+## Enchantments group — CoM2 only
+
+These enchantments exist in CoM2 only.
+Sources: `Manuals/CoM2 spells helptext.txt` (Discipline, Reinforce Magic, Ruler of Underworld, Blazing Eyes, Inner Power, Destiny, Mislead) and `Manuals/CoM2 manual.txt` (Breakthrough).
+Implementation: `Calculator/data.js` ABILITY_DEFS lines 125-132; `Calculator/combat.js` lines 64-83, 220-241, 276-284, 490, 507; `Calculator/ui.js` lines 349-398, 439-448, 504-511, 543-545, 612-614.
+
+### Discipline
+**Normal:** +1 defense.
+**Regular:** +2 defense.
+**Veteran or higher:** +2 defense, +1 melee, +1 missile/boulder.
+Also, if unit is at least Elite and enchantment was cast in combat: Gain Negate First Strike.
+
+### Breakthrough
+**Permanent normal unit:** +1 melee.
+**Non-corporeal or temporary:** +1 melee and +1 defense
+
+### Destiny
+Unit is stripped of experience and becomes a fantastic Life creature.
+Doubles base melee attack, ranged attack, and HP. +4 defense, +4 resistance.
+Grants Supernatural.
+
+### Inner Power
+Applies only to units with Fire Immunity or Lightning Resist.
++3 to all attack strengths (melee, all ranged, thrown, breath). +2 defense, +2 resistance.
+
+### Ruler of Underworld
+Unit gains Wraith Form (Weapon Immunity + bypass enemy Weapon Immunity).
+Additionally, opponents' magical/mithril/adamantium weapons do not bypass this unit's Weapon Immunity.
+
+### Blazing Eyes
+Applies only to fantastic Chaos creatures.
+Gains Doom Gaze 3; if the unit already has Doom Gaze, its strength increases by 1.
+
+### Mislead/Misfortune
+−1 melee attack, −1 ranged attack, −1 defense, −1 resistance.
+
+### Reinforce Magic
++2 resistance.
+**Magical ranged attack present:** +2 strength.
+
+---
+
+## Enchantments group — MoM only
+
+These enchantments exist in MoM 1.31 and 1.60 only. They were removed in CoM and CoM2.
+
+### Righteousness
+Immunity to Cause Fear, Life Steal, Death Gaze, Chaos-realm magic ranged attacks, Fire Breath, Lightning Breath, Immolation, and Wall of Fire.
+
+### Berserk
+Melee attack doubled and defense set to 0, applied after all other bonuses.
+
+### Black Channels
++2 melee, +1 to all ranged/thrown/breath/gaze, +1 defense, +1 resistance, +1 HP per figure.
+Unit permanently becomes a fantastic Death creature with Cold, Illusion, Poison, and Death Immunity.
+
+### Eldritch Weapon
+Opponent's To Block reduced by 10% against this unit's melee, missile, and thrown attacks. Attacks bypass Weapon Immunity.
+
+### Metal Fires
++1 melee, +1 missile and +1 thrown. Attacks bypass Weapon Immunity.
+Superseded by Flame Blade — does not stack.
+
+### Giant Strength
++1 melee and +1 thrown.
+
+### Stone Skin
++1 defense. Superseded by Iron Skin — does not stack.
