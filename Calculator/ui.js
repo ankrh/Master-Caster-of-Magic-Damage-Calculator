@@ -3,13 +3,82 @@
 
 // --- Abilities UI ---
 
+const ENCHANTMENT_TYPE_SUFFIXES = {
+  flameBlade: 'N,H',
+  metalFires: 'N,H',
+  chaosChannels: 'N,H',
+  blackChannels: 'N,H',
+  holyArmor: 'N,H',
+  holyWeapon: 'N,H',
+  eldritchWeapon: 'N,H',
+  shatter: 'N,H',
+  mislead: 'N,H',
+  discipline: 'N',
+  destiny: 'N',
+  landLinking: 'F',
+  survivalInstinct: 'F',
+  blazingEyes: 'F',
+};
+
+const FULL_ROW_ABILITY_KEYS = new Set(['chaosChannels']);
+const SHARED_ABILITY_KEYS = new Set(
+  ABILITY_DEFS
+    .map(abil => abil.key)
+    .filter(key => ENCHANTMENT_DEFS.some(ench => ench.key === key))
+);
+
+function abilityUiDefs() {
+  const abilityDefs = ABILITY_DEFS.map(abil => ({
+    ...abil,
+    calcKey: abil.calcKey || abil.key,
+    uiKey: abil.uiKey || abil.key,
+    source: 'ability',
+  }));
+  const enchantmentDefs = ENCHANTMENT_DEFS.map(abil => ({
+    ...abil,
+    calcKey: abil.calcKey || abil.key,
+    uiKey: abil.uiKey || (SHARED_ABILITY_KEYS.has(abil.key) ? 'enchantment_' + abil.key : abil.key),
+    source: 'enchantment',
+  }));
+  return [...abilityDefs, ...enchantmentDefs];
+}
+
+function abilityControlId(prefix, abil) {
+  return prefix + 'Abil_' + (abil.uiKey || abil.key);
+}
+
+function abilityValueIsActive(abil, val) {
+  if (abil.type === 'bool') return !!val;
+  if (abil.type === 'select') {
+    const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
+    return val !== defaultValue;
+  }
+  if (abil.type === 'numcheck') return val != null;
+  return (val || 0) !== 0;
+}
+
+function mergedAbilityValue(abil, currentValue, nextValue) {
+  if (abil.type === 'bool') return !!currentValue || !!nextValue;
+  if (abil.type === 'select') {
+    const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
+    return nextValue !== defaultValue ? nextValue : (currentValue === undefined ? defaultValue : currentValue);
+  }
+  if (abil.type === 'numcheck') return nextValue != null ? nextValue : (currentValue === undefined ? null : currentValue);
+  return Math.max(currentValue === undefined ? 0 : currentValue, nextValue || 0);
+}
+
+function abilityDisplayLabel(abil) {
+  const suffix = ENCHANTMENT_TYPE_SUFFIXES[abil.key];
+  return suffix ? `${abil.label} (${suffix})` : abil.label;
+}
+
 function buildAbilitiesUI(prefix) {
   const container = document.getElementById(prefix + 'Abilities');
   let gridDiv = null;
   let currentGroup = '';
   let currentGroupClass = '';
   let currentSubgroup = '';
-  for (const abil of ABILITY_DEFS) {
+  for (const abil of abilityUiDefs()) {
     if (abil.group && abil.group !== currentGroup) {
       currentGroup = abil.group;
       currentGroupClass = 'group-' + currentGroup.toLowerCase().replace(/[^a-z]+/g, '-');
@@ -33,55 +102,78 @@ function buildAbilitiesUI(prefix) {
         container.appendChild(subheader);
       }
     }
-    if (!gridDiv) {
+    const isFullRow = FULL_ROW_ABILITY_KEYS.has(abil.key);
+    if (!gridDiv && !isFullRow) {
       gridDiv = document.createElement('div');
       gridDiv.className = 'abil-grid ' + currentGroupClass;
       gridDiv.dataset.abilGroup = currentGroup;
       if (currentSubgroup) gridDiv.dataset.abilSubgroup = currentSubgroup;
       container.appendChild(gridDiv);
     }
-    const id = prefix + 'Abil_' + abil.key;
+    const itemParent = isFullRow ? container : gridDiv;
+    const id = abilityControlId(prefix, abil);
     const realmCls = abil.realm ? 'realm-' + abil.realm : '';
+    const displayLabel = abilityDisplayLabel(abil);
     // Color only spell-name text: for dual-name ability/spell labels, wrap the spell part after '/'
     let labelHtml;
-    if (realmCls && abil.group === 'Abilities/Enchantments' && abil.label.includes('/')) {
-      const slashIdx = abil.label.indexOf('/');
-      labelHtml = abil.label.slice(0, slashIdx + 1) + `<span class="${realmCls}">${abil.label.slice(slashIdx + 1)}</span>`;
+    if (realmCls && displayLabel.includes('/')) {
+      const slashIdx = displayLabel.indexOf('/');
+      labelHtml = displayLabel.slice(0, slashIdx + 1) + `<span class="${realmCls}">${displayLabel.slice(slashIdx + 1)}</span>`;
     } else if (realmCls) {
-      labelHtml = `<span class="${realmCls}">${abil.label}</span>`;
+      labelHtml = `<span class="${realmCls}">${displayLabel}</span>`;
     } else {
-      labelHtml = abil.label;
+      labelHtml = displayLabel;
     }
     if (abil.type === 'bool') {
       const lbl = document.createElement('label');
       lbl.className = 'abil-check abil-item';
-      lbl.dataset.abilKey = abil.key;
+      lbl.dataset.abilKey = abil.uiKey || abil.key;
+      lbl.dataset.calcKey = abil.calcKey || abil.key;
+      lbl.dataset.abilSource = abil.source || '';
+      lbl.dataset.abilGroup = currentGroup;
+      if (currentSubgroup) lbl.dataset.abilSubgroup = currentSubgroup;
       if (abil.tooltip) lbl.dataset.tooltip = abil.tooltip;
       lbl.innerHTML = `<input type="checkbox" id="${id}"> ${labelHtml}`;
-      gridDiv.appendChild(lbl);
+      if (isFullRow) lbl.classList.add('abil-full-row');
+      itemParent.appendChild(lbl);
     } else if (abil.type === 'select') {
       const row = document.createElement('div');
       row.className = 'abil-num-row abil-item';
-      row.dataset.abilKey = abil.key;
+      row.dataset.abilKey = abil.uiKey || abil.key;
+      row.dataset.calcKey = abil.calcKey || abil.key;
+      row.dataset.abilSource = abil.source || '';
+      row.dataset.abilGroup = currentGroup;
+      if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       row.dataset.abilDefault = abil.options[0][0];
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
       const opts = abil.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
       row.innerHTML = `<label for="${id}">${labelHtml}</label><select id="${id}">${opts}</select>`;
-      gridDiv.appendChild(row);
+      if (isFullRow) row.classList.add('abil-full-row');
+      itemParent.appendChild(row);
     } else if (abil.type === 'numcheck') {
       const row = document.createElement('div');
       row.className = 'abil-num-row abil-item';
-      row.dataset.abilKey = abil.key;
+      row.dataset.abilKey = abil.uiKey || abil.key;
+      row.dataset.calcKey = abil.calcKey || abil.key;
+      row.dataset.abilSource = abil.source || '';
+      row.dataset.abilGroup = currentGroup;
+      if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
       row.innerHTML = `<input type="checkbox" id="${id}_on"><label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
-      gridDiv.appendChild(row);
+      if (isFullRow) row.classList.add('abil-full-row');
+      itemParent.appendChild(row);
     } else {
       const row = document.createElement('div');
       row.className = 'abil-num-row abil-item';
-      row.dataset.abilKey = abil.key;
+      row.dataset.abilKey = abil.uiKey || abil.key;
+      row.dataset.calcKey = abil.calcKey || abil.key;
+      row.dataset.abilSource = abil.source || '';
+      row.dataset.abilGroup = currentGroup;
+      if (currentSubgroup) row.dataset.abilSubgroup = currentSubgroup;
       if (abil.tooltip) row.dataset.tooltip = abil.tooltip;
       row.innerHTML = `<label for="${id}">${labelHtml}</label><input type="number" id="${id}" value="0" min="-50" max="50">`;
-      gridDiv.appendChild(row);
+      if (isFullRow) row.classList.add('abil-full-row');
+      itemParent.appendChild(row);
     }
   }
 }
@@ -117,40 +209,50 @@ function parseAbilitiesFromUnit(unit) {
   return result;
 }
 
-function applyAbilities(prefix, abilValues) {
-  for (const abil of ABILITY_DEFS) {
-    const el = document.getElementById(prefix + 'Abil_' + abil.key);
-    if (!el) continue;
-    if (abil.type === 'bool') {
-      el.checked = !!abilValues[abil.key];
-    } else if (abil.type === 'select') {
-      el.value = abilValues[abil.key] || abil.options[0][0];
-    } else if (abil.type === 'numcheck') {
-      const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
-      const val = abilValues[abil.key];
-      if (chk) chk.checked = val != null;
-      el.value = val != null ? val : 0;
-    } else {
-      el.value = abilValues[abil.key] || 0;
-    }
+function setAbilityControlValue(prefix, abil, val) {
+  const el = document.getElementById(abilityControlId(prefix, abil));
+  if (!el) return;
+  if (abil.type === 'bool') {
+    el.checked = !!val;
+  } else if (abil.type === 'select') {
+    el.value = val || abil.options[0][0];
+  } else if (abil.type === 'numcheck') {
+    const chk = document.getElementById(abilityControlId(prefix, abil) + '_on');
+    if (chk) chk.checked = val != null;
+    el.value = val != null ? val : 0;
+  } else {
+    el.value = val || 0;
   }
 }
 
-function clearAbilities(prefix) {
-  for (const abil of ABILITY_DEFS) {
-    const el = document.getElementById(prefix + 'Abil_' + abil.key);
-    if (!el) continue;
-    if (abil.type === 'bool') {
-      el.checked = false;
-    } else if (abil.type === 'select') {
-      el.value = abil.options[0][0];
-    } else if (abil.type === 'numcheck') {
-      const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
-      if (chk) chk.checked = false;
-      el.value = 0;
-    } else {
-      el.value = 0;
-    }
+function getAbilityControlValue(prefix, abil) {
+  const el = document.getElementById(abilityControlId(prefix, abil));
+  if (!el) return undefined;
+  if (abil.type === 'bool') return el.checked;
+  if (abil.type === 'select') return el.value;
+  if (abil.type === 'numcheck') {
+    const chk = document.getElementById(abilityControlId(prefix, abil) + '_on');
+    return chk && chk.checked ? (parseInt(el.value) || 0) : null;
+  }
+  return parseInt(el.value) || 0;
+}
+
+function applyAbilities(prefix, abilValues, sourceFilter) {
+  for (const abil of abilityUiDefs()) {
+    if (sourceFilter && abil.source !== sourceFilter) continue;
+    const val = abilValues[abil.calcKey || abil.key];
+    setAbilityControlValue(prefix, abil, val);
+  }
+}
+
+function clearAbilities(prefix, sourceFilter) {
+  for (const abil of abilityUiDefs()) {
+    if (sourceFilter && abil.source !== sourceFilter) continue;
+    const defaultValue = abil.type === 'select' ? abil.options[0][0]
+      : abil.type === 'numcheck' ? null
+      : abil.type === 'bool' ? false
+      : 0;
+    setAbilityControlValue(prefix, abil, defaultValue);
   }
 }
 
@@ -186,9 +288,10 @@ function populateUnitDropdown(selectId, units) {
     'Beastmen', 'Dark Elf', 'Draconian', 'Dwarven', 'Troll',
   ];
   const categoryOrder = [
-    'Heroes', 'Generic',
+    'Heroes',
     ...raceOrder,
     'Other',
+    'Generic',
     'Life', 'Death', 'Chaos',
     'Nature', 'Sorcery', 'Arcane',
   ];
@@ -290,7 +393,15 @@ function initUnitCombobox(prefix) {
     if (activeIndex >= 0 && items[activeIndex]) items[activeIndex].scrollIntoView({ block: 'nearest' });
   }
 
-  searchEl.addEventListener('focus', () => renderDropdown(searchEl.value));
+  function selectSearchText() {
+    if (searchEl.value) searchEl.select();
+  }
+
+  searchEl.addEventListener('focus', () => {
+    renderDropdown(searchEl.value);
+    selectSearchText();
+  });
+  searchEl.addEventListener('click', selectSearchText);
   searchEl.addEventListener('input', () => renderDropdown(searchEl.value));
   searchEl.addEventListener('blur', () => {
     setTimeout(() => {
@@ -329,19 +440,11 @@ function initUnitCombobox(prefix) {
 // Returns a plain object keyed by ability key.
 function readAbilitiesFromDOM(prefix) {
   const result = {};
-  for (const abil of ABILITY_DEFS) {
-    const el = document.getElementById(prefix + 'Abil_' + abil.key);
-    if (!el) continue;
-    if (abil.type === 'bool') {
-      result[abil.key] = el.checked;
-    } else if (abil.type === 'select') {
-      result[abil.key] = el.value;
-    } else if (abil.type === 'numcheck') {
-      const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
-      result[abil.key] = chk && chk.checked ? (parseInt(el.value) || 0) : null;
-    } else {
-      result[abil.key] = parseInt(el.value) || 0;
-    }
+  for (const abil of abilityUiDefs()) {
+    const val = getAbilityControlValue(prefix, abil);
+    if (val === undefined) continue;
+    const calcKey = abil.calcKey || abil.key;
+    result[calcKey] = mergedAbilityValue(abil, result[calcKey], val);
   }
   return result;
 }
@@ -357,6 +460,7 @@ function readUnitStats(prefix) {
     prefix,
     version: el('gameVersion').value,
     abilities: readAbilitiesFromDOM(prefix),
+    disregardFantasticLoadout: true,
     level: el(prefix + 'Level').value,
     weapon: el(prefix + 'Weapon').value,
     armor: el(prefix + 'Armor').value,
@@ -500,23 +604,20 @@ function applyUnit(prefix, unitIndex) {
   });
 
   const abilValues = parseAbilitiesFromUnit(unit);
-  applyAbilities(prefix, abilValues);
+  clearAbilities(prefix, 'ability');
+  applyAbilities(prefix, abilValues, 'ability');
   applyLevelBonuses(prefix);
 
-  // Lock Abilities/Enchantments items that are innate to this unit
-  for (const abil of ABILITY_DEFS) {
-    if (abil.group !== 'Abilities/Enchantments') continue;
+  // Mark active unit-ability items that are innate to this predefined unit.
+  for (const abil of abilityUiDefs()) {
+    if (abil.source !== 'ability') continue;
     const val = abilValues[abil.key];
-    const isActive = abil.type === 'bool' ? !!val
-      : abil.type === 'numcheck' ? val != null
-      : (val || 0) !== 0;
-    if (!isActive) continue;
-    const el = document.getElementById(prefix + 'Abil_' + abil.key);
+    if (!abilityValueIsActive(abil, val)) continue;
+    const el = document.getElementById(abilityControlId(prefix, abil));
     if (!el) continue;
     const item = el.closest('.abil-item');
     if (!item) continue;
     item.classList.add('abil-unit-locked');
-    item.querySelectorAll('input, select').forEach(inp => { inp.disabled = true; });
   }
 
   refreshAbilityFieldVisibility();
@@ -539,16 +640,15 @@ function updateUnitLock(prefix) {
     const version = document.getElementById('gameVersion').value;
     const units = unitDatabases[version] || [];
     const unit = units.find(u => u.id === parseInt(sel.value));
-    const hasFantasticAbility = unit && (unit.abilities || []).some(a => a === 'Fantastic' || a === 'Fantastic=1');
-    const isHeroOrFantastic = unit && (unit.category === 'Heroes' || (unit.category || '').endsWith(' Creatures') || hasFantasticAbility);
+    const isHero = unit && unit.category === 'Heroes';
     const isZombies = unit && unit.name === 'Zombies';
-    if (isHeroOrFantastic) {
+    if (isHero) {
       levelSel.value = 'normal';
       if (!isZombies) weaponSel.value = 'normal';
     }
     applyUnit(prefix, parseInt(sel.value));
-    levelSel.disabled = isHeroOrFantastic;
-    weaponSel.classList.toggle('weapon-locked', isHeroOrFantastic && !isZombies);
+    levelSel.disabled = isHero;
+    weaponSel.classList.toggle('weapon-locked', isHero && !isZombies);
   } else {
     delete unitBaseStats[prefix];
     weaponSel.classList.remove('weapon-locked');
@@ -568,14 +668,95 @@ function updateCustomLevelState(prefix) {
   const levelSel = document.getElementById(prefix + 'Level');
   const weaponSel = document.getElementById(prefix + 'Weapon');
   const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
-  const isNormal = !unitTypeSel || unitTypeSel.value === 'normal';
-  levelSel.disabled = !isNormal;
-  if (!isNormal) levelSel.value = 'normal';
-  weaponSel.classList.toggle('weapon-locked', !isNormal);
-  if (!isNormal) weaponSel.value = 'normal';
+  const isHero = unitTypeSel && unitTypeSel.value === 'hero';
+  levelSel.disabled = isHero;
+  if (isHero) levelSel.value = 'normal';
+  weaponSel.classList.toggle('weapon-locked', isHero);
+  if (isHero) weaponSel.value = 'normal';
 }
 
 // --- Swap ---
+
+const DEFAULT_GAME_VERSION = 'com2_1.05.11';
+const DEFAULT_UNITS = {
+  a: 'Hell Hounds',
+  b: 'War Bears',
+};
+
+function resetUnitFields(prefix) {
+  const s = UNIT_DEFAULTS;
+  document.getElementById(prefix + 'Unit').value = 'custom';
+  syncUnitDisplay(prefix);
+  document.getElementById(prefix + 'Figs').value = s.figs;
+  document.getElementById(prefix + 'Atk').value = s.atk;
+  document.getElementById(prefix + 'RtbType').value = s.rtbType;
+  document.getElementById(prefix + 'Rtb').value = s.rtb;
+  document.getElementById(prefix + 'Def').value = s.def;
+  document.getElementById(prefix + 'Res').value = s.res;
+  document.getElementById(prefix + 'ToHitMod').value = s.toHitMod;
+  document.getElementById(prefix + 'ToHitRtbMod').value = s.toHitRtbMod;
+  document.getElementById(prefix + 'ToBlkMod').value = s.toBlkMod;
+  document.getElementById(prefix + 'HP').value = s.hp;
+  document.getElementById(prefix + 'Dmg').value = s.dmg;
+  document.getElementById(prefix + 'Weapon').value = s.weapon;
+  document.getElementById(prefix + 'Armor').value = s.armor;
+  document.getElementById(prefix + 'Level').value = s.level;
+  document.getElementById(prefix + 'Abil_unitType').value = s.unitType;
+  clearAbilities(prefix);
+  delete unitBaseStats[prefix];
+
+  const abilCont = document.getElementById(prefix + 'Abilities');
+  abilCont.querySelectorAll('.abil-unit-locked').forEach(item => {
+    item.classList.remove('abil-unit-locked');
+    item.querySelectorAll('input, select').forEach(inp => { inp.disabled = false; });
+  });
+  updateUnitLock(prefix);
+}
+
+function resetGlobalOptions() {
+  document.getElementById('rangedCheck').checked = true;
+  document.getElementById('rangedDist').value = 1;
+  document.getElementById('cityWalls').value = 'none';
+  document.getElementById('nodeAura').value = 'none';
+  document.getElementById('trueLight').checked = false;
+  document.getElementById('darkness').checked = false;
+  document.getElementById('chaosSurge').value = 0;
+  document.getElementById('wallOfFire').checked = false;
+  document.getElementById('warpReality').checked = false;
+}
+
+function resetAbilityPanelVisibility() {
+  document.querySelectorAll('.abilities-section').forEach(section => {
+    section.classList.add('hide-inactive');
+  });
+  document.querySelectorAll('.toggle-abil-btn').forEach(btn => {
+    btn.textContent = 'Show all abilities';
+  });
+}
+
+function selectDefaultUnit(prefix, units) {
+  const match = units.find(u => u.name === DEFAULT_UNITS[prefix]);
+  if (!match) return;
+  document.getElementById(prefix + 'Unit').value = String(match.id);
+  syncUnitDisplay(prefix);
+  updateUnitLock(prefix);
+}
+
+function resetCalculatorState() {
+  document.getElementById('gameVersion').value = DEFAULT_GAME_VERSION;
+  const units = loadUnitDatabase(DEFAULT_GAME_VERSION);
+  populateUnitDropdown('aUnit', units);
+  populateUnitDropdown('bUnit', units);
+  resetGlobalOptions();
+  resetAbilityPanelVisibility();
+  resetUnitFields('a');
+  resetUnitFields('b');
+  selectDefaultUnit('a', units);
+  selectDefaultUnit('b', units);
+  updateTypeVisibility();
+  updateAbilityVisibility();
+  recalculate();
+}
 
 function swapAttackerDefender() {
   const aUnitSel = document.getElementById('aUnit');
@@ -594,14 +775,25 @@ function swapAttackerDefender() {
     bEl.value = tmp;
   }
 
-  for (const abil of ABILITY_DEFS) {
-    const aEl = document.getElementById('aAbil_' + abil.key);
-    const bEl = document.getElementById('bAbil_' + abil.key);
+  for (const abil of abilityUiDefs()) {
+    const aEl = document.getElementById(abilityControlId('a', abil));
+    const bEl = document.getElementById(abilityControlId('b', abil));
     if (!aEl || !bEl) continue;
     if (abil.type === 'bool') {
       const tmpC = aEl.checked;
       aEl.checked = bEl.checked;
       bEl.checked = tmpC;
+    } else if (abil.type === 'numcheck') {
+      const aChk = document.getElementById(abilityControlId('a', abil) + '_on');
+      const bChk = document.getElementById(abilityControlId('b', abil) + '_on');
+      if (aChk && bChk) {
+        const tmpC = aChk.checked;
+        aChk.checked = bChk.checked;
+        bChk.checked = tmpC;
+      }
+      tmp = aEl.value;
+      aEl.value = bEl.value;
+      bEl.value = tmp;
     } else {
       tmp = aEl.value;
       aEl.value = bEl.value;
@@ -671,20 +863,10 @@ function onVersionChange() {
   const savedEnch = {};
   for (const prefix of ['a', 'b']) {
     savedEnch[prefix] = {};
-    for (const abil of ABILITY_DEFS) {
-      if (abil.group !== 'Enchantments') continue;
-      const el = document.getElementById(prefix + 'Abil_' + abil.key);
-      if (!el) continue;
-      if (abil.type === 'bool') {
-        savedEnch[prefix][abil.key] = el.checked;
-      } else if (abil.type === 'select') {
-        savedEnch[prefix][abil.key] = el.value;
-      } else if (abil.type === 'numcheck') {
-        const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
-        savedEnch[prefix][abil.key] = chk && chk.checked ? (parseInt(el.value) || 0) : null;
-      } else {
-        savedEnch[prefix][abil.key] = parseInt(el.value) || 0;
-      }
+    for (const abil of abilityUiDefs()) {
+      if (abil.source !== 'enchantment') continue;
+      const val = getAbilityControlValue(prefix, abil);
+      if (val !== undefined) savedEnch[prefix][abil.uiKey || abil.key] = val;
     }
   }
 
@@ -694,23 +876,11 @@ function onVersionChange() {
 
   // Restore user enchantments; updateTypeVisibility will still disable/uncheck version-incompatible ones
   for (const prefix of ['a', 'b']) {
-    for (const abil of ABILITY_DEFS) {
-      if (abil.group !== 'Enchantments') continue;
-      const el = document.getElementById(prefix + 'Abil_' + abil.key);
-      if (!el) continue;
-      const val = savedEnch[prefix][abil.key];
+    for (const abil of abilityUiDefs()) {
+      if (abil.source !== 'enchantment') continue;
+      const val = savedEnch[prefix][abil.uiKey || abil.key];
       if (val === undefined) continue;
-      if (abil.type === 'bool') {
-        el.checked = val;
-      } else if (abil.type === 'select') {
-        el.value = val;
-      } else if (abil.type === 'numcheck') {
-        const chk = document.getElementById(prefix + 'Abil_' + abil.key + '_on');
-        if (chk) chk.checked = val != null;
-        el.value = val != null ? val : 0;
-      } else {
-        el.value = val || 0;
-      }
+      setAbilityControlValue(prefix, abil, val);
     }
   }
 
@@ -960,7 +1130,7 @@ function updateTypeVisibility() {
     if (isMoM) el.value = 'normal';
   });
 
-  // Version and unit type restrictions on enchantments.
+  // Version restrictions on enchantments.
   const isCoMorCoM2 = version === 'com_6.08' || version === 'com2_1.05.11';
   const isCoM2 = version === 'com2_1.05.11';
 
@@ -972,8 +1142,6 @@ function updateTypeVisibility() {
     return true;
   }
 
-  const abilByKey = Object.fromEntries(ABILITY_DEFS.map(a => [a.key, a]));
-
   function applyDisabled(el, disabled) {
     if (disabled) {
       if (el.tagName === 'SELECT') el.value = el.options[0].value;
@@ -983,35 +1151,13 @@ function updateTypeVisibility() {
   }
 
   for (const prefix of ['a', 'b']) {
-    const unitTypeSel = document.getElementById(prefix + 'Abil_unitType');
-    const unitType = unitTypeSel ? unitTypeSel.value : 'normal';
-    // Casting restrictions should reflect the explicit base Unit Type selector only.
-    // Some enchantments can transform a unit after other legal enchantments were already cast.
-    const isFantastic = unitType.startsWith('fantastic_');
-    const isNormal = unitType === 'normal';
-
-    // Version-only pass: set all Enchantments items based on version.
-    for (const abil of ABILITY_DEFS) {
-      if (abil.group !== 'Enchantments') continue;
-      const el = document.getElementById(prefix + 'Abil_' + abil.key);
+    // Unit type restrictions are informational only. Keep controls usable so users can model
+    // transformed or otherwise exceptional states manually.
+    for (const abil of abilityUiDefs()) {
+      if (abil.source !== 'enchantment') continue;
+      const el = document.getElementById(abilityControlId(prefix, abil));
       if (!el) continue;
       applyDisabled(el, !subgroupAllowed(abil.subgroup));
-    }
-
-    // Unit-type passes use the explicit Unit Type control, not transformed/effective type.
-
-    // Normal or Hero only (disabled for fantastic units).
-    for (const key of ['flameBlade', 'metalFires', 'chaosChannels', 'blackChannels', 'holyArmor', 'holyWeapon', 'eldritchWeapon', 'shatter', 'mislead']) {
-      const el = document.getElementById(prefix + 'Abil_' + key);
-      if (!el) continue;
-      applyDisabled(el, isFantastic || !subgroupAllowed(abilByKey[key]?.subgroup));
-    }
-
-    // Normal only (disabled for fantastic units AND heroes).
-    for (const key of ['discipline', 'destiny']) {
-      const el = document.getElementById(prefix + 'Abil_' + key);
-      if (!el) continue;
-      applyDisabled(el, !isNormal || !subgroupAllowed(abilByKey[key]?.subgroup));
     }
   }
 
@@ -1061,6 +1207,8 @@ function applyPreset(name) {
       onVersionChange();
     }
   }
+  clearAbilities('a');
+  clearAbilities('b');
   function setUnit(prefix, u) {
     const s = { ...UNIT_DEFAULTS, ...u };
     document.getElementById(prefix + 'Figs').value = s.figs;
@@ -1214,33 +1362,18 @@ function updateAbilityVisibility() {
     section.querySelectorAll('.abil-subgroup-header').forEach(header => {
       const group = header.dataset.abilGroup;
       const subgroup = header.dataset.abilSubgroup;
-      const gridContainers = section.querySelectorAll(
-        `.abil-grid[data-abil-group="${group}"][data-abil-subgroup="${subgroup}"]`
+      const subgroupItems = section.querySelectorAll(
+        `.abil-item[data-abil-group="${group}"][data-abil-subgroup="${subgroup}"]`
       );
-      let anyVisible = false;
-      gridContainers.forEach(c => {
-        c.querySelectorAll('.abil-item').forEach(item => {
-          if (!item.classList.contains('abil-hidden')) anyVisible = true;
-        });
-      });
+      const anyVisible = [...subgroupItems].some(item => !item.classList.contains('abil-hidden'));
       header.classList.toggle('abil-hidden', hiding && !anyVisible);
     });
 
     // Hide group headers and grid containers when all their children are hidden
     section.querySelectorAll('.abil-group-header').forEach(header => {
       const group = header.dataset.abilGroup;
-      const siblings = section.querySelectorAll(`.abil-item[data-abil-key]`);
-      // Find items in this group: they are in grid/num-grid containers with matching data-abil-group
-      const groupContainers = section.querySelectorAll(`[data-abil-group="${group}"]`);
-      let anyVisible = false;
-      groupContainers.forEach(c => {
-        if (c === header) return;
-        if (c.classList.contains('abil-subgroup-header')) return;
-        const groupItems = c.querySelectorAll('.abil-item');
-        groupItems.forEach(item => {
-          if (!item.classList.contains('abil-hidden')) anyVisible = true;
-        });
-      });
+      const groupItems = section.querySelectorAll(`.abil-item[data-abil-group="${group}"]`);
+      const anyVisible = [...groupItems].some(item => !item.classList.contains('abil-hidden'));
       header.classList.toggle('abil-hidden', hiding && !anyVisible);
     });
 
@@ -1271,11 +1404,633 @@ function toggleAllAbilities() {
   updateAbilityVisibility();
 }
 
+function selectedEnchantmentRows(prefix, selectedOverride) {
+  const rows = [];
+  for (const abil of abilityUiDefs()) {
+    if (abil.source !== 'enchantment') continue;
+    const id = abilityControlId(prefix, abil);
+    const label = abilityDisplayLabel(abil);
+    const val = selectedOverride ? selectedOverride[abil.calcKey || abil.key] : getAbilityControlValue(prefix, abil);
+    if (val === undefined) continue;
+
+    if (abil.type === 'bool') {
+      if (val) rows.push(label);
+    } else if (abil.type === 'select') {
+      const el = document.getElementById(id);
+      const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : (el ? el.options[0].value : 'none');
+      if (val !== defaultValue) {
+        const option = abil.options ? abil.options.find(([value]) => value === val) : null;
+        rows.push(`${label}: ${option ? option[1] : (el ? el.selectedOptions[0].textContent : val)}`);
+      }
+    } else if (abil.type === 'numcheck') {
+      if (val != null) rows.push(`${label}: ${val}`);
+    } else if (abil.type === 'num') {
+      if (parseInt(val, 10) !== 0) rows.push(`${label}: ${val}`);
+    }
+  }
+  return rows;
+}
+
+function renderEnchantmentSnapshotList(listId, rows) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  list.textContent = '';
+  const entries = rows.length ? rows : ['None'];
+  for (const text of entries) {
+    const item = document.createElement('li');
+    item.textContent = text;
+    if (!rows.length) item.className = 'empty';
+    list.appendChild(item);
+  }
+}
+
+function selectedGlobalOptionRows() {
+  const rows = [];
+  const checkboxOptions = [
+    ['trueLight', 'True Light'],
+    ['darkness', 'Darkness'],
+    ['wallOfFire', 'Wall of Fire'],
+    ['warpReality', 'Warp Reality'],
+  ];
+  for (const [id, label] of checkboxOptions) {
+    const el = document.getElementById(id);
+    if (el && el.checked) rows.push(label);
+  }
+
+  const chaosSurge = document.getElementById('chaosSurge');
+  if (chaosSurge && parseInt(chaosSurge.value, 10) !== 0) {
+    rows.push(`Chaos Surge enchantments: ${chaosSurge.value}`);
+  }
+
+  const cityWalls = document.getElementById('cityWalls');
+  if (cityWalls && cityWalls.value !== 'none') {
+    rows.push(`City walls: ${cityWalls.selectedOptions[0].textContent}`);
+  }
+
+  const nodeAura = document.getElementById('nodeAura');
+  if (nodeAura && nodeAura.value !== 'none') {
+    rows.push(`Node aura: ${nodeAura.selectedOptions[0].textContent}`);
+  }
+
+  return rows;
+}
+
+function selectedMatrixSettingRows(prefix) {
+  const rowDefs = [
+    [prefix + 'Level', 'Unit level'],
+    [prefix + 'Weapon', 'Weapon type'],
+    [prefix + 'Armor', 'Armor type'],
+  ];
+  return rowDefs.flatMap(([id, label]) => {
+    const control = document.getElementById(id);
+    if (!control || control.value === 'normal') return [];
+    const value = control && control.selectedOptions && control.selectedOptions[0]
+      ? control.selectedOptions[0].textContent
+      : '';
+    return value ? [`${label}: ${value}`] : [];
+  });
+}
+
+function renderMeleeMatrixSnapshot() {
+  const versionEl = document.getElementById('meleeMatrixVersion');
+  const gameVersion = document.getElementById('gameVersion');
+  if (versionEl && gameVersion) {
+    versionEl.textContent = `Game version: ${gameVersion.selectedOptions[0].textContent}`;
+  }
+  const attackerEnchantments = activeNonInnateUnitEnchantments('a');
+  const defenderEnchantments = activeNonInnateUnitEnchantments('b');
+  renderEnchantmentSnapshotList(
+    'matrixAttackerSettings',
+    selectedMatrixSettingRows('a').concat(selectedEnchantmentRows('a', attackerEnchantments))
+  );
+  renderEnchantmentSnapshotList(
+    'matrixDefenderSettings',
+    selectedMatrixSettingRows('b').concat(selectedEnchantmentRows('b', defenderEnchantments))
+  );
+  renderEnchantmentSnapshotList('matrixGlobalOptions', selectedGlobalOptionRows());
+  meleeMatrixCache = buildMeleeMatrixCache(attackerEnchantments, defenderEnchantments);
+  renderMeleeMatrixTable();
+}
+
+function selectedUnitLabel(prefix) {
+  const searchEl = document.getElementById(prefix + 'UnitSearch');
+  const name = searchEl ? searchEl.value.trim() : '';
+  return name || (prefix === 'a' ? 'Custom attacker' : 'Custom defender');
+}
+
+function distExpectedValue(dist) {
+  if (!dist) return 0;
+  let ev = 0;
+  for (let d = 0; d < dist.length; d++) ev += d * dist[d];
+  return ev;
+}
+
+function formatMeleeMatrixRatio(result) {
+  const pctToDefender = result.bRemHP > 0 ? distExpectedValue(result.totalDmgToB) / result.bRemHP : 0;
+  const pctToAttacker = result.aRemHP > 0 ? distExpectedValue(result.totalDmgToA) / result.aRemHP : 0;
+
+  if (pctToAttacker <= 1e-12) {
+    if (pctToDefender <= 1e-12) return '0.00';
+    return '∞';
+  }
+  return (pctToDefender / pctToAttacker).toFixed(2);
+}
+
+function meleeMatrixRatioValue(result) {
+  const pctToDefender = result.bRemHP > 0 ? distExpectedValue(result.totalDmgToB) / result.bRemHP : 0;
+  const pctToAttacker = result.aRemHP > 0 ? distExpectedValue(result.totalDmgToA) / result.aRemHP : 0;
+
+  if (pctToAttacker <= 1e-12) {
+    if (pctToDefender <= 1e-12) return 0;
+    return Infinity;
+  }
+  return pctToDefender / pctToAttacker;
+}
+
+function formatMeleeMatrixRatioValue(ratio) {
+  if (!Number.isFinite(ratio)) return '>99';
+  if (ratio > 99) return '>99';
+  if (ratio < 0.01) return '<0.01';
+  return ratio.toPrecision(2);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function mixRgb(a, b, t) {
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * t),
+    Math.round(a[1] + (b[1] - a[1]) * t),
+    Math.round(a[2] + (b[2] - a[2]) * t),
+  ];
+}
+
+function meleeMatrixCellColor(ratio) {
+  const logValue = ratio > 0 ? Math.log10(ratio) : -Infinity;
+  const scaled = clamp(logValue, -1, 1);
+  const red = [214, 72, 72];
+  const white = [255, 255, 255];
+  const green = [66, 157, 92];
+  const rgb = scaled < 0
+    ? mixRgb(red, white, scaled + 1)
+    : mixRgb(white, green, scaled);
+  const textColor = Math.abs(scaled) > 0.68 ? '#fff' : '#1d2438';
+  return {
+    background: `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
+    textColor,
+  };
+}
+
+function predefinedUnitRtb(unit) {
+  return (unit.ranged && parseInt(unit.ranged, 10) > 0) ? parseInt(unit.ranged, 10)
+    : (unit.breath && parseInt(unit.breath, 10) > 0) ? parseInt(unit.breath, 10)
+    : (unit.thrown_breath && parseInt(unit.thrown_breath, 10) > 0) ? parseInt(unit.thrown_breath, 10) : 0;
+}
+
+function predefinedUnitRtbType(unit) {
+  const rawRtb = (unit.ranged_type && unit.ranged_type !== 'none') ? unit.ranged_type
+    : (unit.thrown_breath_type && unit.thrown_breath_type !== 'none') ? unit.thrown_breath_type
+    : 'none';
+  return RANGED_TYPE_NORMALIZE[rawRtb] || rawRtb;
+}
+
+function predefinedUnitType(unit) {
+  const cat = unit.category || '';
+  const hasFantasticAbility = (unit.abilities || []).some(a => a === 'Fantastic' || a === 'Fantastic=1');
+  const isFantastic = cat.endsWith(' Creatures') || hasFantasticAbility;
+  if (cat === 'Heroes') return 'hero';
+  if (!isFantastic) return 'normal';
+
+  const realmMap = {
+    'Nature': 'nature',
+    'Sorcery': 'sorcery',
+    'Chaos': 'chaos',
+    'Life': 'life',
+    'Death': 'death',
+    'Arcane': 'arcane',
+    'Nature Creatures': 'nature',
+    'Sorcery Creatures': 'sorcery',
+    'Chaos Creatures': 'chaos',
+    'Life Creatures': 'life',
+    'Death Creatures': 'death',
+    'Arcane Creatures': 'arcane',
+  };
+  return 'fantastic_' + (realmMap[cat] || 'arcane');
+}
+
+function matrixRealmClassForUnitType(unitType) {
+  const realm = String(unitType || '').replace(/^fantastic_/, '');
+  return ['life', 'death', 'chaos', 'nature', 'sorcery'].includes(realm) ? `realm-${realm}` : '';
+}
+
+function activeNonInnateUnitEnchantments(prefix) {
+  const result = {};
+  for (const abil of abilityUiDefs()) {
+    if (abil.source !== 'enchantment') continue;
+    const val = getAbilityControlValue(prefix, abil);
+    const calcKey = abil.calcKey || abil.key;
+    if (abil.type === 'bool' && val) {
+      result[calcKey] = true;
+    } else if (abil.type === 'select') {
+      const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
+      if (val !== defaultValue) result[calcKey] = val;
+    } else if (abil.type === 'numcheck' && val != null) {
+      result[calcKey] = val;
+    } else if (abil.type === 'num' && val !== 0) {
+      result[calcKey] = val;
+    }
+  }
+  return result;
+}
+
+function buildMatrixUnitStats(prefix, unit, appliedEnchantments) {
+  const version = document.getElementById('gameVersion').value;
+  const unitType = predefinedUnitType(unit);
+  const level = document.getElementById(prefix + 'Level').value;
+  const weapon = document.getElementById(prefix + 'Weapon').value;
+  const abilities = { ...parseAbilitiesFromUnit(unit), ...appliedEnchantments };
+  const enemyPrefix = prefix === 'a' ? 'b' : 'a';
+  return deriveUnitStats({
+    prefix,
+    version,
+    abilities,
+    level,
+    weapon,
+    armor: document.getElementById(prefix + 'Armor').value,
+    rtbType: predefinedUnitRtbType(unit),
+    unitType,
+    chaosChannels: abilities.chaosChannels || 'none',
+    figs: unit.figures || 1,
+    atk: unit.melee,
+    rtb: predefinedUnitRtb(unit),
+    def: unit.defense,
+    res: unit.resist,
+    hp: unit.hp,
+    dmg: 0,
+    toHitMod: unit.to_hit || 0,
+    toHitRtbMod: 0,
+    toBlkMod: document.getElementById(prefix + 'ToBlkMod').value,
+    cityWalls: document.getElementById('cityWalls').value,
+    nodeAura: document.getElementById('nodeAura').value,
+    trueLight: !!document.getElementById('trueLight').checked,
+    darkness: !!document.getElementById('darkness').checked,
+    enemyEternalNight: !!document.getElementById(enemyPrefix + 'Abil_eternalNight').checked,
+    chaosSurge: document.getElementById('chaosSurge').value,
+    rangedCheck: false,
+    rangedDist: 1,
+    warpReality: !!document.getElementById('warpReality').checked,
+    generic: unit.category === 'Generic',
+  });
+}
+
+function buildMatrixDefenderStats(unit, appliedEnchantments) {
+  return buildMatrixUnitStats('b', unit, appliedEnchantments);
+}
+
+function buildMatrixAttackerStats(unit, appliedEnchantments) {
+  return buildMatrixUnitStats('a', unit, appliedEnchantments);
+}
+
+function selectedMatrixUnitRow(prefix) {
+  const stats = readUnitStats(prefix);
+  return {
+    label: selectedUnitLabel(prefix),
+    realmClass: matrixRealmClassForUnitType(stats.unitType),
+    stats,
+  };
+}
+
+function predefinedMatrixUnitRows(prefix, appliedEnchantments) {
+  const version = document.getElementById('gameVersion').value;
+  const unitsById = new Map((unitDatabases[version] || []).map(unit => [String(unit.id), unit]));
+  return (unitComboboxData[prefix] || [])
+    .map(entry => unitsById.get(entry.id))
+    .filter(Boolean)
+    .map(unit => {
+      const unitType = predefinedUnitType(unit);
+      return {
+        label: unit.name,
+        realmClass: matrixRealmClassForUnitType(unitType),
+        stats: prefix === 'a'
+          ? buildMatrixAttackerStats(unit, appliedEnchantments)
+          : buildMatrixDefenderStats(unit, appliedEnchantments),
+      };
+    });
+}
+
+let meleeMatrixCache = null;
+
+function meleeMatrixFractionalWinCount(values) {
+  if (values.length === 1) return values[0];
+
+  let greaterCount = 0;
+  let highestBelow = -Infinity;
+  let lowestAbove = Infinity;
+  let hasExactTie = false;
+
+  for (const value of values) {
+    if (value > 1) {
+      greaterCount += 1;
+      lowestAbove = Math.min(lowestAbove, value);
+    } else if (value < 1) {
+      highestBelow = Math.max(highestBelow, value);
+    } else {
+      hasExactTie = true;
+    }
+  }
+
+  if (greaterCount === values.length) return values.length;
+  if (greaterCount === 0 || hasExactTie || highestBelow === -Infinity || lowestAbove === Infinity) {
+    return greaterCount;
+  }
+
+  const thresholdFraction = (1 - highestBelow) / (lowestAbove - highestBelow);
+  return greaterCount + (1 - thresholdFraction);
+}
+
+function meleeMatrixAttackerWinCount(cells, defenderIndexes) {
+  return meleeMatrixFractionalWinCount(defenderIndexes.map(defenderIndex => cells[defenderIndex].ratio));
+}
+
+function meleeMatrixDefenderWinCount(rows, defenderIndex) {
+  return meleeMatrixFractionalWinCount(rows.map(row => {
+    const attackerRatio = row.cells[defenderIndex].ratio;
+    return attackerRatio > 0 ? 1 / attackerRatio : Infinity;
+  }));
+}
+
+function compareMeleeMatrixSortKeys(a, b) {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
+function numericMeleeMatrixCsvValue(ratio) {
+  if (Number.isFinite(ratio)) return String(Number(ratio.toPrecision(15)));
+  return '1e99';
+}
+
+function csvEscape(value) {
+  const text = String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function buildMeleeMatrixCache(attackerEnchantments, defenderEnchantments) {
+  const version = document.getElementById('gameVersion').value;
+  const wallOfFire = document.getElementById('wallOfFire').checked;
+  const allAttackers = predefinedMatrixUnitRows('a', attackerEnchantments);
+  const allDefenders = predefinedMatrixUnitRows('b', defenderEnchantments);
+  const selectedAttacker = selectedMatrixUnitRow('a');
+  const selectedDefender = selectedMatrixUnitRow('b');
+  const attackers = [...allAttackers, selectedAttacker];
+  const defenders = [...allDefenders, selectedDefender];
+  const selectedAttackerIndex = attackers.length - 1;
+  const selectedDefenderIndex = defenders.length - 1;
+  const rows = attackers.map((attackerInfo, attackerIndex) => {
+    const cells = defenders.map((defenderInfo, defenderIndex) => {
+      const result = resolveCombat(attackerInfo.stats, defenderInfo.stats, { isRanged: false, version, wallOfFire });
+      const ratio = meleeMatrixRatioValue(result);
+      return {
+        defenderIndex,
+        ratio,
+      };
+    });
+    return {
+      attackerIndex,
+      info: attackerInfo,
+      cells,
+    };
+  });
+
+  return {
+    allAttackerIndexes: allAttackers.map((_, i) => i),
+    allDefenderIndexes: allDefenders.map((_, i) => i),
+    selectedAttackerIndex,
+    selectedDefenderIndex,
+    rows,
+    defenders,
+  };
+}
+
+function renderMeleeMatrixTable() {
+  const wrap = document.getElementById('meleeMatrixTableWrap');
+  if (!wrap) return;
+  if (!meleeMatrixCache) return;
+
+  const { matrixRows, matrixCols } = currentMeleeMatrixView();
+  if (!matrixRows || !matrixCols) return;
+
+  wrap.textContent = '';
+  const table = document.createElement('table');
+  table.className = 'matrix-table';
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  const cornerHead = document.createElement('th');
+  cornerHead.className = 'matrix-corner-header';
+  cornerHead.innerHTML = '<span class="matrix-corner-attacker">Attacker</span><span class="matrix-corner-defender">Defender</span>';
+  headRow.appendChild(cornerHead);
+  for (const defenderCol of matrixCols) {
+    const defenderHead = document.createElement('th');
+    defenderHead.scope = 'col';
+    defenderHead.className = 'matrix-col-header';
+    const defenderLabelSpan = document.createElement('span');
+    defenderLabelSpan.className = 'matrix-col-label';
+    if (defenderCol.info.realmClass) defenderLabelSpan.classList.add(defenderCol.info.realmClass);
+    defenderLabelSpan.textContent = defenderCol.info.label;
+    defenderHead.appendChild(defenderLabelSpan);
+    headRow.appendChild(defenderHead);
+  }
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  for (const attackerRow of matrixRows) {
+    const row = document.createElement('tr');
+    const attackerHead = document.createElement('th');
+    attackerHead.scope = 'row';
+    const attackerLabelSpan = document.createElement('span');
+    if (attackerRow.info.realmClass) attackerLabelSpan.classList.add(attackerRow.info.realmClass);
+    attackerLabelSpan.textContent = attackerRow.info.label;
+    attackerHead.appendChild(attackerLabelSpan);
+    row.appendChild(attackerHead);
+    for (const defenderCol of matrixCols) {
+      const ratio = attackerRow.cells[defenderCol.defenderIndex].ratio;
+      const cell = document.createElement('td');
+      const color = meleeMatrixCellColor(ratio);
+      cell.textContent = formatMeleeMatrixRatioValue(ratio);
+      cell.style.backgroundColor = color.background;
+      cell.style.color = color.textColor;
+      row.appendChild(cell);
+    }
+    tbody.appendChild(row);
+  }
+  table.appendChild(tbody);
+
+  wrap.appendChild(table);
+}
+
+function currentMeleeMatrixView() {
+  if (!meleeMatrixCache) return {};
+
+  const showAllDefenders = !!document.getElementById('matrixShowAllDefenders')?.checked;
+  const showAllAttackers = !!document.getElementById('matrixShowAllAttackers')?.checked;
+  const sortDefenders = !!document.getElementById('matrixSortDefenders')?.checked;
+  const sortAttackers = !!document.getElementById('matrixSortAttackers')?.checked;
+
+  const attackerIndexes = showAllAttackers
+    ? meleeMatrixCache.allAttackerIndexes
+    : [meleeMatrixCache.selectedAttackerIndex];
+  const defenderIndexes = showAllDefenders
+    ? meleeMatrixCache.allDefenderIndexes
+    : [meleeMatrixCache.selectedDefenderIndex];
+  const matrixRows = attackerIndexes.map((attackerIndex, viewIndex) => {
+    const cachedRow = meleeMatrixCache.rows[attackerIndex];
+    return {
+      attackerIndex,
+      viewIndex,
+      info: cachedRow.info,
+      cells: cachedRow.cells,
+      sortKey: meleeMatrixAttackerWinCount(cachedRow.cells, defenderIndexes),
+    };
+  });
+  const matrixCols = defenderIndexes.map((defenderIndex, viewIndex) => ({
+    defenderIndex,
+    viewIndex,
+    info: meleeMatrixCache.defenders[defenderIndex],
+    sortKey: meleeMatrixDefenderWinCount(matrixRows, defenderIndex),
+  }));
+  if (sortAttackers) {
+    matrixRows.sort((a, b) => compareMeleeMatrixSortKeys(b.sortKey, a.sortKey) || (a.viewIndex - b.viewIndex));
+  }
+  if (sortDefenders) {
+    matrixCols.sort((a, b) => compareMeleeMatrixSortKeys(b.sortKey, a.sortKey) || (a.viewIndex - b.viewIndex));
+  }
+
+  return { matrixRows, matrixCols };
+}
+
+function buildMeleeMatrixCsv() {
+  const { matrixRows, matrixCols } = currentMeleeMatrixView();
+  if (!matrixRows || !matrixCols) return '';
+
+  const lines = [
+    ['Attacker / Defender', ...matrixCols.map(col => col.info.label)].map(csvEscape).join(','),
+  ];
+  for (const attackerRow of matrixRows) {
+    const row = [csvEscape(attackerRow.info.label)];
+    for (const defenderCol of matrixCols) {
+      const ratio = attackerRow.cells[defenderCol.defenderIndex].ratio;
+      row.push(numericMeleeMatrixCsvValue(ratio));
+    }
+    lines.push(row.join(','));
+  }
+  return lines.join('\r\n');
+}
+
+async function writeTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch (err) {
+      // Fall through to the legacy copy path if browser policy blocks the API.
+    }
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    if (!document.execCommand('copy')) throw new Error('Copy command failed');
+  } catch (err) {
+    throw err;
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
+async function exportMeleeMatrixCsvToClipboard(button) {
+  if (!meleeMatrixCache) renderMeleeMatrixSnapshot();
+  const csv = buildMeleeMatrixCsv();
+  if (!csv) return;
+
+  const originalText = button ? button.textContent : '';
+  try {
+    await writeTextToClipboard(csv);
+    if (button) button.textContent = 'Copied';
+  } catch (err) {
+    if (button) button.textContent = 'Copy failed';
+  } finally {
+    if (button) {
+      window.setTimeout(() => {
+        button.textContent = originalText || 'Export csv to clipboard';
+      }, 1400);
+    }
+  }
+}
+
+function initMeleeMatrixModal() {
+  const openBtn = document.getElementById('meleeMatrixBtn');
+  const modal = document.getElementById('meleeMatrixModal');
+  const closeBtn = document.getElementById('meleeMatrixClose');
+  const exportBtn = document.getElementById('matrixExportCsv');
+  const showAllDefenders = document.getElementById('matrixShowAllDefenders');
+  const showAllAttackers = document.getElementById('matrixShowAllAttackers');
+  const sortDefenders = document.getElementById('matrixSortDefenders');
+  const sortAttackers = document.getElementById('matrixSortAttackers');
+  if (!openBtn || !modal || !closeBtn) return;
+
+  const open = () => {
+    renderMeleeMatrixSnapshot();
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    const tip = document.getElementById('tt');
+    if (tip) tip.style.display = 'none';
+    closeBtn.focus();
+  };
+  const close = () => {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    openBtn.focus();
+  };
+
+  openBtn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      void exportMeleeMatrixCsvToClipboard(exportBtn);
+    });
+  }
+  [showAllDefenders, showAllAttackers, sortDefenders, sortAttackers].forEach(el => {
+    if (!el) return;
+    el.addEventListener('change', () => {
+      if (modal.classList.contains('is-open')) renderMeleeMatrixTable();
+    });
+  });
+  modal.addEventListener('click', e => {
+    if (e.target === modal) close();
+  });
+  modal.addEventListener('wheel', e => {
+    e.stopPropagation();
+  }, { passive: true });
+  modal.addEventListener('touchmove', e => {
+    e.stopPropagation();
+  }, { passive: true });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('is-open')) close();
+  });
+}
+
 // --- Event Wiring ---
 
 // Build ability UI
 buildAbilitiesUI('a');
 buildAbilitiesUI('b');
+initMeleeMatrixModal();
 
 // Unit type change -> update level availability
 ['a', 'b'].forEach(prefix => {
@@ -1290,6 +2045,7 @@ buildAbilitiesUI('b');
 
 document.getElementById('gameVersion').addEventListener('change', onVersionChange);
 document.getElementById('swapBtn').addEventListener('click', swapAttackerDefender);
+document.getElementById('resetBtn').addEventListener('click', resetCalculatorState);
 document.querySelectorAll('.toggle-abil-btn').forEach(btn => {
   btn.addEventListener('click', toggleAllAbilities);
 });
@@ -1379,18 +2135,7 @@ document.querySelectorAll('.abil-item').forEach(item => {
 })();
 
 // Initial load
-(function setDefaults() {
-  document.getElementById('gameVersion').value = 'com2_1.05.11';
-  onVersionChange();
-  const db = unitDatabases['com2_1.05.11'] || [];
-  const hmUnit = db.find(u => u.name === 'High Men Spearmen');
-  const klUnit = db.find(u => u.name === 'Klackon Spearmen');
-  if (hmUnit) { document.getElementById('aUnit').value = String(hmUnit.id); syncUnitDisplay('a'); updateUnitLock('a'); }
-  if (klUnit) { document.getElementById('bUnit').value = String(klUnit.id); syncUnitDisplay('b'); updateUnitLock('b'); }
-  updateTypeVisibility();
-  updateAbilityVisibility();
-  recalculate();
-})();
+resetCalculatorState();
 
 // --- Cursor-following tooltip ---
 (function initTooltip() {
@@ -1408,12 +2153,31 @@ document.querySelectorAll('.abil-item').forEach(item => {
       }
     }
   });
-  document.addEventListener('mousemove', e => {
-    let el = e.target;
+
+  function tooltipElementAtPoint(x, y) {
+    const direct = document.elementFromPoint(x, y);
+    let el = direct;
     while (el && el !== document.documentElement) {
-      if (el.dataset && el.dataset.tooltip) break;
+      if (el.dataset && el.dataset.tooltip) return el;
       el = el.parentElement;
     }
+    if (direct && direct.closest && direct.closest('.modal-overlay.is-open')) return null;
+
+    // Disabled or pointer-locked form controls may not become the event target.
+    // Fall back to geometry so their tooltips still work while they remain locked.
+    const tooltipEls = Array.from(document.querySelectorAll('[data-tooltip]'));
+    for (let i = tooltipEls.length - 1; i >= 0; i--) {
+      const candidate = tooltipEls[i];
+      const rect = candidate.getBoundingClientRect();
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  document.addEventListener('mousemove', e => {
+    const el = tooltipElementAtPoint(e.clientX, e.clientY);
     const text = el && el.dataset && el.dataset.tooltip;
     if (text) {
       tip.textContent = text;
@@ -1455,17 +2219,3 @@ document.querySelectorAll('.abil-item').forEach(item => {
   overlay.addEventListener('click', close);
 })();
 
-// Default matchup on page load
-(function() {
-  const version = document.getElementById('gameVersion').value;
-  const db = loadUnitDatabase(version);
-  function pickUnit(prefix, name) {
-    const match = db.find(u => u.name === name);
-    if (!match) return;
-    document.getElementById(prefix + 'Unit').value = String(match.id);
-    syncUnitDisplay(prefix);
-    document.getElementById(prefix + 'Unit').dispatchEvent(new Event('change'));
-  }
-  pickUnit('a', 'Hell Hounds');
-  pickUnit('b', 'War Bears');
-})();

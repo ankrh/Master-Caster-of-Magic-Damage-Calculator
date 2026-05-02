@@ -351,13 +351,10 @@ function getAbilityStatModifiers(abilities, version) {
     toHitMod += 10;
   }
 
-  // Land Linking: CoM grants +2 attack and defense to fantastic units.
-  // CoM2 narrows the attack bonus to melee and breath; breath is handled in stats.js.
+  // Land Linking: CoM/CoM2 grants +2 melee, breath, and defense to fantastic units.
+  // Breath is handled in stats.js.
   if (hasAbil(abilities, 'landLinking')) {
     atkMod += 2;
-    if (version && version.startsWith('com_')) {
-      rtbMod += 2;
-    }
     defMod += 2;
   }
 
@@ -683,16 +680,18 @@ function wallOfFireStr(version) {
 
 // --- Cause Fear ---
 // Probability of a single figure failing its fear resistance roll.
-// Fear has no resistance modifier (0). Death/Magic Immunity grants +50/+100 resistance.
+// MoM: no resistance modifier. CoM/CoM2: -3 resistance modifier.
+// Death/Magic Immunity grants +50/+100 resistance.
 // Righteousness grants +30 resistance (always pushes effective Res ≥ 10).
 function fearFailProb(defRes, defAbilities, version) {
   const isCoM = version && version.startsWith('com');
+  const modifier = isCoM ? -3 : 0;
   let bonus = 0;
   if (hasAbil(defAbilities, 'deathImmunity') || hasAbil(defAbilities, 'magicImmunity')) bonus = isCoM ? 100 : 50;
   else if (hasAbil(defAbilities, 'righteousness')) bonus = 30;
-  const effectiveRes = Math.max(defRes, 0) + bonus;
+  const effectiveRes = defRes + modifier + bonus;
   if (effectiveRes >= 10) return 0;
-  return (10 - effectiveRes) / 10;
+  return Math.min(1, Math.max(0, (10 - effectiveRes) / 10));
 }
 
 // Marginal fear display distribution when survivor count is uncertain.
@@ -2209,7 +2208,7 @@ function resolveCombat(a, b, opts) {
   } = buildResistanceContext(a, b, ver, isCoM);
 
   // Cause Fear: reduces opponent's effective melee + touch-attack figures.
-  // Fires before the melee exchange. No resistance modifier.
+  // Fires before the melee exchange. MoM has no resistance modifier; CoM/CoM2 is -3.
   // v1.31 bugs: (1) defending Fear doesn't work; (2) attacker's Fear also self-fears attacker.
   const aFear = !isRanged && hasAbil(a.abilities, 'fear');
   const bFear = !isRanged && hasAbil(b.abilities, 'fear');

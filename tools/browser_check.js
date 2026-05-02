@@ -234,6 +234,49 @@ async function main() {
         };
       })()`,
       'run-tests': `runTests()`,
+      'type-suffixes': `(() => {
+        document.getElementById('gameVersion').value = 'com2_1.05.11';
+        onVersionChange();
+        document.getElementById('aAbil_unitType').value = 'fantastic_chaos';
+        updateTypeVisibility();
+        const labels = {};
+        for (const key of ['flameBlade', 'destiny', 'landLinking', 'lionheart']) {
+          const item = document.querySelector('#aAbilities [data-abil-key="' + key + '"]');
+          labels[key] = item ? item.textContent.replace(/\\s+/g, ' ').trim() : null;
+        }
+        return {
+          flameBladeDisabled: document.getElementById('aAbil_flameBlade').disabled,
+          destinyDisabled: document.getElementById('aAbil_destiny').disabled,
+          landLinkingDisabled: document.getElementById('aAbil_landLinking').disabled,
+          labels
+        };
+      })()`,
+      'disabled-tooltips': `(() => {
+        function hoverText(id) {
+          const el = document.getElementById(id);
+          const rect = el.getBoundingClientRect();
+          document.dispatchEvent(new MouseEvent('mousemove', {
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            bubbles: true
+          }));
+          return document.getElementById('tt').textContent;
+        }
+
+        document.getElementById('rangedCheck').checked = false;
+        updateTypeVisibility();
+        const rangedDisabled = document.getElementById('rangedDist').disabled;
+        const rangedTooltip = hoverText('rangedDist');
+
+        document.getElementById('gameVersion').value = 'mom_1.31';
+        onVersionChange();
+        const armorDisabled = document.getElementById('aArmor').disabled;
+        const armorTooltip = hoverText('aArmor');
+
+        const chaosTooltip = hoverText('chaosSurge');
+
+        return { rangedDisabled, rangedTooltip, armorDisabled, armorTooltip, chaosTooltip };
+      })()`,
     };
 
     const expression = expressions[mode];

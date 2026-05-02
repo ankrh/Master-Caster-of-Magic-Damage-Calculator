@@ -18,6 +18,7 @@
     <option value="com2_1.05.11">CoM2 1.05.11</option>
   </select>
   <button id="swapBtn" class="swap-btn" title="Swap attacker and defender">&#8644; Swap attacker and defender</button>
+  <button id="resetBtn" class="reset-btn" type="button" title="Reset calculator to the default state">Reset</button>
   <a href="https://github.com/ankrh/Master-Caster-of-Magic-Damage-Calculator/issues" target="_blank" rel="noopener" class="feedback-link">Report a bug / Request a feature</a>
 </div>
 
@@ -32,13 +33,16 @@
 
 <div class="page-layout">
 <div class="main-content">
+<div class="matrix-actions">
+  <button id="meleeMatrixBtn" class="matrix-btn" type="button" title="Open melee matrix calculator">Calculate melee matrix<br>using selected settings</button>
+</div>
 <div class="combat-enchantments">
   <div class="enchant-row">
     <label class="check-label" data-tooltip="MoM 1.31 &amp; 1.60 only. Life fantastic units get +1 mel/rng/def/res; Death units get &#8722;1.">
-      <input type="checkbox" id="trueLight"> <span class="realm-life">True Light</span>
+      <input type="checkbox" id="trueLight"> <span class="realm-life">True Light (F)</span>
     </label>
-    <label class="check-label" data-tooltip="Death fantastic units get +1 mel/rng/def/res; Life units get &#8722;1. Can be active alongside True Light, canceling its matching modifiers.">
-      <input type="checkbox" id="darkness"> <span class="realm-death">Darkness</span>
+    <label class="check-label" data-tooltip="Death fantastic units get +1 mel/rng/def/res; Life units get &#8722;1.">
+      <input type="checkbox" id="darkness"> <span class="realm-death">Darkness (F)</span>
     </label>
     <label class="check-label" data-tooltip="Area fire attack on all attacker figures, firing before the melee phase.&#10;MoM 1.31 &amp; 1.60: Strength 5.&#10;CoM 1 &amp; 2: Strength 10.&#10;Immune: Fire Immunity, Magic Immunity, Righteousness.">
       <input type="checkbox" id="wallOfFire"> <span class="realm-chaos">Wall of Fire</span>
@@ -47,8 +51,8 @@
       <input type="checkbox" id="warpReality"> <span class="realm-chaos">Warp Reality</span>
     </label>
     <span class="field-group">
-      <label for="chaosSurge" data-tooltip="Global enchantment. MoM: Chaos creatures gain +2 to attack strengths, non-stacking. CoM/CoM2: Chaos creatures gain +3 melee, +2 ranged/breath, and +2 resistance from the first copy. Each additional copy adds +1 to those bonuses."><span class="realm-chaos">Chaos Surge enchantments</span>:</label>
-      <input type="number" id="chaosSurge" min="0" max="99" value="0">
+      <label for="chaosSurge" data-tooltip="MoM: Chaos creatures gain +2 to attack strengths, non-stacking.&#10;CoM/CoM2: Chaos creatures gain +3 melee, +2 ranged/breath, and +2 resistance.&#10;First enchantment gives the full bonus.&#10;Each additional enchantment adds half as much to those bonuses."><span class="realm-chaos">Chaos Surge enchantments (F)</span>:</label>
+      <input type="number" id="chaosSurge" min="0" max="99" value="0" data-tooltip="MoM: Chaos creatures gain +2 to attack strengths, non-stacking.&#10;CoM/CoM2: Chaos creatures gain +3 melee, +2 ranged/breath, and +2 resistance.&#10;First copy gives the full bonus.&#10;Each additional copy adds +1 to those bonuses.">
     </span>
   </div>
   <div class="enchant-row" style="justify-content: center; gap: 1.5rem;">
@@ -57,11 +61,11 @@
     </label>
     <span class="field-group" id="rangedDistLabel">
       <label for="rangedDist" data-tooltip="Missile and boulder only. Magic ranged ignores distance.&#10;MoM 1.31 &amp; 1.60: &#8722;10/&#8722;20/&#8722;30% at 3/6/9 tiles.&#10;CoM 1: &#8722;10/&#8722;20/&#8722;30% at 4/8/12 tiles.&#10;CoM 2: &#8722;10% at 4 tiles, then &#8722;3% per additional tile.&#10;Long Range caps penalty at &#8722;10%.">Ranged attack distance:</label>
-      <input type="number" id="rangedDist" min="1" max="99" value="1">
+      <input type="number" id="rangedDist" min="1" max="99" value="1" data-tooltip="Missile and boulder only. Magic ranged ignores distance.&#10;MoM 1.31 &amp; 1.60: &#8722;10/&#8722;20/&#8722;30% at 3/6/9 tiles.&#10;CoM 1: &#8722;10/&#8722;20/&#8722;30% at 4/8/12 tiles.&#10;CoM 2: &#8722;10% at 4 tiles, then &#8722;3% per additional tile.&#10;Long Range caps penalty at &#8722;10%.">
     </span>
     <span class="field-group">
       <label for="cityWalls" data-tooltip="Defense bonus applied to the defender only.&#10;MoM 1.31: Intact city wall: +3 def. Destroyed city wall or inner area: +1 def.&#10;MoM 1.60, CoM 1 &amp; 2: Intact city wall or inner area: +3 def. Destroyed city wall: +1 def.">City walls:</label>
-      <select id="cityWalls">
+      <select id="cityWalls" data-tooltip="Defense bonus applied to the defender only.&#10;MoM 1.31: Intact city wall: +3 def. Destroyed city wall or inner area: +1 def.&#10;MoM 1.60, CoM 1 &amp; 2: Intact city wall or inner area: +3 def. Destroyed city wall: +1 def.">
         <option value="none" selected>None</option>
         <option value="1">+1 def</option>
         <option value="3">+3 def</option>
@@ -85,7 +89,7 @@
       <div class="unit-combobox"><input type="text" id="aUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="aUnitList"></div><input type="hidden" id="aUnit" value="custom"></div>
     </div>
     <div class="panel-fields">
-      <label for="aAbil_unitType" data-tooltip="Affects which enchantments can be cast on the unit and some immunity effects.">Unit Type</label>
+      <label for="aAbil_unitType" data-tooltip="Affects which type-restricted enchantments the unit will be affected by, plus some immunity interactions.">Base unit type</label>
       <select id="aAbil_unitType">
         <option value="normal">Normal</option>
         <option value="hero">Hero</option>
@@ -151,7 +155,7 @@
       <input type="number" id="aDmg" min="0" max="999" value="0">
       <span class="mod-val"></span>
 
-      <label for="aLevel" data-tooltip="MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit">Level</label>
+      <label for="aLevel" data-tooltip="Disregarded for fantastic units and heroes.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit">Level</label>
       <select id="aLevel" disabled>
         <option value="normal" selected>Normal</option>
         <option value="regular">Regular</option>
@@ -161,7 +165,7 @@
         <option value="champion">Champion</option>
       </select>
 
-      <label for="aWeapon" data-tooltip="Magic:      +10% To Hit&#10;Mithril:    +10% To Hit, +1 atk, +1 def&#10;Adamantium: +10% To Hit, +2 atk, +2 def&#10;All three bypass Weapon Immunity.&#10;To Hit: melee, missile, boulder only.&#10;Atk:    melee, missile, boulder, thrown only.">Weapon Type</label>
+      <label for="aWeapon" data-tooltip="Disregarded for fantastic units and heroes.&#10;&#10;Magic:      +10% To Hit&#10;Mithril:    +10% To Hit, +1 atk, +1 def&#10;Adamantium: +10% To Hit, +2 atk, +2 def&#10;All three bypass Weapon Immunity.&#10;To Hit: melee, missile, boulder only.&#10;Atk:    melee, missile, boulder, thrown only.">Weapon Type</label>
       <select id="aWeapon">
         <option value="normal" selected>Normal</option>
         <option value="magic">Magic</option>
@@ -169,7 +173,7 @@
         <option value="adamantium">Adamantium</option>
       </select>
 
-      <label for="aArmor" data-tooltip="Orihalcon: +1 resistance, +2 magic ranged attack.">Armor Type</label>
+      <label for="aArmor" data-tooltip="Disregarded for fantastic units and heroes.&#10;&#10;Orihalcon: +1 resistance, +2 magic ranged attack.">Armor Type</label>
       <select id="aArmor">
         <option value="normal" selected>Normal</option>
         <option value="orihalcon">Orihalcon</option>
@@ -195,7 +199,7 @@
       <div class="unit-combobox"><input type="text" id="bUnitSearch" class="unit-search" placeholder="Custom" autocomplete="off"><div class="unit-dropdown-list" id="bUnitList"></div><input type="hidden" id="bUnit" value="custom"></div>
     </div>
     <div class="panel-fields">
-      <label for="bAbil_unitType" data-tooltip="Affects which enchantments can be cast on the unit and some immunity effects.">Unit Type</label>
+      <label for="bAbil_unitType" data-tooltip="Affects which type-restricted enchantments the unit will be affected by, plus some immunity interactions.">Base unit type</label>
       <select id="bAbil_unitType">
         <option value="normal">Normal</option>
         <option value="hero">Hero</option>
@@ -261,7 +265,7 @@
       <input type="number" id="bDmg" min="0" max="999" value="0">
       <span class="mod-val"></span>
 
-      <label for="bLevel" data-tooltip="MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit">Level</label>
+      <label for="bLevel" data-tooltip="Disregarded for fantastic units in the main calculator; used as the matrix setting.&#10;&#10;MoM 1.31 &amp; 1.60:&#10;Regular:     +1 atk/rng/thr, +1 res&#10;Veteran:     +1 atk/rng/thr, +2 res, +1 def&#10;Elite:       +2 atk/rng/thr, +3 res, +1 def, +1 hp, +10% hit&#10;Ultra Elite: +2 atk/rng/thr, +4 res, +2 def, +1 hp, +20% hit&#10;Champion:    +3 atk/rng/thr, +5 res, +2 def, +2 hp, +30% hit&#10;&#10;CoM &amp; CoM2:&#10;Regular:     +1 atk/rng, +1 res&#10;Veteran:     +2 atk/rng, +1 res, +1 thr, +1 def&#10;Elite:       +2 atk/rng, +2 res, +1 thr, +2 def, +1 hp&#10;Ultra Elite: +3 atk/rng, +2 res, +1 thr, +3 def, +1 hp&#10;Champion:    +3 atk/rng, +2 res, +1 thr, +3 def, +2 hp, +10% hit">Level</label>
       <select id="bLevel" disabled>
         <option value="normal" selected>Normal</option>
         <option value="regular">Regular</option>
@@ -271,7 +275,7 @@
         <option value="champion">Champion</option>
       </select>
 
-      <label for="bWeapon" data-tooltip="Magic:      +10% To Hit&#10;Mithril:    +10% To Hit, +1 atk, +1 def&#10;Adamantium: +10% To Hit, +2 atk, +2 def&#10;All three bypass Weapon Immunity.&#10;To Hit: melee, missile, boulder only.&#10;Atk:    melee, missile, boulder, thrown only.">Weapon Type</label>
+      <label for="bWeapon" data-tooltip="Disregarded for fantastic units in the main calculator; used as the matrix setting.&#10;&#10;Magic:      +10% To Hit&#10;Mithril:    +10% To Hit, +1 atk, +1 def&#10;Adamantium: +10% To Hit, +2 atk, +2 def&#10;All three bypass Weapon Immunity.&#10;To Hit: melee, missile, boulder only.&#10;Atk:    melee, missile, boulder, thrown only.">Weapon Type</label>
       <select id="bWeapon">
         <option value="normal" selected>Normal</option>
         <option value="magic">Magic</option>
@@ -279,7 +283,7 @@
         <option value="adamantium">Adamantium</option>
       </select>
 
-      <label for="bArmor" data-tooltip="Orihalcon: +1 resistance, +2 magic ranged attack.">Armor Type</label>
+      <label for="bArmor" data-tooltip="Disregarded for fantastic units in the main calculator; used as the matrix setting.&#10;&#10;Orihalcon: +1 resistance, +2 magic ranged attack.">Armor Type</label>
       <select id="bArmor">
         <option value="normal" selected>Normal</option>
         <option value="orihalcon">Orihalcon</option>
@@ -296,6 +300,57 @@
 
 </div><!-- /main-content -->
 </div><!-- /page-layout -->
+
+<div id="meleeMatrixModal" class="modal-overlay" aria-hidden="true">
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="meleeMatrixTitle">
+    <div class="modal-header">
+      <div class="modal-title-block">
+        <h2 id="meleeMatrixTitle">Melee Matrix</h2>
+        <div id="meleeMatrixVersion" class="modal-version"></div>
+      </div>
+      <div class="matrix-modal-action">
+        <div class="matrix-modal-note">Value shown is the % HP damage done to the defender divided by % HP damage done to the attacker.</div>
+        <button id="matrixExportCsv" class="matrix-export-btn" type="button">Export csv to clipboard</button>
+      </div>
+      <div class="matrix-modal-options" aria-label="Melee matrix display options">
+        <label class="check-label" for="matrixShowAllDefenders">
+          <input type="checkbox" id="matrixShowAllDefenders" checked>
+          Show all defenders
+        </label>
+        <label class="check-label" for="matrixShowAllAttackers">
+          <input type="checkbox" id="matrixShowAllAttackers" checked>
+          Show all attackers
+        </label>
+        <label class="check-label" for="matrixSortDefenders">
+          <input type="checkbox" id="matrixSortDefenders" checked>
+          Sort defenders
+        </label>
+        <label class="check-label" for="matrixSortAttackers">
+          <input type="checkbox" id="matrixSortAttackers" checked>
+          Sort attackers
+        </label>
+      </div>
+      <button id="meleeMatrixClose" class="modal-close" type="button" aria-label="Close melee matrix">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="matrix-enchantment-summary">
+        <section class="matrix-enchantment-box">
+          <h3>Attacker settings</h3>
+          <ul id="matrixAttackerSettings" class="matrix-enchantment-list"></ul>
+        </section>
+        <section class="matrix-enchantment-box">
+          <h3>Defender settings</h3>
+          <ul id="matrixDefenderSettings" class="matrix-enchantment-list"></ul>
+        </section>
+        <section class="matrix-enchantment-box">
+          <h3>Global settings</h3>
+          <ul id="matrixGlobalOptions" class="matrix-enchantment-list"></ul>
+        </section>
+      </div>
+      <div id="meleeMatrixTableWrap" class="matrix-table-wrap"></div>
+    </div>
+  </div>
+</div>
 
 <!-- Load order: units (data blobs) -> data (constants) -> engine (math) -> combat/stats (logic) -> ui (DOM) -->
 <div id="tt" class="tt"></div>

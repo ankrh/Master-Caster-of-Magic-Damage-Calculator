@@ -52,4 +52,5 @@ Questions for the experts:
 
 - The CoM2 help text states that Land Linking gives +2 breath, but the CoM2 and CoM1 manuals do not mention a modifier to breath.
 
-- The CoM2 help text says that the darkness granted by eternal night is twice as effective as regular darkness, but the CoM and CoM2 manuals do not mention this.
+- Sky drake has negate first strike in UNITS.INI but not in the manual
+

@@ -35,6 +35,16 @@ const THROWN_TYPES = ['thrown', 'fire', 'lightning'];
 
 // --- Ability Definitions ---
 // Each ability: { key, label, type: 'bool'|'num'|'select', match, group }
+function twoColumnMajor(items) {
+  const leftColumnLength = Math.ceil(items.length / 2);
+  const leftColumn = items.slice(0, leftColumnLength);
+  const rightColumn = items.slice(leftColumnLength);
+  return leftColumn.flatMap((leftItem, index) => {
+    const rightItem = rightColumn[index];
+    return rightItem ? [leftItem, rightItem] : [leftItem];
+  });
+}
+
 const ABILITY_DEFS = [
   // Abilities — gaze (left col) | touch (right col); 7 items fill 4 rows, gazeRanged alone in row 4
   { key: 'stoningGaze', label: 'Stoning Gaze', type: 'numcheck', match: 'StoningGaze', group: 'Abilities', tooltip: 'For each defender figure: Defender resist at −X or die.\nImmune: Stoning, Magic.' },
@@ -44,95 +54,111 @@ const ABILITY_DEFS = [
   { key: 'doomGaze', label: 'Doom Gaze', type: 'num', match: 'DoomGaze', group: 'Abilities', tooltip: 'Deals X damage.' },
   { key: 'poison', label: 'Poison Touch', type: 'num', match: 'PoisonTouch', group: 'Abilities', tooltip: 'X times per attacker figure: Defender resist or take 1 dmg.\nMoM 1.31 & 1.60: No modifier.\nCoM 1 & 2: Modifier −1.\nImmune: Poison.' },
   { key: 'gazeRanged', label: 'Hidden Gaze Attack', type: 'num', match: 'GazeRanged', group: 'Abilities', tooltip: 'Physical attack that gazes are attached to.' },
-  // Bool abilities in a new headerless grid; '_' prefix suppresses the subgroup header
-  { key: 'dispelEvil', label: 'Dispel Evil', type: 'bool', match: 'DispelEvil', group: 'Abilities', subgroup: '_', tooltip: 'Chaos/Death unit: For each attacker figure: Defender resist at −4 or die.\nUndead unit: For each attacker figure: Defender resist at −9 or die.\nImmune: Magic, all other unit types.' },
-  { key: 'armorPiercing', label: 'Armor Piercing', type: 'bool', match: 'ArmorPiercing', group: 'Abilities', subgroup: '_', tooltip: "Halves defender's defense." },
-  { key: 'firstStrike', label: 'First Strike', type: 'bool', match: 'FirstStrike', group: 'Abilities', subgroup: '_', tooltip: 'Attacker delivers melee and touch attacks before the defender retaliates (not when counter-attacking).\nCoM 1: Only triggers if ≤ 24 damage is needed to kill the top figure.\nImmune: Negate First Strike' },
-  { key: 'negateFirstStrike', label: 'Negate First Strike', type: 'bool', match: 'NegateFirstStrike', group: 'Abilities', subgroup: '_', tooltip: "Negates the opponent's First Strike." },
-  { key: 'largeShield', label: 'Large Shield', type: 'bool', match: 'LargeShield', group: 'Abilities', subgroup: '_', tooltip: 'Extra defense vs. ranged, thrown and breath.\nMoM 1.31 & 1.60: +2.\nCoM 1 & 2: +3.' },
-  { key: 'lucky', label: 'Lucky', type: 'bool', match: 'Lucky', group: 'Abilities', subgroup: '_', tooltip: '+10% To Hit, +10% To Block, +1 Resistance.\nMoM 1.31: Also opponent −10% To Hit (melee, ranged, and breath).' },
-  { key: 'illusion', label: 'Illusion', type: 'bool', match: 'Illusion', group: 'Abilities', subgroup: '_', tooltip: "Defender's defense = 0, overriding all immunities.\nImmune: Illusion, True Sight." },
-  { key: 'longRange', label: 'Long Range', type: 'bool', match: 'LongRange', group: 'Abilities', subgroup: '_', tooltip: 'Missile and boulder ranged distance penalty capped at −10% instead of −30%.' },
-  { key: 'caster', label: 'Caster', type: 'bool', match: 'Caster', group: 'Abilities', subgroup: '_', tooltip: "MoM 1.31 & 1.60: Haste does not double this unit's magical ranged attack.\nCoM 1 & 2: Qualifies unit for Supreme Light bonuses." },
-  { key: 'doom', label: 'Doom Damage', type: 'bool', match: 'Doom', group: 'Abilities', subgroup: '_', tooltip: 'All attacks skip to-hit and defense rolls; attack strength = exact damage dealt.' },
-  { key: 'fireImmunity', label: 'Fire Immunity', type: 'bool', match: 'FireImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Fire Breath and Immolation.\nCoM 2: Also qualifies unit for Inner Power bonuses.' },
-  { key: 'coldImmunity', label: 'Cold Immunity', type: 'bool', match: 'ColdImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to cold damage attacks.' },
-  { key: 'deathImmunity', label: 'Death Immunity', type: 'bool', match: 'DeathImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Death Gaze, Life Stealing, and Cause Fear.' },
-  { key: 'poisonImmunity', label: 'Poison Immunity', type: 'bool', match: 'PoisonImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Poison Touch.' },
-  { key: 'stoningImmunity', label: 'Stoning Immunity', type: 'bool', match: 'StoningImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Stoning Gaze and Stoning Touch.' },
-  { key: 'supernatural', label: 'Supernatural', type: 'bool', match: 'Supernatural', group: 'Abilities', subgroup: '_', tooltip: "Attacker's hits always deal at least a minimum damage, regardless of the defender's blocks.\nMoM 1.31 & 1.60: No effect.\nCoM 1: Min = (hits − 5) / 2.\nCoM 2: Min = hits / 3." },
-  { key: 'weaponImmunity', label: 'Weapon Immunity', type: 'bool', match: 'WeaponImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Extra defense against non-magical attacks from normal units.\nMoM 1.31: Defense = 10. Bug: Thrown attacks bypass this.\nMoM 1.60: Defense = 10.\nCoM 1 & 2: Defense +8.' },
-  { key: 'lightningResist', label: 'Lightning Resist', type: 'bool', match: 'LightningResist', group: 'Abilities', subgroup: '_', tooltip: 'Negates the Armor Piercing component of incoming Lightning Breath.\nCoM 2: Also qualifies unit for Inner Power bonuses.' },
-  // Abilities/Enchantments (innate or granted by spells) — sorted by realm: no realm, life, death, chaos, nature, sorcery
-  { key: 'resistanceToAll', label: 'Received res. to all', type: 'num', match: 'ResistanceToAll', group: 'Abilities/Enchantments', tooltip: '+X to resistance.' },
-  { key: 'holyBonus', label: 'Received holy bonus', type: 'num', match: 'HolyBonus', group: 'Abilities/Enchantments', tooltip: '+X to melee attack, defense, and resistance.\nCoM 1 & 2: Also +X to ranged/thrown/breath attack.' },
-  // Left col filled first: illusionImmunity(life), fear(death), undead(death), immolation(chaos)
-  // Right col: invisibility(sorcery), magicImmunity(sorcery), missileImmunity(sorcery)
-  { key: 'illusionImmunity', label: 'Illusion Imm./True Sight', type: 'bool', match: 'IllusionImmunity', group: 'Abilities/Enchantments', realm: 'life', tooltip: 'Immune to Illusion and Invisibility.\nMoM 1.31 bug: Illusion Immunity is checked on the defender instead of the attacker for Blur.' },
-  { key: 'fear', label: 'Cause Fear/Cloak of Fear', type: 'bool', match: 'CauseFear', group: 'Abilities/Enchantments', realm: 'death', tooltip: 'For each opponent figure: Resist or freeze for the melee exchange.\nNo resistance modifier.\nImmune: Death, Magic, Righteousness.\nMoM 1.31 bug 1: Defender\'s Cause Fear never fires — only the attacker\'s does.\nMoM 1.31 bug 2: Each of the defender\'s failed rolls also fears one attacker\nfigure (self-fear), bypassing immunity.' },
-  { key: 'invisibility', label: 'Invisible', type: 'bool', match: 'Invisibility', group: 'Abilities/Enchantments', realm: 'sorcery', tooltip: 'Ranged attackers cannot target this unit.\nMoM 1.31 & 1.60: Opponent −10% To Hit on all To Hit rolls (melee, ranged, thrown, breath, gaze).\nCoM 1 & 2: 20% chance to negate each incoming hit before defense rolls; stacks with the Blur enchantment up to a 30% cap.\nImmune: Illusion.' },
-  { key: 'magicImmunity', label: 'Magic Immunity', type: 'bool', match: 'MagicImmunity', group: 'Abilities/Enchantments', realm: 'sorcery', tooltip: 'Immunity to magic ranged attacks, Immolation damage, Wall of Fire, Death Gaze,\nLife Steal, Cause Fear, Stoning, and Dispel Evil.' },
-  { key: 'undead', label: 'Undead', type: 'bool', match: 'Undead', group: 'Abilities/Enchantments', realm: 'death', tooltip: 'Unit becomes a fantastic death creature. Grants Death, Cold, Poison, and Illusion Immunity.\nMoM 1.31 bug: Only Death Immunity applies; Cold, Poison, and Illusion Immunity are missing.' },
-  { key: 'missileImmunity', label: 'Missile Imm./Guardian Wind', type: 'bool', match: 'MissileImmunity', group: 'Abilities/Enchantments', realm: 'sorcery', tooltip: 'Immunity to ranged missile attacks.' },
-  { key: 'immolation', label: 'Immolation', type: 'bool', match: 'Immolation', group: 'Abilities/Enchantments', realm: 'chaos', tooltip: 'Fire area attack hitting all opponent figures each melee combat phase.\nMoM 1.31: Strength 4. Bug: Also fires alongside ranged attacks.\nMoM 1.60: Strength 4.\nCoM 1 & 2: Strength 10.\nImmune: Fire Immunity, Magic Immunity, Righteousness.' },
-  // Enchantments — All versions selects (each takes one grid cell: L, R, L)
-  { key: 'prayer', label: 'Prayer', type: 'select', options: [['none','None'],['prayer','Prayer'],['highPrayer','High Prayer']], group: 'Enchantments', subgroup: 'All versions', realm: 'life', tooltip: 'Prayer: All units in combat gain +10% To Hit, +10% To Block, +1 resistance.\nHigh Prayer: All units in combat gain +10% To Hit, +10% To Block, +2 defense, +3 resistance.\nMoM 1.31 & 1.60, CoM 1: Also +3 melee.\nCoM 2: Also +2 melee.' },
-  { key: 'chaosChannels', label: 'Chaos Channels', type: 'select', options: [['none','None'],['defense','+Defense'],['fireBreath','+Fire Breath'],['flight','+Flight']], group: 'Enchantments', subgroup: 'All versions', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\n+Defense: +3 defense. MoM 1.31 bug: Applied twice in combat (net +6).\n+Fire Breath: MoM 1.31 & 1.60: Strength 2. CoM 1 & 2: Strength 4.\n+Flight: Flight has no consequences in this calculator.' },
+  { key: 'resistanceToAll', label: 'Res. to all', type: 'num', match: 'ResistanceToAll', group: 'Abilities', tooltip: '+X to resistance.' },
+  { key: 'holyBonus', label: 'Holy bonus', type: 'num', match: 'HolyBonus', group: 'Abilities', tooltip: '+X to melee attack, defense, and resistance.\nCoM 1 & 2: Also +X to ranged/thrown/breath attack.' },
+  // Bool abilities in a headerless grid; '_' prefix suppresses the subgroup header.
+  // Keep labels column-major alphabetical: the UI grid flows row-first.
+  ...twoColumnMajor([
+    { key: 'armorPiercing', label: 'Armor Piercing', type: 'bool', match: 'ArmorPiercing', group: 'Abilities', subgroup: '_', tooltip: "Halves defender's defense." },
+    { key: 'caster', label: 'Caster', type: 'bool', match: 'Caster', group: 'Abilities', subgroup: '_', tooltip: "MoM 1.31 & 1.60: Haste does not double this unit's magical ranged attack.\nCoM 1 & 2: Qualifies unit for Supreme Light bonuses." },
+    { key: 'fear', label: 'Cause Fear', type: 'bool', match: 'CauseFear', group: 'Abilities', subgroup: '_', tooltip: 'For each opponent figure: Resist or freeze for the melee exchange.\nMoM 1.31 & 1.60: No resistance modifier.\nCoM 1 & 2: Modifier −3.\nImmune: Death, Magic, Righteousness.\nMoM 1.31 bug 1: Defender\'s Cause Fear never fires — only the attacker\'s does.\nMoM 1.31 bug 2: Each of the defender\'s failed rolls also fears one attacker\nfigure (self-fear), bypassing immunity.' },
+    { key: 'coldImmunity', label: 'Cold Immunity', type: 'bool', match: 'ColdImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to cold damage attacks.' },
+    { key: 'deathImmunity', label: 'Death Immunity', type: 'bool', match: 'DeathImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Death Gaze, Life Stealing, and Cause Fear.' },
+    { key: 'dispelEvil', label: 'Dispel Evil', type: 'bool', match: 'DispelEvil', group: 'Abilities', subgroup: '_', tooltip: 'Chaos/Death unit: For each attacker figure: Defender resist at −4 or die.\nUndead unit: For each attacker figure: Defender resist at −9 or die.\nImmune: Magic, all other unit types.' },
+    { key: 'doom', label: 'Doom Damage', type: 'bool', match: 'Doom', group: 'Abilities', subgroup: '_', tooltip: 'All attacks skip to-hit and defense rolls; attack strength = exact damage dealt.' },
+    { key: 'fireImmunity', label: 'Fire Immunity', type: 'bool', match: 'FireImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Fire Breath, Immolation, and Wall of Fire.\nCoM 2: Also qualifies unit for Inner Power bonuses.' },
+    { key: 'firstStrike', label: 'First Strike', type: 'bool', match: 'FirstStrike', group: 'Abilities', subgroup: '_', tooltip: 'Attacker delivers melee and touch attacks before the defender retaliates (not when counter-attacking).\nCoM 1: Only triggers if ≤ 24 damage is needed to kill the top figure.\nImmune: Negate First Strike' },
+    { key: 'illusion', label: 'Illusion', type: 'bool', match: 'Illusion', group: 'Abilities', subgroup: '_', tooltip: "Defender's defense = 0, overriding all immunities.\nImmune: Illusion, True Sight." },
+    { key: 'illusionImmunity', label: 'Illusion Immunity', type: 'bool', match: 'IllusionImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immune to Illusion and Invisibility.\nMoM 1.31 bug: Illusion Immunity is checked on the defender instead of the attacker for Blur.' },
+    { key: 'immolation', label: 'Immolation', type: 'bool', match: 'Immolation', group: 'Abilities', subgroup: '_', tooltip: 'Fire area attack hitting all opponent figures each melee combat phase.\nMoM 1.31: Strength 4. Bug: Also fires alongside ranged attacks.\nMoM 1.60: Strength 4.\nCoM 1 & 2: Strength 10.\nImmune: Fire Immunity, Magic Immunity, Righteousness.' },
+    { key: 'invisibility', label: 'Invisibility', type: 'bool', match: 'Invisibility', group: 'Abilities', subgroup: '_', tooltip: 'Ranged attackers cannot target this unit.\nMoM 1.31 & 1.60: Opponent −10% To Hit on all To Hit rolls (melee, ranged, thrown, breath, gaze).\nCoM 1 & 2: 20% chance to negate each incoming hit before defense rolls; stacks with the Blur enchantment up to a 30% cap.\nImmune: Illusion.' },
+    { key: 'largeShield', label: 'Large Shield', type: 'bool', match: 'LargeShield', group: 'Abilities', subgroup: '_', tooltip: 'Extra defense vs. ranged, thrown and breath.\nMoM 1.31 & 1.60: +2.\nCoM 1 & 2: +3.' },
+    { key: 'lightningResist', label: 'Lightning Resist', type: 'bool', match: 'LightningResist', group: 'Abilities', subgroup: '_', tooltip: 'Negates the Armor Piercing component of incoming Lightning Breath.\nCoM 2: Also qualifies unit for Inner Power bonuses.' },
+    { key: 'longRange', label: 'Long Range', type: 'bool', match: 'LongRange', group: 'Abilities', subgroup: '_', tooltip: 'Missile and boulder ranged distance penalty capped at −10% instead of −30%.' },
+    { key: 'lucky', label: 'Lucky', type: 'bool', match: 'Lucky', group: 'Abilities', subgroup: '_', tooltip: '+10% To Hit, +10% To Block, +1 Resistance.\nMoM 1.31: Also opponent −10% To Hit (melee, ranged, and breath).' },
+    { key: 'magicImmunity', label: 'Magic Immunity', type: 'bool', match: 'MagicImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to magic ranged attacks, Immolation damage, Wall of Fire, Death Gaze,\nLife Steal, Cause Fear, Stoning, and Dispel Evil.\nMoM only: Also protects against Fire Breath and Lightning Breath.' },
+    { key: 'missileImmunity', label: 'Missile Immunity', type: 'bool', match: 'MissileImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to ranged missile attacks.' },
+    { key: 'negateFirstStrike', label: 'Negate First Strike', type: 'bool', match: 'NegateFirstStrike', group: 'Abilities', subgroup: '_', tooltip: "Negates the opponent's First Strike." },
+    { key: 'poisonImmunity', label: 'Poison Immunity', type: 'bool', match: 'PoisonImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Poison Touch.' },
+    { key: 'stoningImmunity', label: 'Stoning Immunity', type: 'bool', match: 'StoningImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Immunity to Stoning Gaze and Stoning Touch.' },
+    { key: 'supernatural', label: 'Supernatural', type: 'bool', match: 'Supernatural', group: 'Abilities', subgroup: '_', tooltip: "Attacker's hits always deal at least a minimum damage, regardless of the defender's blocks.\nMoM 1.31 & 1.60: No effect.\nCoM 1: Min = (hits − 5) / 2.\nCoM 2: Min = hits / 3." },
+    { key: 'undead', label: 'Undead', type: 'bool', match: 'Undead', group: 'Abilities', subgroup: '_', tooltip: 'Unit becomes a fantastic death creature. Grants Death, Cold, Poison, and Illusion Immunity.\nMoM 1.31 bug: Only Death Immunity applies; Cold, Poison, and Illusion Immunity are missing.' },
+    { key: 'weaponImmunity', label: 'Weapon Immunity', type: 'bool', match: 'WeaponImmunity', group: 'Abilities', subgroup: '_', tooltip: 'Extra defense against non-magical attacks from normal units.\nMoM 1.31: Defense = 10. Bug: Thrown attacks bypass this.\nMoM 1.60: Defense = 10.\nCoM 1 & 2: Defense +8.' },
+  ]),
+];
+
+const ENCHANTMENT_DEFS = [
+  // All versions: Elements and Prayer on the top row; Chaos Channels on its own row.
   { key: 'elemArmor', label: 'Elements', type: 'select', options: [['none','None'],['resistElements','Resist Elem.'],['elementalArmor','Elem. Armor']], group: 'Enchantments', subgroup: 'All versions', realm: 'nature', tooltip: 'Resist Elements: Bonus defense and resistance vs. magical ranged attacks, breath attacks, Stoning Touch and Stoning Gaze.\nMoM 1.31 & 1.60: +3 bonus.\nCoM 1 & 2: +4 bonus.\nElemental Armor:\nMoM 1.31 & 1.60: +10 defense against Chaos/Nature conventional damage (ranged magical, fire breath, immolation, etc.).\n+10 resistance against Stoning Touch and Stoning Gaze.\nCoM 1 & 2: +12 defense against magical ranged attacks and breath attacks.' },
-  // Bools in a separate grid (subgroup '_All versions') so they start fresh at pos 1(L).
-  // Left col (12): life×6, death×6. Right col (11): chaos×5, nature×1, sorcery×5. Interleaved for row-first CSS grid.
-  // Left  (pos 1,3,5,7,9,11,13,15,17,19,21,23): bless, invulnerability, holyWeapon, lionheart, holyArmor, charmOfLife, animated, blackSleep, blackPrayer, raiseDead, weakness, wraithForm
-  // Right (pos 2,4,6,8,10,12,14,16,18,20,22):   flameBlade, shatter, warpAttack, warpDefense, warpResist, ironSkin, blur, resistMagic, haste, vertigo, mindStorm
-  { key: 'bless', label: 'Bless', type: 'bool', match: 'Bless', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: "MoM 1.31 & 1.60: +3 defense and +3 resistance vs. breath attacks, Death Gaze, Life Steal,\nCause Fear and Chaos/Death creatures' melee and ranged.\nCoM 1 & 2: +5 defense and +5 resistance vs. breath attacks, Death Gaze, Life Steal and Cause Fear." },
-  { key: 'flameBlade', label: 'Flame Blade', type: 'bool', match: 'FlameBlade', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'Bypasses Weapon Immunity.\nMoM 1.31 & 1.60: +2 melee, thrown and missile attack.\nCoM 1 & 2: +3 melee and +2 missile.' },
-  { key: 'invulnerability', label: 'Invulnerability', type: 'bool', match: 'Invulnerability', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: 'Grants Weapon Immunity. Reduces damage by 2 per defense roll.\nDoes not reduce Doom damage.' },
-  { key: 'shatter', label: 'Shatter', type: 'bool', match: 'Shatter', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'All attack strengths reduced to 1.' },
-  { key: 'holyWeapon', label: 'Holy Weapon/Holy Arms', type: 'bool', match: 'HolyWeapon', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: '+10% To Hit on melee, thrown, missile, and boulder attacks. Negates Weapon Immunity.\nMoM 1.31 bug: Does not affect thrown attacks.' },
-  { key: 'warpAttack', label: 'Warp: Attack', type: 'bool', match: 'WarpAttack', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'Melee attack halved.\nCoM 1 & 2: All ranged and thrown attacks also halved.' },
-  { key: 'lionheart', label: 'Lionheart', type: 'bool', match: 'Lionheart', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: '+3 melee, missile, boulder, and thrown attack; +3 resistance.\nMoM 1.31 & 1.60: +3 HP per figure.\nCoM 1 & 2: +floor(8/figures) HP per figure.' },
-  { key: 'warpDefense', label: 'Warp: Defense', type: 'bool', match: 'WarpDefense', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'Defense halved.\nCoM 1 & 2: Defense reduced to one-third instead.' },
-  { key: 'holyArmor', label: 'Holy Armor', type: 'bool', match: 'HolyArmor', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: 'MoM 1.31 & 1.60: +2 defense.\nCoM 1 & 2: +2 defense if defense ≤ 5; +10% To Block if defense > 5.' },
-  { key: 'warpResist', label: 'Warp: Resist', type: 'bool', match: 'WarpResist', group: 'Enchantments', subgroup: '_All versions', realm: 'chaos', tooltip: 'Resistance set to 0.' },
-  { key: 'charmOfLife', label: 'Charm of Life', type: 'bool', match: 'CharmOfLife', group: 'Enchantments', subgroup: '_All versions', realm: 'life', tooltip: '+25% HP per figure (minimum +1 HP per figure).' },
-  { key: 'ironSkin', label: 'Iron Skin', type: 'bool', match: 'IronSkin', group: 'Enchantments', subgroup: '_All versions', realm: 'nature', tooltip: '+5 defense. Supersedes Stone Skin.' },
-  { key: 'animated', label: 'Animate Dead', type: 'bool', match: 'Animated', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature): gains Death, Cold, Poison, and Illusion Immunity.\nMoM 1.31 bug: Only Death Immunity applies; Cold, Poison, and Illusion Immunity are missing.\nCoM 1 & 2: Also grants Animated buff: +1 melee, ranged, thrown, breath, defense, +10% To Hit, and Weapon Immunity.' },
-  { key: 'blur', label: 'Blur', type: 'bool', match: 'Blur', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: 'Each incoming hit has a chance to be negated before defense rolls.\nDoes not apply to Doom damage or to spell damage (Immolation, Wall of Fire, etc.).\nMoM 1.31 & 1.60: 10% per hit.\nMoM 1.31 bugs: Each successful negation skips the next roll, capping protection at 50%.\nThe unit\'s own Illusion Immunity disables their Blur, while the opponent\'s immunity is ignored.\nCoM 1 & 2: 20% per hit. Stacks with Invisibility to 30%.' },
-  { key: 'blackSleep', label: 'Black Sleep', type: 'bool', match: 'BlackSleep', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'All incoming conventional damage becomes Doom Damage (attack and\ndefense rolls skipped; ranged penalties and missile immunity ignored).' },
-  { key: 'resistMagic', label: 'Resist Magic', type: 'bool', match: 'ResistMagic', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: '+5 resistance vs. Cause Fear, Death Gaze, Life Steal, Stoning Gaze,\nStoning Touch, and Dispel Evil. Does not affect Poison Touch.' },
-  { key: 'blackPrayer', label: 'Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: '−1 to melee, missile, boulder, magic ranged, thrown and breath; −1 defense; −2 resistance.' },
-  { key: 'haste', label: 'Haste', type: 'bool', match: 'Haste', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: 'Melee, thrown, breath, ranged attacks, and counter-attacks are performed twice.\nMoM 1.31 & 1.60: Magic ranged attacks are not performed twice for Caster units (mana-pool casting).\nCoM 1 & 2: Hasted defenders do not counter-attack twice.' },
-  { key: 'raiseDead', label: 'Raise Dead', type: 'bool', match: 'RaiseDead', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'MoM 1.31 & 1.60: No effect on combat stats — the revived unit retains its original type and realm.\nCoM 1 & 2: Revived unit becomes an unaligned fantastic creature.' },
-  { key: 'vertigo', label: 'Vertigo', type: 'bool', match: 'Vertigo', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: 'To Hit, To Block and defense penalties. Affects melee, all ranged types, thrown, and breath.\nMoM 1.31 & 1.60: −20% To Hit; −1 Defense.\nCoM 1: −30% To Hit; −10% To Block.\nCoM 2: −25% To Hit; −7% To Block.' },
-  { key: 'weakness', label: 'Weakness', type: 'bool', match: 'Weakness', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'MoM 1.31: −2 melee and −2 missile. Bug: thrown is unaffected.\nMoM 1.60: −2 melee, −2 missile, −2 thrown.\nCoM 1 & 2: −3 melee, −3 missile, −3 thrown.' },
-  { key: 'mindStorm', label: 'Mind Storm', type: 'bool', match: 'MindStorm', group: 'Enchantments', subgroup: '_All versions', realm: 'sorcery', tooltip: 'MoM 1.31 & 1.60: −5 melee, ranged, thrown, breath, defense and resistance.\nCoM 1 & 2: −3 melee, −5 ranged, thrown, breath, defense, resistance.' },
-  { key: 'wraithForm', label: 'Wraith Form', type: 'bool', match: 'WraithForm', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'Grants Weapon Immunity to the unit. Attacks bypass enemy Weapon Immunity.' },
-  { key: 'eternalNight', label: 'Eternal Night', type: 'bool', match: 'EternalNight', group: 'Enchantments', subgroup: '_All versions', realm: 'death', tooltip: 'Side owns the global enchantment.\nMoM 1.31/1.60 and CoM 1: All combats are under Darkness at normal strength.\nCoM 2: Darkness grants twice the normal attack and defense modifier.\nCoM 1 & 2: Enemy non-Death units lose 1 resistance.' },
-  // Enchantments — MoM only (removed in CoM) — column-wise: life → death → chaos → nature
-  { key: 'righteousness', label: 'Righteousness', type: 'bool', match: 'Righteousness', group: 'Enchantments', subgroup: 'MoM only', realm: 'life', tooltip: 'Immunity to Cause Fear, Life Steal, Death Gaze, Chaos-realm magic ranged attacks,\nFire Breath, Lightning Breath, Immolation, and Wall of Fire.' },
-  { key: 'metalFires', label: 'Metal Fires', type: 'bool', match: 'MetalFires', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: '+1 melee, +1 missile and +1 thrown. Attacks bypass Weapon Immunity.\nSuperseded by Flame Blade — does not stack.' },
-  { key: 'berserk', label: 'Berserk', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: 'Melee attack doubled and defense set to 0, applied after all other bonuses.' },
-  { key: 'giantStrength', label: 'Giant Strength', type: 'bool', match: 'GiantStrength', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: '+1 melee and +1 thrown.' },
-  { key: 'blackChannels', label: 'Black Channels', type: 'bool', match: 'BlackChannels', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: '+2 melee, +1 to all ranged/thrown/breath/gaze, +1 defense, +1 resistance, +1 HP per figure.\nUnit permanently becomes a fantastic Death creature with Cold, Illusion, Poison, and Death Immunity.' },
-  { key: 'stoneSkin', label: 'Stone Skin', type: 'bool', match: 'StoneSkin', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: '+1 defense. Superseded by Iron Skin — does not stack.' },
-  { key: 'eldritchWeapon', label: 'Eldritch Weapon', type: 'bool', match: 'EldritchWeapon', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: "Opponent's To Block reduced by 10% against this unit's melee, missile,\nand thrown attacks. Attacks bypass Weapon Immunity." },
-  // Enchantments — CoM & CoM2 (added in CoM, kept in CoM2) — column-wise: life → death → chaos → nature → sorcery
-  { key: 'supremeLight', label: 'Supreme Light', type: 'bool', match: 'SupremeLight', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life', tooltip: 'Applies only to Life fantastic creatures and Caster units.\n+2 melee and +2 ranged attack. Defense bonus = floor(resistance / 3).' },
-  { key: 'mysticSurge', label: 'Mystic Surge', type: 'bool', match: 'MysticSurge', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'chaos', tooltip: "+2 defense, −2 resistance. Opponent's To Block reduced by 10%.\nUnit becomes an unaligned fantastic creature.\nSelect granted additional random enchants manually." },
-  { key: 'endurance', label: 'Endurance', type: 'bool', match: 'Endurance', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life', tooltip: 'CoM 1: +2 defense.\nCoM 2: +floor(4 / figures) HP per figure, minimum +1 HP.' },
-  { key: 'survivalInstinct', label: 'Survival Instinct', type: 'bool', match: 'SurvivalInstinct', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'nature', tooltip: '+1 defense, +2 resistance, +10% To Hit.' },
-  { key: 'bloodLust', label: 'Blood Lust', type: 'bool', match: 'BloodLust', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature) and gains Death, Cold, Poison, and Illusion Immunity.\nDoubles melee attack against Normal and Hero targets.' },
-  { key: 'landLinking', label: 'Land Linking', type: 'bool', match: 'LandLinking', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'nature', tooltip: 'Grants Pathfinding, which has no direct damage-calculator effect.\nFantastic units gain +2 defense.\nCoM 1: Fantastic units gain +2 melee, ranged, thrown, and breath attack.\nCoM 2: Fantastic units gain +2 melee and breath attack only.' },
-  { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'sorcery', tooltip: 'Magical ranged or breath attack present: +3 strength.\nThrown or missile attack present: Converted into a Sorcery magical ranged attack at strength at least 3.\nCoM 2 only — Doom Gaze present: +3 doom damage.\nOtherwise: Gains a strength-3 Sorcery magical ranged attack.' },
-  { key: 'blazingMarch', label: 'Blazing March', type: 'bool', match: 'BlazingMarch', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'chaos', tooltip: '+3 melee and +3 missile attack. Melee and missile attacks bypass Weapon Immunity.' },
+  { key: 'prayer', label: 'Prayer', type: 'select', options: [['none','None'],['prayer','Prayer'],['highPrayer','High Prayer']], group: 'Enchantments', subgroup: 'All versions', realm: 'life', tooltip: 'Prayer: All units in combat gain +10% To Hit, +10% To Block, +1 resistance.\nHigh Prayer: All units in combat gain +10% To Hit, +10% To Block, +2 defense, +3 resistance.\nMoM 1.31 & 1.60, CoM 1: Also +3 melee.\nCoM 2: Also +2 melee.' },
+  { key: 'chaosChannels', label: 'Chaos Channels', type: 'select', options: [['none','None'],['defense','+Defense'],['fireBreath','+Fire Breath'],['flight','+Flight']], group: 'Enchantments', subgroup: '_All versions chaos', realm: 'chaos', tooltip: 'Unit permanently becomes a fantastic Chaos creature.\n+Defense: +3 defense. MoM 1.31 bug: Applied twice in combat (net +6).\n+Fire Breath: MoM 1.31 & 1.60: Strength 2. CoM 1 & 2: Strength 4.\n+Flight: Flight has no consequences in this calculator.' },
+  { key: 'resistanceToAll', label: 'Received res. to all', type: 'num', match: 'ResistanceToAll', group: 'Enchantments', subgroup: '_All versions numeric', tooltip: '+X to resistance.' },
+  { key: 'holyBonus', label: 'Received holy bonus', type: 'num', match: 'HolyBonus', group: 'Enchantments', subgroup: '_All versions numeric', tooltip: '+X to melee attack, defense, and resistance.\nCoM 1 & 2: Also +X to ranged/thrown/breath attack.' },
+  ...twoColumnMajor([
+    { key: 'trueSight', calcKey: 'illusionImmunity', label: 'True Sight', type: 'bool', match: 'IllusionImmunity', group: 'Enchantments', subgroup: '_All versions bools', realm: 'life', tooltip: 'Grants Illusion Immunity.' },
+    { key: 'bless', label: 'Bless', type: 'bool', match: 'Bless', group: 'Enchantments', subgroup: '_All versions bools', realm: 'life', tooltip: "MoM 1.31 & 1.60: +3 defense and +3 resistance vs. breath attacks, Death Gaze, Life Steal,\nCause Fear and Chaos/Death creatures' melee and ranged.\nCoM 1 & 2: +5 defense and +5 resistance vs. breath attacks, Death Gaze, Life Steal and Cause Fear." },
+    { key: 'invulnerability', label: 'Invulnerability', type: 'bool', match: 'Invulnerability', group: 'Enchantments', subgroup: '_All versions bools', realm: 'life', tooltip: 'Grants Weapon Immunity. Reduces damage by 2 per defense roll.\nDoes not reduce Doom damage.' },
+    { key: 'holyWeapon', label: 'Holy Weapon', type: 'bool', match: 'HolyWeapon', group: 'Enchantments', subgroup: '_All versions bools', realm: 'life', tooltip: '+10% To Hit on melee, thrown, missile, and boulder attacks. Negates Weapon Immunity.\nMoM 1.31 bug: Does not affect thrown attacks.' },
+    { key: 'lionheart', label: 'Lionheart', type: 'bool', match: 'Lionheart', group: 'Enchantments', subgroup: '_All versions bools', realm: 'life', tooltip: '+3 melee, missile, boulder, and thrown attack; +3 resistance.\nMoM 1.31 & 1.60: +3 HP per figure.\nCoM 1 & 2: +floor(8/figures) HP per figure.' },
+    { key: 'holyArmor', label: 'Holy Armor', type: 'bool', match: 'HolyArmor', group: 'Enchantments', subgroup: '_All versions bools', realm: 'life', tooltip: 'MoM 1.31 & 1.60: +2 defense.\nCoM 1 & 2: +2 defense if defense ≤ 5; +10% To Block if defense > 5.' },
+    { key: 'charmOfLife', label: 'Charm of Life', type: 'bool', match: 'CharmOfLife', group: 'Enchantments', subgroup: '_All versions bools', realm: 'life', tooltip: '+25% HP per figure (minimum +1 HP per figure).' },
+    { key: 'fear', label: 'Cloak of Fear', type: 'bool', match: 'CauseFear', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Grants Cause Fear.' },
+    { key: 'undead', label: 'Undead', type: 'bool', match: 'Undead', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Unit becomes a fantastic death creature. Grants Death, Cold, Poison, and Illusion Immunity.\nMoM 1.31 bug: Only Death Immunity applies; Cold, Poison, and Illusion Immunity are missing.' },
+    { key: 'animated', label: 'Animate Dead', type: 'bool', match: 'Animated', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature): gains Death, Cold, Poison, and Illusion Immunity.\nMoM 1.31 bug: Only Death Immunity applies; Cold, Poison, and Illusion Immunity are missing.\nCoM 1 & 2: Also grants Animated buff: +1 melee, ranged, thrown, breath, defense, +10% To Hit, and Weapon Immunity.' },
+    { key: 'blackSleep', label: 'Black Sleep', type: 'bool', match: 'BlackSleep', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'All incoming conventional damage becomes Doom Damage (attack and\ndefense rolls skipped; ranged penalties and missile immunity ignored).' },
+    { key: 'blackPrayer', label: 'Black Prayer', type: 'bool', match: 'BlackPrayer', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: '−1 to melee, missile, boulder, magic ranged, thrown and breath; −1 defense; −2 resistance.' },
+    { key: 'raiseDead', label: 'Raise Dead', type: 'bool', match: 'RaiseDead', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'MoM 1.31 & 1.60: No effect on combat stats — the revived unit retains its original type and realm.\nCoM 1 & 2: Revived unit becomes an unaligned fantastic creature.' },
+    { key: 'weakness', label: 'Weakness', type: 'bool', match: 'Weakness', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'MoM 1.31: −2 melee and −2 missile. Bug: thrown is unaffected.\nMoM 1.60: −2 melee, −2 missile, −2 thrown.\nCoM 1 & 2: −3 melee, −3 missile, −3 thrown.' },
+    { key: 'wraithForm', label: 'Wraith Form', type: 'bool', match: 'WraithForm', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Grants Weapon Immunity to the unit. Attacks bypass enemy Weapon Immunity.' },
+    { key: 'eternalNight', label: 'Eternal Night', type: 'bool', match: 'EternalNight', group: 'Enchantments', subgroup: '_All versions bools', realm: 'death', tooltip: 'Side owns the global enchantment.\nMoM 1.31/1.60 and CoM 1: All combats are under Darkness at normal strength.\nCoM 2: Darkness grants twice the normal attack and defense modifier.\nCoM 1 & 2: Enemy non-Death units lose 1 resistance.' },
+    { key: 'immolation', label: 'Immolation', type: 'bool', match: 'Immolation', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Fire area attack hitting all opponent figures each melee combat phase.\nMoM 1.31: Strength 4. Bug: Also fires alongside ranged attacks.\nMoM 1.60: Strength 4.\nCoM 1 & 2: Strength 10.\nImmune: Fire Immunity, Magic Immunity, Righteousness.' },
+    { key: 'flameBlade', label: 'Flame Blade', type: 'bool', match: 'FlameBlade', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Bypasses Weapon Immunity.\nMoM 1.31 & 1.60: +2 melee, thrown and missile attack.\nCoM 1 & 2: +3 melee and +2 missile.' },
+    { key: 'shatter', label: 'Shatter', type: 'bool', match: 'Shatter', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'All attack strengths reduced to 1.' },
+    { key: 'warpAttack', label: 'Warp: Attack', type: 'bool', match: 'WarpAttack', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Melee attack halved.\nCoM 1 & 2: All ranged and thrown attacks also halved.' },
+    { key: 'warpDefense', label: 'Warp: Defense', type: 'bool', match: 'WarpDefense', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Defense halved.\nCoM 1 & 2: Defense reduced to one-third instead.' },
+    { key: 'warpResist', label: 'Warp: Resist', type: 'bool', match: 'WarpResist', group: 'Enchantments', subgroup: '_All versions bools', realm: 'chaos', tooltip: 'Resistance set to 0.' },
+    { key: 'ironSkin', label: 'Iron Skin', type: 'bool', match: 'IronSkin', group: 'Enchantments', subgroup: '_All versions bools', realm: 'nature', tooltip: '+5 defense. Supersedes Stone Skin.' },
+    { key: 'invisibility', label: 'Invisibility', type: 'bool', match: 'Invisibility', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Grants Invisible.' },
+    { key: 'magicImmunity', label: 'Magic Immunity', type: 'bool', match: 'MagicImmunity', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Immunity to magic ranged attacks, Immolation damage, Wall of Fire, Death Gaze,\nLife Steal, Cause Fear, Stoning, and Dispel Evil.\nMoM only: Also protects against Fire Breath and Lightning Breath.' },
+    { key: 'guardianWind', calcKey: 'missileImmunity', label: 'Guardian Wind', type: 'bool', match: 'MissileImmunity', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Grants missile immunity.' },
+    { key: 'blur', label: 'Blur', type: 'bool', match: 'Blur', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Each incoming hit has a chance to be negated before defense rolls.\nDoes not apply to Doom damage or to spell damage (Immolation, Wall of Fire, etc.).\nMoM 1.31 & 1.60: 10% per hit.\nMoM 1.31 bugs: Each successful negation skips the next roll, capping protection at 50%.\nThe unit\'s own Illusion Immunity disables their Blur, while the opponent\'s immunity is ignored.\nMoM 1.60, CoM 1 & 2: Opponent Illusion Immunity negates Blur.\nCoM 1 & 2: 20% per hit. Stacks with Invisibility to 30%.' },
+    { key: 'resistMagic', label: 'Resist Magic', type: 'bool', match: 'ResistMagic', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: '+5 resistance vs. Cause Fear, Death Gaze, Life Steal, Stoning Gaze,\nStoning Touch, and Dispel Evil. Does not affect Poison Touch.' },
+    { key: 'haste', label: 'Haste', type: 'bool', match: 'Haste', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'Melee, thrown, breath, ranged attacks, and counter-attacks are performed twice.\nMoM 1.31 & 1.60: Magic ranged attacks are not performed twice for Caster units (mana-pool casting).\nCoM 1 & 2: Hasted defenders do not counter-attack twice.' },
+    { key: 'vertigo', label: 'Vertigo', type: 'bool', match: 'Vertigo', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'To Hit, To Block and defense penalties. Affects melee, all ranged types, thrown, and breath.\nMoM 1.31 & 1.60: −20% To Hit; −1 Defense.\nCoM 1: −30% To Hit; −10% To Block.\nCoM 2: −25% To Hit; −7% To Block.' },
+    { key: 'mindStorm', label: 'Mind Storm', type: 'bool', match: 'MindStorm', group: 'Enchantments', subgroup: '_All versions bools', realm: 'sorcery', tooltip: 'MoM 1.31 & 1.60: −5 melee, ranged, thrown, breath, defense and resistance.\nCoM 1 & 2: −3 melee, −5 ranged, thrown, breath, defense, resistance.' },
+  ]),
+  // Enchantments — MoM only (removed in CoM) — visual order: life → death → chaos → nature
+  ...twoColumnMajor([
+    { key: 'righteousness', label: 'Righteousness', type: 'bool', match: 'Righteousness', group: 'Enchantments', subgroup: 'MoM only', realm: 'life', tooltip: 'Immunity to Cause Fear, Life Steal, Death Gaze, Chaos-realm magic ranged attacks,\nFire Breath, Lightning Breath, Immolation, and Wall of Fire.' },
+    { key: 'berserk', label: 'Berserk', type: 'bool', match: 'Berserk', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: 'Melee attack doubled and defense set to 0, applied after all other bonuses.' },
+    { key: 'blackChannels', label: 'Black Channels', type: 'bool', match: 'BlackChannels', group: 'Enchantments', subgroup: 'MoM only', realm: 'death', tooltip: '+2 melee, +1 to all ranged/thrown/breath/gaze, +1 defense, +1 resistance, +1 HP per figure.\nUnit permanently becomes a fantastic Death creature with Cold, Illusion, Poison, and Death Immunity.' },
+    { key: 'metalFires', label: 'Metal Fires', type: 'bool', match: 'MetalFires', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: '+1 melee, +1 missile and +1 thrown. Attacks bypass Weapon Immunity.\nSuperseded by Flame Blade — does not stack.' },
+    { key: 'eldritchWeapon', label: 'Eldritch Weapon', type: 'bool', match: 'EldritchWeapon', group: 'Enchantments', subgroup: 'MoM only', realm: 'chaos', tooltip: "Opponent's To Block reduced by 10% against this unit's melee, missile,\nand thrown attacks. Attacks bypass Weapon Immunity." },
+    { key: 'giantStrength', label: 'Giant Strength', type: 'bool', match: 'GiantStrength', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: '+1 melee and +1 thrown.' },
+    { key: 'stoneSkin', label: 'Stone Skin', type: 'bool', match: 'StoneSkin', group: 'Enchantments', subgroup: 'MoM only', realm: 'nature', tooltip: '+1 defense. Superseded by Iron Skin — does not stack.' },
+  ]),
+  // Enchantments — CoM & CoM2 (added in CoM, kept in CoM2) — visual order: life → death → chaos → nature → sorcery
+  ...twoColumnMajor([
+    { key: 'supremeLight', label: 'Supreme Light', type: 'bool', match: 'SupremeLight', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life', tooltip: 'Applies only to Life fantastic creatures and Caster units.\n+2 melee and +2 ranged attack. Defense bonus = floor(resistance / 3).' },
+    { key: 'endurance', label: 'Endurance', type: 'bool', match: 'Endurance', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'life', tooltip: 'CoM 1: +2 defense.\nCoM 2: +floor(4 / figures) HP per figure, minimum +1 HP.' },
+    { key: 'bloodLust', label: 'Blood Lust', type: 'bool', match: 'BloodLust', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'death', tooltip: 'Unit becomes undead (fantastic Death creature) and gains Death, Cold, Poison, and Illusion Immunity.\nDoubles melee attack against Normal and Hero targets.' },
+    { key: 'mysticSurge', label: 'Mystic Surge', type: 'bool', match: 'MysticSurge', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'chaos', tooltip: "+2 defense, −2 resistance. Opponent's To Block reduced by 10%.\nUnit becomes an unaligned fantastic creature.\nSelect granted additional random enchants manually." },
+    { key: 'blazingMarch', label: 'Blazing March', type: 'bool', match: 'BlazingMarch', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'chaos', tooltip: '+3 melee and +3 missile attack. Melee and missile attacks bypass Weapon Immunity.' },
+    { key: 'survivalInstinct', label: 'Survival Instinct', type: 'bool', match: 'SurvivalInstinct', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'nature', tooltip: 'Fantastic creatures gain +1 defense, +2 resistance, +10% To Hit.' },
+    { key: 'landLinking', label: 'Land Linking', type: 'bool', match: 'LandLinking', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'nature', tooltip: 'Fantastic units gain +2 defense, +2 melee, and +2 breath attack.' },
+    { key: 'focusMagic', label: 'Focus Magic', type: 'bool', match: 'FocusMagic', group: 'Enchantments', subgroup: 'CoM & CoM2', realm: 'sorcery', tooltip: 'Magical ranged or breath attack present: +3 strength.\nThrown or missile attack present: Converted into a Sorcery magical ranged attack at strength at least 3.\nCoM 2 only — Doom Gaze present: +3 doom damage.\nOtherwise: Gains a strength-3 Sorcery magical ranged attack.' },
+  ]),
   // Enchantments — CoM2 only — select first, then bools interleaved for life → death → chaos → sorcery
   { key: 'discipline', label: 'Discipline', type: 'select', options: [['none','None'],['overland','Overland'],['combat','Combat']], match: 'Discipline', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'life', tooltip: 'Normal: +1 defense.\nRegular: +2 defense.\nVeteran or higher: +2 defense, +1 melee, +1 missile/boulder.\nAlso, if unit is at least Elite and enchantment was cast in combat: Gain Negate First Strike.' },
   { key: 'breakthrough', label: 'Breakthrough', type: 'select', options: [['none','None'],['melee','+1mel'],['meleeDef','+1mel/+1def']], match: 'Breakthrough', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos', tooltip: 'Permanent normal unit: +1 melee.\nNon-corporeal or temporary: +1 melee and +1 defense.' },
-  { key: 'destiny', label: 'Destiny', type: 'bool', match: 'Destiny', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'life', tooltip: 'Unit is stripped of experience and becomes a fantastic Life creature.\nDoubles base melee attack, ranged attack, and HP. +4 defense, +4 resistance.\nGrants Supernatural.' },
-  { key: 'innerPower', label: 'Inner Power', type: 'bool', match: 'InnerPower', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos', tooltip: 'Applies only to units with Fire Immunity or Lightning Resist.\n+3 to all attack strengths (melee, all ranged, thrown, breath). +2 defense, +2 resistance.' },
-  { key: 'rulerOfUnderworld', label: 'Ruler of Underworld', type: 'bool', match: 'RulerOfUnderworld', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'death', tooltip: 'Unit gains Wraith Form (Weapon Immunity + bypass enemy Weapon Immunity).\nAdditionally, opponents’ magical/mithril/adamantium weapons do not bypass this unit’s Weapon Immunity.' },
-  { key: 'blazingEyes', label: 'Blazing Eyes', type: 'bool', match: 'BlazingEyes', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos', tooltip: 'Applies only to fantastic Chaos creatures.\nGains Doom Gaze 3; if the unit already has Doom Gaze, its strength increases by 1.' },
-  { key: 'mislead', label: 'Mislead/Misfortune', type: 'bool', match: 'Mislead', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'death', tooltip: '−1 melee attack, −1 ranged attack, −1 defense, −1 resistance.' },
-  { key: 'reinforceMagic', label: 'Reinforce Magic', type: 'bool', match: 'ReinforceMagic', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'sorcery', tooltip: '+2 resistance.\nIf the unit has a magical ranged attack, it gains +2 strength.' },
+  ...twoColumnMajor([
+    { key: 'destiny', label: 'Destiny', type: 'bool', match: 'Destiny', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'life', tooltip: 'Unit is stripped of experience and becomes a fantastic Life creature.\nDoubles base melee attack, ranged attack, and HP. +4 defense, +4 resistance.\nGrants Supernatural.' },
+    { key: 'rulerOfUnderworld', label: 'Ruler of Underworld', type: 'bool', match: 'RulerOfUnderworld', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'death', tooltip: 'Unit gains Wraith Form (Weapon Immunity + bypass enemy Weapon Immunity).\nAdditionally, opponents’ magical/mithril/adamantium weapons do not bypass this unit’s Weapon Immunity.' },
+    { key: 'mislead', label: 'Mislead/Misfortune', type: 'bool', match: 'Mislead', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'death', tooltip: '−1 melee attack, −1 ranged attack, −1 defense, −1 resistance.' },
+    { key: 'innerPower', label: 'Inner Power', type: 'bool', match: 'InnerPower', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos', tooltip: 'Applies only to units with Fire Immunity or Lightning Resist.\n+3 to all attack strengths (melee, all ranged, thrown, breath). +2 defense, +2 resistance.' },
+    { key: 'blazingEyes', label: 'Blazing Eyes', type: 'bool', match: 'BlazingEyes', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'chaos', tooltip: 'Applies only to fantastic Chaos creatures.\nGains Doom Gaze 3; if the unit already has Doom Gaze, its strength increases by 1.' },
+    { key: 'reinforceMagic', label: 'Reinforce Magic', type: 'bool', match: 'ReinforceMagic', group: 'Enchantments', subgroup: 'CoM2 only', realm: 'sorcery', tooltip: '+2 resistance.\nIf the unit has a magical ranged attack, it gains +2 strength.' },
+  ]),
 ];
 
 // --- Version -> Unit Data mapping ---
@@ -1751,12 +1777,12 @@ const PRESETS = {
     expected: { dmgToA: 0, dmgToB: 1.000 },
   },
   landLinkingRangedCoM: {
-    desc: 'Land Linking (CoM): fantastic creature gets +2 ranged attack. missile 2 to 4',
+    desc: 'Land Linking (CoM): fantastic creature does not get +2 ranged attack. missile 2 stays 2',
     version: 'com_6.08',
     a: { rtbType:'missile', rtb:2, toHitRtbMod:70, hp:10, unitType: 'fantastic_nature', abilities: { landLinking: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
   },
   landLinkingRangedCoM2: {
     desc: 'Land Linking (CoM2): fantastic creature does not get +2 ranged attack. missile 2 stays 2',
@@ -2513,6 +2539,20 @@ const PRESETS = {
     a: { atk:5, toHitMod:70, hp:10, res:5 },
     b: { atk:5, toHitMod:70, hp:10, def:0, res:5, abilities: { fear: true } },
     expected: { dmgToA: 5.000, dmgToB: 2.500 },
+  },
+  fearDefenderPenaltyCoM: {
+    desc: 'Cause Fear Defender (CoM): B defending Fear works with -3 resistance. A res 5 becomes 2, so only 20% attack → E[dmgB]=1',
+    version: 'com_6.08',
+    a: { atk:5, toHitMod:70, hp:10, res:5 },
+    b: { atk:5, toHitMod:70, hp:10, def:0, res:5, abilities: { fear: true } },
+    expected: { dmgToA: 5.000, dmgToB: 1.000 },
+  },
+  fearDefenderPenaltyCoM2: {
+    desc: 'Cause Fear Defender (CoM2): B defending Fear works with -3 resistance. A res 5 becomes 2, so only 20% attack → E[dmgB]=1',
+    version: 'com2_1.05.11',
+    a: { atk:5, toHitMod:70, hp:10, res:5 },
+    b: { atk:5, toHitMod:70, hp:10, def:0, res:5, abilities: { fear: true } },
+    expected: { dmgToA: 5.000, dmgToB: 1.000 },
   },
   fearDefenderFixedFirstStrike: {
     desc: 'Cause Fear bilateral + First Strike (MoM CP 1.60): B fears A before FS; A fears B after FS before counter',
@@ -3936,6 +3976,13 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Cause Fear',
+        keys: [
+          'fearDefenderPenaltyCoM',
+          'fearDefenderPenaltyCoM2',
+        ],
+      },
+      {
         name: 'Chaos Surge',
         keys: [
           'chaosSurgeBreathCoM2',
@@ -4101,7 +4148,7 @@ const TEST_TREE = [
   { name: 'Version differences tests', subs: [
       { name: 'Bless', keys: ['blessMeleeFromDeath', 'blessMeleeFromDeathCoM2', 'blessMeleeFromChaos', 'blessMeleeFromChaosCoM2', 'blessBreathBonusMoM', 'blessBreathBonusCoM2', 'blessResistBonusMoM', 'blessResistBonusCoM2'] },
       { name: 'Blur', keys: ['blurBasicMoM131', 'blurFixedMoM160', 'blurCoM2', 'blurIllImmBugV131', 'blurIllImmDefenderFixed', 'blurIllImmAtkBugV131', 'blurIllImmFixed', 'blurPlusInvisCoM2'] },
-      { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderFixedFirstStrike'] },
+      { name: 'Cause Fear', keys: ['fearBasic', 'fearAttackerFixed', 'fearDefenderNoop', 'fearDefenderFixed', 'fearDefenderPenaltyCoM2', 'fearDefenderFixedFirstStrike'] },
       { name: 'Chaos Channels', keys: ['ccDefense131', 'ccDefenseFixed', 'ccFireBreathBasic', 'ccFireBreathCoM', 'ccFireBreathReplacesLightningCoM2', 'ccFireBreathReplacesGazeCoM2'] },
       { name: 'Defense Rollover', keys: ['defRolloverWoundedCoM', 'defRolloverWoundedCoM2'] },
       { name: 'Elemental Armor / Resist Elements', keys: ['resistElementsMagicC', 'resistElementsMagicCCoM2', 'resistElementsNotVsMagicSMoM', 'resistElementsVsMagicSCoM2', 'resistElementsFireBreathMoM', 'resistElementsFireBreathCoM2', 'elemArmorNotVsMagicS', 'elemArmorVsMagicSCoM2'] },

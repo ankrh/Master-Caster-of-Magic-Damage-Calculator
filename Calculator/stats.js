@@ -13,19 +13,20 @@ function deriveUnitStats(input) {
   // Abilities are read before stat derivation because Chaos Channels eligibility can depend on gaze attacks.
   const abilities = input.abilities || {};
   const destinyActive = destinyActiveForUnit(abilities, version);
+  const unitTypeRaw = input.unitType;
+  const unitTypeVal = determineEffectiveUnitType(unitTypeRaw, abilities, version);
+  const disregardLoadout = !!input.disregardFantasticLoadout && String(unitTypeRaw || '').startsWith('fantastic_');
   const level = input.level;
-  const effectiveLevel = destinyActive ? 'normal' : level;
+  const effectiveLevel = (destinyActive || disregardLoadout) ? 'normal' : level;
   const lvl = getLevelBonuses(effectiveLevel, version);
-  const weapon = input.weapon;
+  const weapon = disregardLoadout ? 'normal' : input.weapon;
   const wpn = weaponBonus(weapon);
-  const armor = input.armor;
+  const armor = disregardLoadout ? 'normal' : input.armor;
 
   const rtbTypeRaw = input.rtbType;
   let rangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
   let thrownType = THROWN_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
 
-  const unitTypeRaw = input.unitType;
-  const unitTypeVal = determineEffectiveUnitType(unitTypeRaw, abilities, version);
   const baseDoomGazeWithBlazingEyes = blazingEyesDoomGazeForUnit(abilities, unitTypeVal, version);
 
   // Chaos Channels (Fire Breath option): version-sensitive strength.
@@ -265,8 +266,8 @@ function deriveUnitStats(input) {
     && (rangedType === 'missile' || rangedType === 'boulder'
       || rangedType === 'magic_c' || rangedType === 'magic_n' || rangedType === 'magic_s') ? 2 : 0;
 
-  // CoM2 Land Linking boosts melee and breath only; CoM's broader attack bonus is in abilMods.rtbMod.
-  const landLinkingBreathRtbMod = landLinkingEligible && version.startsWith('com2')
+  // CoM/CoM2 Land Linking boosts melee and breath only.
+  const landLinkingBreathRtbMod = landLinkingEligible && version.startsWith('com')
     && (thrownType === 'fire' || thrownType === 'lightning') ? 2 : 0;
 
   // Giant Strength: +1 thrown only (not missile/boulder/magic ranged, not breath).
