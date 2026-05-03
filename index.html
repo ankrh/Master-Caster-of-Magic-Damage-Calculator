@@ -35,6 +35,7 @@
 <div class="main-content">
 <div class="matrix-actions">
   <button id="meleeMatrixBtn" class="matrix-btn" type="button" title="Open melee matrix calculator">Calculate melee matrix<br>using selected settings</button>
+  <button id="rangedMatrixBtn" class="matrix-btn" type="button" title="Open ranged matrix calculator">Calculate ranged matrix<br>using selected settings</button>
 </div>
 <div class="combat-enchantments">
   <div class="enchant-row">
@@ -313,14 +314,6 @@
         <button id="matrixExportCsv" class="matrix-export-btn" type="button">Export csv to clipboard</button>
       </div>
       <div class="matrix-modal-options" aria-label="Melee matrix display options">
-        <label class="check-label" for="matrixShowAllDefenders">
-          <input type="checkbox" id="matrixShowAllDefenders" checked>
-          Show all defenders
-        </label>
-        <label class="check-label" for="matrixShowAllAttackers">
-          <input type="checkbox" id="matrixShowAllAttackers" checked>
-          Show all attackers
-        </label>
         <label class="check-label" for="matrixSortDefenders">
           <input type="checkbox" id="matrixSortDefenders" checked>
           Sort defenders
@@ -345,6 +338,17 @@
         <section class="matrix-enchantment-box">
           <h3>Global settings</h3>
           <ul id="matrixGlobalOptions" class="matrix-enchantment-list"></ul>
+        </section>
+        <button id="matrixSwapSides" class="matrix-swap-btn" type="button">Swap attacker/defender</button>
+        <section class="matrix-name-filter-box" aria-label="Melee matrix name filters">
+          <label for="matrixAttackerNameFilter">Attacker name matches</label>
+          <textarea id="matrixAttackerNameFilter" rows="4" spellcheck="false"></textarea>
+          <label for="matrixDefenderNameFilter">Defender name matches</label>
+          <textarea id="matrixDefenderNameFilter" rows="4" spellcheck="false"></textarea>
+          <div class="matrix-filter-actions">
+            <div class="matrix-filter-help">(e.g., &quot;Life&quot;, &quot;Halberdiers&quot;, &quot;Klackon&quot;)</div>
+            <button id="matrixApplyNameFilters" class="matrix-apply-filter-btn" type="button">Apply</button>
+          </div>
         </section>
       </div>
       <div id="meleeMatrixTableWrap" class="matrix-table-wrap"></div>

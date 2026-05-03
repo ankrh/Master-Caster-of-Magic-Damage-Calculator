@@ -404,6 +404,7 @@ h1 {
 .matrix-actions {
   display: flex;
   justify-content: center;
+  gap: 0.75rem;
   margin: 0.75rem auto 0.5rem;
   max-width: var(--two-panel-width);
 }
@@ -595,6 +596,28 @@ select:disabled[data-tooltip] {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-color: #7f8fd9 rgba(255,255,255,0.12);
+  scrollbar-width: thin;
+}
+.matrix-enchantment-summary::-webkit-scrollbar,
+.matrix-table-wrap::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.matrix-enchantment-summary::-webkit-scrollbar-track,
+.matrix-table-wrap::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.12);
+  border-radius: 6px;
+}
+.matrix-enchantment-summary::-webkit-scrollbar-thumb,
+.matrix-table-wrap::-webkit-scrollbar-thumb {
+  background: #7f8fd9;
+  border: 2px solid var(--bg);
+  border-radius: 6px;
+}
+.matrix-enchantment-summary::-webkit-scrollbar-thumb:hover,
+.matrix-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #9aa8f0;
 }
 .matrix-enchantment-box {
   width: max-content;
@@ -607,6 +630,22 @@ select:disabled[data-tooltip] {
 .matrix-enchantment-box h3 {
   margin: 0 0 0.65rem;
   font-size: 0.95rem;
+}
+.matrix-swap-btn {
+  align-self: center;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.matrix-swap-btn:hover,
+.matrix-swap-btn:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .matrix-enchantment-list {
   display: flex;
@@ -623,12 +662,73 @@ select:disabled[data-tooltip] {
 .matrix-enchantment-list .empty {
   color: var(--muted);
 }
+.matrix-name-filter-box {
+  display: flex;
+  width: min(100%, 20rem);
+  flex-direction: column;
+  gap: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  padding: 0.85rem 1rem;
+}
+.matrix-name-filter-box label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.matrix-filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.matrix-filter-help {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+.matrix-name-filter-box textarea {
+  width: 100%;
+  min-height: 4.8rem;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  padding: 0.45rem 0.55rem;
+}
+.matrix-name-filter-box textarea:focus {
+  outline: 2px solid rgba(42, 117, 255, 0.25);
+  border-color: var(--accent);
+}
+.matrix-apply-filter-btn {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.matrix-apply-filter-btn:hover,
+.matrix-apply-filter-btn:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .matrix-table-wrap {
   flex: 1;
   min-width: 0;
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-color: #7f8fd9 rgba(255,255,255,0.12);
+  scrollbar-width: thin;
 }
 .matrix-table {
   width: max-content;
@@ -708,6 +808,7 @@ select:disabled[data-tooltip] {
   z-index: 2;
   text-align: left;
   min-width: 10rem;
+  white-space: nowrap;
 }
 .matrix-table td {
   min-width: 2.5rem;
