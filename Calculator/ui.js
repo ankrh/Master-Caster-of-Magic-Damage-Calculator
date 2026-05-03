@@ -2114,6 +2114,21 @@ function swapMeleeMatrixSides() {
   renderMeleeMatrixSnapshot();
 }
 
+function resetMeleeMatrixControls() {
+  ['matrixAttackerNameFilter', 'matrixDefenderNameFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = '';
+    el.defaultValue = '';
+  });
+  ['matrixSortDefenders', 'matrixSortAttackers'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.checked = true;
+    el.defaultChecked = true;
+  });
+}
+
 function initMeleeMatrixModal() {
   const openBtn = document.getElementById('meleeMatrixBtn');
   const rangedOpenBtn = document.getElementById('rangedMatrixBtn');
@@ -2121,10 +2136,24 @@ function initMeleeMatrixModal() {
   const closeBtn = document.getElementById('meleeMatrixClose');
   const exportBtn = document.getElementById('matrixExportCsv');
   const swapSidesBtn = document.getElementById('matrixSwapSides');
-  const applyNameFiltersBtn = document.getElementById('matrixApplyNameFilters');
+  const attackerFilter = document.getElementById('matrixAttackerNameFilter');
+  const defenderFilter = document.getElementById('matrixDefenderNameFilter');
   const sortDefenders = document.getElementById('matrixSortDefenders');
   const sortAttackers = document.getElementById('matrixSortAttackers');
   if (!openBtn || !modal || !closeBtn) return;
+  resetMeleeMatrixControls();
+
+  let pendingFilterRender = 0;
+  const renderOpenMatrixTable = () => {
+    if (modal.classList.contains('is-open')) renderMeleeMatrixTable();
+  };
+  const scheduleFilterRender = () => {
+    if (pendingFilterRender) return;
+    pendingFilterRender = window.requestAnimationFrame(() => {
+      pendingFilterRender = 0;
+      renderOpenMatrixTable();
+    });
+  };
 
   const open = (matrixMode) => {
     activeMatrixMode = matrixMode;
@@ -2157,15 +2186,12 @@ function initMeleeMatrixModal() {
   }
   [sortDefenders, sortAttackers].forEach(el => {
     if (!el) return;
-    el.addEventListener('change', () => {
-      if (modal.classList.contains('is-open')) renderMeleeMatrixTable();
-    });
+    el.addEventListener('change', renderOpenMatrixTable);
   });
-  if (applyNameFiltersBtn) {
-    applyNameFiltersBtn.addEventListener('click', () => {
-      if (modal.classList.contains('is-open')) renderMeleeMatrixTable();
-    });
-  }
+  [attackerFilter, defenderFilter].forEach(el => {
+    if (!el) return;
+    el.addEventListener('input', scheduleFilterRender);
+  });
   modal.addEventListener('click', e => {
     if (e.target === modal) close();
   });

@@ -219,6 +219,25 @@ async function main() {
 
   try {
     const wsUrl = await waitForTarget(targetUrl, debugPort, chrome);
+    if (mode === 'matrix-refresh-reset') {
+      await cdpEvaluate(wsUrl, `(() => {
+        document.getElementById('matrixAttackerNameFilter').value = 'Life';
+        document.getElementById('matrixDefenderNameFilter').value = 'Death';
+        document.getElementById('matrixSortDefenders').checked = false;
+        document.getElementById('matrixSortAttackers').checked = false;
+        window.setTimeout(() => window.location.reload(), 0);
+        return true;
+      })()`);
+      await sleep(1500);
+      const result = await cdpEvaluate(wsUrl, `(() => ({
+        attackerFilter: document.getElementById('matrixAttackerNameFilter').value,
+        defenderFilter: document.getElementById('matrixDefenderNameFilter').value,
+        sortDefenders: document.getElementById('matrixSortDefenders').checked,
+        sortAttackers: document.getElementById('matrixSortAttackers').checked
+      }))()`);
+      console.log(JSON.stringify(result));
+      return;
+    }
     const expressions = {
       'cancelled-tohit': `(() => {
         document.getElementById('gameVersion').value = 'mom_1.31';
@@ -276,6 +295,36 @@ async function main() {
         const chaosTooltip = hoverText('chaosSurge');
 
         return { rangedDisabled, rangedTooltip, armorDisabled, armorTooltip, chaosTooltip };
+      })()`,
+      'matrix-live-filter': `(async () => {
+        document.getElementById('meleeMatrixBtn').click();
+        const allRows = document.querySelectorAll('#meleeMatrixTableWrap tbody tr').length;
+        const applyButtonMissing = !document.getElementById('matrixApplyNameFilters');
+        const filter = document.getElementById('matrixAttackerNameFilter');
+        filter.value = 'Life';
+        filter.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const filteredRows = document.querySelectorAll('#meleeMatrixTableWrap tbody tr').length;
+        const firstHeader = document.querySelector('#meleeMatrixTableWrap tbody th')?.textContent || '';
+        document.getElementById('meleeMatrixClose').click();
+        return { allRows, filteredRows, firstHeader, applyButtonMissing };
+      })()`,
+      'matrix-reset-controls': `(() => {
+        const attackerFilter = document.getElementById('matrixAttackerNameFilter');
+        const defenderFilter = document.getElementById('matrixDefenderNameFilter');
+        const sortDefenders = document.getElementById('matrixSortDefenders');
+        const sortAttackers = document.getElementById('matrixSortAttackers');
+        attackerFilter.value = 'Life';
+        defenderFilter.value = 'Death';
+        sortDefenders.checked = false;
+        sortAttackers.checked = false;
+        resetMeleeMatrixControls();
+        return {
+          attackerFilter: attackerFilter.value,
+          defenderFilter: defenderFilter.value,
+          sortDefenders: sortDefenders.checked,
+          sortAttackers: sortAttackers.checked
+        };
       })()`,
     };
 

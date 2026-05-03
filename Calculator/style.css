@@ -680,8 +680,6 @@ select:disabled[data-tooltip] {
 .matrix-filter-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
 }
 .matrix-filter-help {
   min-width: 0;
@@ -705,21 +703,6 @@ select:disabled[data-tooltip] {
 .matrix-name-filter-box textarea:focus {
   outline: 2px solid rgba(42, 117, 255, 0.25);
   border-color: var(--accent);
-}
-.matrix-apply-filter-btn {
-  flex: 0 0 auto;
-  padding: 0.4rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--panel);
-  color: var(--text);
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-.matrix-apply-filter-btn:hover,
-.matrix-apply-filter-btn:focus-visible {
-  border-color: var(--accent);
-  color: var(--accent);
 }
 .matrix-table-wrap {
   flex: 1;
